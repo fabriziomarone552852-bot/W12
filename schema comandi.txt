@@ -1,0 +1,25 @@
+Come cambiare database
+
+Backend (uvicorn):
+
+Database	Comando
+Dev (volatile locale)		set APP_ENV=dev && uvicorn main:app --reload
+Test (persistente locale)	set APP_ENV=test && uvicorn main:app --reload
+Prod (NAS in LAN)			set APP_ENV=prod && uvicorn main:app
+Se non specifichi APP_ENV, il default è dev.
+
+
+Alembic (migrazioni):
+
+bash
+set APP_ENV=dev && alembic upgrade head
+set APP_ENV=test && alembic upgrade head
+set APP_ENV=prod && alembic upgrade head
+
+
+Frontend (Vite):
+
+bash
+npm run dev:dev      # → .env.development
+npm run dev:test     # → .env.test
+npm run dev:prod     # → .env.production

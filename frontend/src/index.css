@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+@layer utilities {
+  /* Scrollbar personalizzata invisibile/sottile per i menu interni */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #374151; /* gray-700, si abbina alla sidebar scura */
+    border-radius: 20px;
+  }
+  .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+    background-color: #4b5563; /* gray-600 al passaggio del mouse */
+  }
+
+  /* Animazione fluida per l'apertura dei sottomenu */
+  .animate-fadeIn {
+    animation: fadeIn 0.2s ease-out forwards;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-5px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}

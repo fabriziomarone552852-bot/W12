@@ -1,0 +1,1 @@
+set APP_ENV=dev && uvicorn main:app --reload

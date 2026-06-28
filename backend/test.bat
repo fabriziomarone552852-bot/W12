@@ -1,0 +1,1 @@
+set APP_ENV=test && uvicorn main:app --reload
