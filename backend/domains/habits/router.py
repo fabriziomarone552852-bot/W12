@@ -13,10 +13,10 @@ router = APIRouter()
 
 @router.get("/habits", response_model=List[schemas.HabitResponse], tags=["habits"])
 def list_habits(
-    tipo: Optional[str] = Query(default=None),
-    attive_al: Optional[date] = Query(default=None),
     current_user: deps.CurrentUserDep,
     db: deps.DbDep,
+    tipo: Optional[str] = Query(default=None),
+    attive_al: Optional[date] = Query(default=None),
 ):
     lookback_date = date.today() - timedelta(days=DEFAULT_HABIT_LOG_LOOKBACK_DAYS)
 
@@ -240,11 +240,11 @@ def delete_habit_period(
     tags=["habit_log"],
 )
 def list_habit_logs(
+    current_user: deps.CurrentUserDep,
+    db: deps.DbDep,
     habit_id: Optional[int] = Query(default=None),
     dal: Optional[date] = Query(default=None),
     al: Optional[date] = Query(default=None),
-    current_user: deps.CurrentUserDep,
-    db: deps.DbDep,
 ):
     query = (
         db.query(models.HabitLog)
@@ -313,9 +313,9 @@ def get_habit_log(
 )
 def create_or_increment_habit_log(
     log_in: schemas.HabitLogCreate,
-    habit_id: int = Query(...),
     current_user: deps.CurrentUserDep,
     db: deps.DbDep,
+    habit_id: int = Query(...),
 ):
     return deps.increment_habit_log(habit_id, log_in.data_riferimento, current_user, db)
 
@@ -327,9 +327,9 @@ def create_or_increment_habit_log(
 )
 def toggle_habit_log(
     log_in: schemas.HabitLogCreate,
-    habit_id: int = Query(...),
     current_user: deps.CurrentUserDep,
     db: deps.DbDep,
+    habit_id: int = Query(...),
 ):
     return deps.increment_habit_log(habit_id, log_in.data_riferimento, current_user, db)
 
@@ -341,9 +341,9 @@ def toggle_habit_log(
 )
 def decrement_habit_log(
     log_in: schemas.HabitLogCreate,
-    habit_id: int = Query(...),
     current_user: deps.CurrentUserDep,
     db: deps.DbDep,
+    habit_id: int = Query(...),
 ):
     period = deps.get_active_period_from_db(habit_id, log_in.data_riferimento, current_user.id, db)
 
