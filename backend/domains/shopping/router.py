@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, selectinload
 
 from api import deps
-from . import deps as shopping_deps
+from . import deps as shopping_domain_deps
 from . import models, schemas
 from . import access as shopping_access
 from .access import ShoppingPermission, ShoppingRole
@@ -20,7 +20,7 @@ CurrentUserDep = Annotated[models.User, Depends(deps.get_current_user)]
 ViewShoppingListDep = Annotated[
     models.ShoppingList,
     Depends(
-        shopping_deps.shopping_list_permission_dependency(
+        shopping_domain_deps.shopping_list_permission_dependency(
             ShoppingPermission.VIEW_LIST
         )
     ),
@@ -29,7 +29,7 @@ ViewShoppingListDep = Annotated[
 ManageListFullDep = Annotated[
     models.ShoppingList,
     Depends(
-        shopping_deps.shopping_list_permission_dependency(
+        shopping_domain_deps.shopping_list_permission_dependency(
             ShoppingPermission.MANAGE_LIST_FULL
         )
     ),
@@ -38,7 +38,7 @@ ManageListFullDep = Annotated[
 DeleteItemDep = Annotated[
     models.ShoppingListItem,
     Depends(
-        shopping_deps.shopping_item_permission_dependency(
+        shopping_domain_deps.shopping_item_permission_dependency(
             ShoppingPermission.DELETE_ITEM
         )
     ),
@@ -46,28 +46,28 @@ DeleteItemDep = Annotated[
 
 ManageItemDep = Annotated[
     models.ShoppingListItem,
-    Depends(shopping_deps.shopping_item_management_dependency()),
+    Depends(shopping_domain_deps.shopping_item_management_dependency()),
 ]
 
 PurchaseItemDep = Annotated[
     models.ShoppingListItem,
-    Depends(shopping_deps.shopping_item_purchase_dependency()),
+    Depends(shopping_domain_deps.shopping_item_purchase_dependency()),
 ]
 
 EditPriceDep = Annotated[
     models.ShoppingPrice,
-    Depends(shopping_deps.shopping_price_edit_dependency()),
+    Depends(shopping_domain_deps.shopping_price_edit_dependency()),
 ]
 
 DeletePriceDep = Annotated[
     models.ShoppingPrice,
-    Depends(shopping_deps.shopping_price_delete_dependency()),
+    Depends(shopping_domain_deps.shopping_price_delete_dependency()),
 ]
 
 GroupViewDep = Annotated[
     models.ShoppingGroup,
     Depends(
-        shopping_deps.shopping_group_permission_dependency(
+        shopping_domain_deps.shopping_group_permission_dependency(
             ShoppingPermission.VIEW_LIST
         )
     ),
@@ -76,7 +76,7 @@ GroupViewDep = Annotated[
 GroupInviteDep = Annotated[
     models.ShoppingGroup,
     Depends(
-        shopping_deps.shopping_group_permission_dependency(
+        shopping_domain_deps.shopping_group_permission_dependency(
             ShoppingPermission.INVITE_MEMBERS
         )
     ),

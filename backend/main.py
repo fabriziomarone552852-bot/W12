@@ -21,7 +21,7 @@ from api import (
     users,
 )
 
-from domains.shopping import router as shopping_router
+from domains.shopping import router as shopping
 
 app = FastAPI(title=f"Smart Agenda API [{app_env}]", version="3.0")
 
@@ -43,7 +43,7 @@ app.include_router(users.router)
 app.include_router(tasks.router)
 app.include_router(events.router)
 app.include_router(categories.router)
-app.include_router(shopping_router)
+app.include_router(shopping)
 app.include_router(analytics.router)
 app.include_router(admin.router)
 app.include_router(daily_entries.router)
