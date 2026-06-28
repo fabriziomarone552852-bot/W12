@@ -1,9 +1,14 @@
+# backend/domains/audit/schemas.py
 from __future__ import annotations
 
 from datetime import datetime
 from typing import Optional
 
-from ..users.schemas import ORMBaseModel
+from pydantic import BaseModel, ConfigDict
+
+
+class ORMBaseModel(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SharedActivityLogResponse(ORMBaseModel):
