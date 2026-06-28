@@ -1,4 +1,4 @@
-# backend/services/analytics_prices.py
+# backend/domains/shopping/analytics_prices.py
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Dict, List, Optional

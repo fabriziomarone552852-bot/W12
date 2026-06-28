@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session, selectinload, with_loader_criteria
 import models
 import schemas
 from api import deps
-from api.events import populate_event_category_name
+from domains.events import populate_event_category_name
 from domains.tasks.router import populate_task_category_name
 from settings import DEFAULT_COMPLETED_TASK_LOOKBACK_DAYS
 
