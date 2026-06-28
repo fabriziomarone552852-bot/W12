@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 import models
 import schemas
 from api import deps
-from services.analytics_prices import get_item_price_metrics, get_price_history_series
+from domains.shopping.analytics_prices import get_item_price_metrics, get_price_history_series
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
