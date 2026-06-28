@@ -1,14 +1,3 @@
-from fastapi import APIRouter, Depends
+from domains.system.admin import router
 
-from . import deps
-
-router = APIRouter(
-    prefix="/admin",
-    tags=["admin"],
-    dependencies=[Depends(deps.require_superuser)],
-)
-
-
-@router.get("/ping")
-def admin_ping():
-    return {"message": "admin ok"}
+__all__ = ["router"]
