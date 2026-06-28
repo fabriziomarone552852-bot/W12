@@ -13,13 +13,11 @@ from api import (
     daily_entries,
     daysync,
     events,
-    habit_log,
-    habits,
     sync,
     tasks,
 )
 
-from domains import auth, shopping, users
+from domains import auth, habits, shopping, users
 
 app = FastAPI(title=f"Smart Agenda API [{app_env}]", version="3.0")
 
@@ -47,6 +45,5 @@ app.include_router(admin.router)
 app.include_router(daily_entries.router)
 app.include_router(countdowns.router)
 app.include_router(habits.router)
-app.include_router(habit_log.router)
 app.include_router(daysync.router)
 app.include_router(sync.router)
