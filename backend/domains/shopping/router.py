@@ -1,4 +1,4 @@
-# backend/api/shopping.py
+# backend/domains/shopping/router.py
 from datetime import datetime, timezone
 from typing import Annotated, List, Optional
 

@@ -1,4 +1,4 @@
-# backend/api/shopping_deps.py
+# backend/domains/shopping/deps.py
 from __future__ import annotations
 
 from typing import Annotated, Callable
