@@ -5,14 +5,9 @@ from config import load_app_env
 
 app_env, _ = load_app_env()
 
-from api import (
-    categories,
-    countdowns,
-    daily_entries,
-    events,
-)
+from api import categories, daily_entries
 
-from domains import auth, habits, planning, shopping, sync, system, tasks, users
+from domains import auth, countdowns, events, habits, planning, shopping, sync, system, tasks, users
 
 app = FastAPI(title=f"Smart Agenda API [{app_env}]", version="3.0")
 
