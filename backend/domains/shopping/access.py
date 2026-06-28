@@ -1,4 +1,4 @@
-# backend/services/shopping_access.py
+# backend/domains/shopping/access.py
 from __future__ import annotations
 
 from datetime import datetime, timezone
