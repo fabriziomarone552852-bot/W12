@@ -1,8 +1,61 @@
-# backend/domains/audit/models.py
-# Il modello SQLAlchemy SharedActivityLog è definito in models.py (root) per
-# garantire la compatibilità con Alembic e la Base globale. Questo modulo
-# lo re-esporta affinché il codice che usa il dominio audit possa importarlo
-# da un unico punto coerente.
-from models import SharedActivityLog
+from __future__ import annotations
 
-__all__ = ["SharedActivityLog"]
+from datetime import datetime, timezone
+from typing import Optional
+
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from ..system.models import ConfigCode
+from ..users.models import Base, User
+
+
+class SharedActivityLog(Base):
+    __tablename__ = "shared_activity_log"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    module_code_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("config_codes.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    entity_type_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("config_codes.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    action_type_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("config_codes.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    entity_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    performed_by_user_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        index=True,
+    )
+    payload_before: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    payload_after: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    module_code: Mapped["ConfigCode"] = relationship("ConfigCode", foreign_keys=[module_code_id])
+    entity_type: Mapped["ConfigCode"] = relationship("ConfigCode", foreign_keys=[entity_type_id])
+    action_type: Mapped["ConfigCode"] = relationship("ConfigCode", foreign_keys=[action_type_id])
+    performed_by_user: Mapped["User"] = relationship("User", foreign_keys=[performed_by_user_id], back_populates="shared_logs")
+
+    __table_args__ = (
+        Index("ix_shared_activity_log_entity", "module_code_id", "entity_type_id", "entity_id"),
+    )
+
+
+__all__ = ["ConfigCode", "User", "SharedActivityLog"]
