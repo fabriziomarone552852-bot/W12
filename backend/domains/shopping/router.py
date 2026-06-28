@@ -6,6 +6,15 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, selectinload
 
 from api import deps
+from domains.audit import (
+    AuditActionType,
+    AuditEntityType,
+    AuditModule,
+    log_model_action,
+    log_model_create,
+    log_model_update,
+    model_to_audit_dict,
+)
 from . import deps as shopping_domain_deps
 from . import models, schemas
 from . import access as shopping_access
@@ -150,6 +159,62 @@ def get_config_code_id_or_500(db: Session, code_type: str, code_value: str) -> i
     return code_id
 
 
+def _log_shopping_create(
+    db: Session,
+    *,
+    entity_type: AuditEntityType,
+    entity,
+    performed_by_user_id: int,
+):
+    log_model_create(
+        db,
+        module=AuditModule.SHOPPING,
+        entity_type=entity_type,
+        entity=entity,
+        performed_by_user_id=performed_by_user_id,
+    )
+
+
+def _log_shopping_update(
+    db: Session,
+    *,
+    entity_type: AuditEntityType,
+    entity_before: dict,
+    entity_after,
+    performed_by_user_id: int,
+):
+    log_model_update(
+        db,
+        module=AuditModule.SHOPPING,
+        entity_type=entity_type,
+        entity_before=entity_before,
+        entity_after=entity_after,
+        performed_by_user_id=performed_by_user_id,
+    )
+
+
+def _log_shopping_action(
+    db: Session,
+    *,
+    entity_type: AuditEntityType,
+    action_type: AuditActionType,
+    entity,
+    performed_by_user_id: int,
+    payload_before: dict | None = None,
+    payload_after: dict | None = None,
+):
+    log_model_action(
+        db,
+        module=AuditModule.SHOPPING,
+        entity_type=entity_type,
+        action_type=action_type,
+        entity=entity,
+        performed_by_user_id=performed_by_user_id,
+        payload_before=payload_before,
+        payload_after=payload_after,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Shopping lists
 # ---------------------------------------------------------------------------
@@ -206,6 +271,13 @@ def create_shopping_list(
         updated_at=now_utc,
     )
     db.add(db_list)
+    db.flush()
+    _log_shopping_create(
+        db,
+        entity_type=AuditEntityType.SHOPPING_LIST,
+        entity=db_list,
+        performed_by_user_id=current_user.id,
+    )
     db.commit()
     db.refresh(db_list)
     return db_list
@@ -236,10 +308,19 @@ def update_shopping_list(
                 detail="Solo admin o owner del gruppo possono assegnare la lista a quel gruppo",
             )
 
+    before_data = model_to_audit_dict(db_list)
+
     for field, value in update_data.items():
         setattr(db_list, field, value)
 
     db_list.updated_at = datetime.now(timezone.utc)
+    _log_shopping_update(
+        db,
+        entity_type=AuditEntityType.SHOPPING_LIST,
+        entity_before=before_data,
+        entity_after=db_list,
+        performed_by_user_id=current_user.id,
+    )
     db.commit()
     db.refresh(db_list)
     return db_list
@@ -250,13 +331,24 @@ def delete_shopping_list(
     list_id: int,
     db_list: ManageListFullDep,
     db: DbDep,
+    current_user: CurrentUserDep,
 ):
     if db_list.id != list_id:
         raise HTTPException(status_code=400, detail="list_id non coerente")
 
+    before_data = model_to_audit_dict(db_list)
     now_utc = datetime.now(timezone.utc)
     db_list.deleted_at = now_utc
     db_list.updated_at = now_utc
+    _log_shopping_action(
+        db,
+        entity_type=AuditEntityType.SHOPPING_LIST,
+        action_type=AuditActionType.DELETE,
+        entity=db_list,
+        performed_by_user_id=current_user.id,
+        payload_before=before_data,
+        payload_after=model_to_audit_dict(db_list),
+    )
     db.commit()
     return
 
@@ -329,6 +421,13 @@ def create_shopping_item(
         updated_at=now_utc,
     )
     db.add(db_item)
+    db.flush()
+    _log_shopping_create(
+        db,
+        entity_type=AuditEntityType.SHOPPING_LIST_ITEM,
+        entity=db_item,
+        performed_by_user_id=current_user.id,
+    )
     db.commit()
     db.refresh(db_item)
     return db_item
@@ -346,6 +445,7 @@ def update_shopping_item(
         raise HTTPException(status_code=400, detail="item_id non coerente")
 
     update_data = item_in.model_dump(exclude_unset=True)
+    before_data = model_to_audit_dict(db_item)
 
     if "name_original" in update_data and update_data["name_original"] is not None:
         update_data["name_normalized"] = shopping_access.normalize_shopping_name(
@@ -357,6 +457,13 @@ def update_shopping_item(
 
     db_item.updated_by_user_id = current_user.id
     db_item.updated_at = datetime.now(timezone.utc)
+    _log_shopping_update(
+        db,
+        entity_type=AuditEntityType.SHOPPING_LIST_ITEM,
+        entity_before=before_data,
+        entity_after=db_item,
+        performed_by_user_id=current_user.id,
+    )
     db.commit()
     db.refresh(db_item)
     return db_item
@@ -372,10 +479,20 @@ def delete_shopping_item(
     if db_item.id != item_id:
         raise HTTPException(status_code=400, detail="item_id non coerente")
 
+    before_data = model_to_audit_dict(db_item)
     now_utc = datetime.now(timezone.utc)
     db_item.deleted_at = now_utc
     db_item.updated_by_user_id = current_user.id
     db_item.updated_at = now_utc
+    _log_shopping_action(
+        db,
+        entity_type=AuditEntityType.SHOPPING_LIST_ITEM,
+        action_type=AuditActionType.DELETE,
+        entity=db_item,
+        performed_by_user_id=current_user.id,
+        payload_before=before_data,
+        payload_after=model_to_audit_dict(db_item),
+    )
     db.commit()
     return
 
@@ -423,6 +540,13 @@ def create_supplier(
         updated_at=now_utc,
     )
     db.add(db_supplier)
+    db.flush()
+    _log_shopping_create(
+        db,
+        entity_type=AuditEntityType.SHOPPING_SUPPLIER,
+        entity=db_supplier,
+        performed_by_user_id=current_user.id,
+    )
     db.commit()
     db.refresh(db_supplier)
     return db_supplier
@@ -451,10 +575,20 @@ def delete_supplier(
             detail="Impossibile eliminare il fornitore: ha prezzi associati.",
         )
 
+    before_data = model_to_audit_dict(db_supplier)
     now_utc = datetime.now(timezone.utc)
     db_supplier.deleted_at = now_utc
     db_supplier.updated_by_user_id = current_user.id
     db_supplier.updated_at = now_utc
+    _log_shopping_action(
+        db,
+        entity_type=AuditEntityType.SHOPPING_SUPPLIER,
+        action_type=AuditActionType.DELETE,
+        entity=db_supplier,
+        performed_by_user_id=current_user.id,
+        payload_before=before_data,
+        payload_after=model_to_audit_dict(db_supplier),
+    )
     db.commit()
     return
 
@@ -477,6 +611,7 @@ def add_shopping_price(
     if price_in.supplier_id is not None:
         shopping_access.get_supplier_or_404(db, supplier_id=price_in.supplier_id)
 
+    item_before_data = model_to_audit_dict(db_item)
     now_utc = datetime.now(timezone.utc)
     currency_id = price_in.currency_id or get_config_code_id_or_500(db, "currency", "EUR")
     offer_flag_id = price_in.offer_flag_id or get_config_code_id_or_500(db, "offer_flag", "no")
@@ -497,12 +632,27 @@ def add_shopping_price(
         updated_at=now_utc,
     )
     db.add(db_price)
+    db.flush()
 
     db_item.is_purchased = True
     db_item.purchased_at = now_utc
     db_item.purchased_by_user_id = current_user.id
     db_item.updated_by_user_id = current_user.id
     db_item.updated_at = now_utc
+
+    _log_shopping_create(
+        db,
+        entity_type=AuditEntityType.SHOPPING_PRICE,
+        entity=db_price,
+        performed_by_user_id=current_user.id,
+    )
+    _log_shopping_update(
+        db,
+        entity_type=AuditEntityType.SHOPPING_LIST_ITEM,
+        entity_before=item_before_data,
+        entity_after=db_item,
+        performed_by_user_id=current_user.id,
+    )
 
     db.commit()
     db.refresh(db_price)
@@ -521,6 +671,7 @@ def update_shopping_price(
         raise HTTPException(status_code=400, detail="price_id non coerente")
 
     update_data = price_in.model_dump(exclude_unset=True)
+    before_data = model_to_audit_dict(db_price)
 
     if "supplier_id" in update_data and update_data["supplier_id"] is not None:
         shopping_access.get_supplier_or_404(db, supplier_id=update_data["supplier_id"])
@@ -530,6 +681,13 @@ def update_shopping_price(
 
     db_price.updated_by_user_id = current_user.id
     db_price.updated_at = datetime.now(timezone.utc)
+    _log_shopping_update(
+        db,
+        entity_type=AuditEntityType.SHOPPING_PRICE,
+        entity_before=before_data,
+        entity_after=db_price,
+        performed_by_user_id=current_user.id,
+    )
     db.commit()
     db.refresh(db_price)
     return db_price
@@ -545,10 +703,20 @@ def delete_shopping_price(
     if db_price.id != price_id:
         raise HTTPException(status_code=400, detail="price_id non coerente")
 
+    before_data = model_to_audit_dict(db_price)
     now_utc = datetime.now(timezone.utc)
     db_price.deleted_at = now_utc
     db_price.updated_by_user_id = current_user.id
     db_price.updated_at = now_utc
+    _log_shopping_action(
+        db,
+        entity_type=AuditEntityType.SHOPPING_PRICE,
+        action_type=AuditActionType.DELETE,
+        entity=db_price,
+        performed_by_user_id=current_user.id,
+        payload_before=before_data,
+        payload_after=model_to_audit_dict(db_price),
+    )
     db.commit()
     return
 
@@ -620,6 +788,15 @@ def invite_group_member(
         target_role=target_role,
     )
 
+    db.flush()
+    _log_shopping_action(
+        db,
+        entity_type=AuditEntityType.SHOPPING_GROUP_MEMBER,
+        action_type=AuditActionType.ADD_MEMBER,
+        entity=db_member,
+        performed_by_user_id=current_user.id,
+        payload_after=model_to_audit_dict(db_member),
+    )
     db.commit()
     db.refresh(db_member)
     return db_member
@@ -653,6 +830,9 @@ def update_group_member_role(
             permission=ShoppingPermission.ASSIGN_BASIC_ROLES,
         )
 
+    db_member_before = model_to_audit_dict(
+        shopping_access.get_group_member_or_404(db, member_id=member_id)
+    )
     db_member = shopping_access.update_group_member_role(
         db,
         member_id=member_id,
@@ -666,6 +846,15 @@ def update_group_member_role(
             detail="member_id non appartiene al group_id indicato",
         )
 
+    _log_shopping_action(
+        db,
+        entity_type=AuditEntityType.SHOPPING_GROUP_MEMBER,
+        action_type=AuditActionType.UPDATE_ROLE,
+        entity=db_member,
+        performed_by_user_id=current_user.id,
+        payload_before=db_member_before,
+        payload_after=model_to_audit_dict(db_member),
+    )
     db.commit()
     db.refresh(db_member)
     return db_member
@@ -682,6 +871,9 @@ def remove_group_member(
     if group.id != group_id:
         raise HTTPException(status_code=400, detail="group_id non coerente")
 
+    db_member_before = model_to_audit_dict(
+        shopping_access.get_group_member_or_404(db, member_id=member_id)
+    )
     db_member = shopping_access.remove_group_member(
         db,
         member_id=member_id,
@@ -694,5 +886,14 @@ def remove_group_member(
             detail="member_id non appartiene al group_id indicato",
         )
 
+    _log_shopping_action(
+        db,
+        entity_type=AuditEntityType.SHOPPING_GROUP_MEMBER,
+        action_type=AuditActionType.REMOVE_MEMBER,
+        entity=db_member,
+        performed_by_user_id=current_user.id,
+        payload_before=db_member_before,
+        payload_after=model_to_audit_dict(db_member),
+    )
     db.commit()
     return
