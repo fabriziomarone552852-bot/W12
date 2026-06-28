@@ -643,17 +643,7 @@ class ShoppingSupplierResponse(ORMBaseModel):
     deleted_at: Optional[datetime] = None
 
 
-class SharedActivityLogResponse(ORMBaseModel):
-    id: int
-    module_code_id: int
-    entity_type_id: int
-    action_type_id: int
-    entity_id: str
-    performed_by_user_id: int
-    created_at: datetime
-    payload_before: Optional[str] = None
-    payload_after: Optional[str] = None
-
+from domains.audit.schemas import SharedActivityLogResponse  # noqa: F401
 
 class NotificationCreate(StrictBaseModel):
     user_id: int
