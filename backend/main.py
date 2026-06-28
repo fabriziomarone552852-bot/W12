@@ -7,7 +7,6 @@ app_env, _ = load_app_env()
 
 from api import (
     analytics,
-    auth,
     admin,
     categories,
     countdowns,
@@ -18,10 +17,9 @@ from api import (
     habits,
     sync,
     tasks,
-    users,
 )
 
-from domains import shopping
+from domains import auth, shopping, users
 
 app = FastAPI(title=f"Smart Agenda API [{app_env}]", version="3.0")
 
