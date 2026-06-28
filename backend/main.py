@@ -13,11 +13,10 @@ from api import (
     daily_entries,
     daysync,
     events,
-    sync,
     tasks,
 )
 
-from domains import auth, habits, shopping, users
+from domains import auth, habits, shopping, sync, users
 
 app = FastAPI(title=f"Smart Agenda API [{app_env}]", version="3.0")
 
