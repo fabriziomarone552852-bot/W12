@@ -2,7 +2,8 @@ from typing import Generic, List, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from schemas import EventResponse, TaskResponse
+from backend.domains.events.schemas import EventResponse
+from backend.domains.tasks.schemas import TaskResponse
 
 T = TypeVar("T")
 

@@ -1,25 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 import models
 import schemas
+from backend.domains.auth.schemas import RefreshTokenRequest, Token, TokenPairResponse
 from . import deps
 
 router = APIRouter(tags=["auth"])
-
-
-class TokenPairResponse(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str
-    must_change_password: bool = False
-    is_superuser: bool = False
-
-
-class RefreshTokenRequest(BaseModel):
-    refresh_token: str
 
 
 @router.post("/register", response_model=schemas.UserResponse, status_code=201)
@@ -85,7 +73,7 @@ def login(
     )
 
 
-@router.post("/refresh", response_model=schemas.Token)
+@router.post("/refresh", response_model=Token)
 def refresh_token(
     payload: RefreshTokenRequest,
     db: Session = Depends(deps.get_db),
@@ -110,7 +98,7 @@ def refresh_token(
 
     new_access_token = deps.create_access_token(data={"sub": user.username})
 
-    return schemas.Token(
+    return Token(
         access_token=new_access_token,
         token_type="bearer",
         must_change_password=user.must_change_password,

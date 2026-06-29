@@ -2,6 +2,10 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+# Import all models to register them with SQLAlchemy
+# This MUST be done before any API imports that use models
+from backend.core.models import *  # noqa: F401, F403
+
 from api import (
     analytics,
     auth,
