@@ -1,91 +1,75 @@
 // src/context/TasksContext.tsx
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { apiUrl } from '../api/client'; 
 import { useAuth } from './AuthContext'; 
+import { useApi } from '../hooks/useApi'; 
 import type { Task } from '../types';
 
 interface TasksContextType {
   tasks: Task[];
   fetchTasks: () => Promise<void>;
-  addTask: (nuovaTask: Partial<Task>) => Promise<void>; // Partial significa che non servono tutti i campi (es. l'id lo crea il server)
+  addTask: (nuovaTask: Partial<Task>) => Promise<void>;
   updateTask: (id: number, datiAggiornati: Partial<Task>) => Promise<void>;
   deleteTask: (id: number) => Promise<void>;
 }
 const TasksContext = createContext<TasksContextType | undefined>(undefined);
 
 export const TasksProvider = ({ children }: { children: React.ReactNode }) => {
-  // Aggiungi authHeaders qui!
-  const { token, authHeaders } = useAuth(); 
+  const { token } = useAuth(); 
+  const api = useApi();
   const [tasks, setTasks] = useState<Task[]>([]);
 
   const fetchTasks = async () => {
+    if (!token) return;
     try {
-      const res = await fetch(apiUrl('/tasks'), {
-        headers: authHeaders() // <-- MODIFICATO QUI
-      });
-      const data = await res.json();
+      const data = await api.get('/tasks');
       setTasks(data.items || data); 
-    } catch (error) {
-      console.error("Errore nel recupero delle task");
-    }
+    } catch (error) { console.error("Errore fetch tasks", error); }
   };
 
   const addTask = async (nuovaTask: Partial<Task>) => {
     try {
-      const res = await fetch(apiUrl('/tasks'), {
-        method: 'POST',
-        headers: {
-          ...authHeaders(), // <-- MODIFICATO QUI
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(nuovaTask)
-      });
-      const taskSalvata = await res.json();
-      setTasks((taskPrecedenti) => [...taskPrecedenti, taskSalvata]);
-    } catch (error) {
-      console.error("Errore nel salvataggio");
-    }
+      const taskSalvata = await api.post('/tasks', nuovaTask);
+      setTasks((prev) => [...prev, taskSalvata]);
+    } catch (error) { console.error("Errore salvataggio task", error); }
   };
 
-  const updateTask = async (id: number, datiAggiornati: Partial<Task>) => {
-    try {
-      const res = await fetch(apiUrl(`/tasks/${id}`), {
-        method: 'PATCH',
-        headers: {
-          ...authHeaders(), // <-- MODIFICATO QUI
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(datiAggiornati)
-      });
-      const taskAggiornata = await res.json();
-      setTasks((taskPrecedenti) => 
-        taskPrecedenti.map((t) => (t.id === id ? taskAggiornata : t))
-      );
-    } catch (error) {
-      console.error("Errore nell'aggiornamento della task");
-    }
+  const updateTask = async (id: number, updates: Partial<Task>) => {
+  // 1. BACKUP GLOBALE: Salviamo lo stato di tutte le task prima di fare danni
+  const previousTasks = [...tasks];
+
+  // 2. OPTIMISTIC UI: Aggiorniamo la RAM globale all'istante!
+  // Tutta l'app vedrà la modifica istantaneamente
+  setTasks(prev => prev.map(t => 
+    t.id === id ? { ...t, ...updates } : t
+  ));
+
+  try {
+    // 3. CHIAMATA API: Aggiorniamo il vero database in background
+    await api.patch(`/tasks/${id}`, updates); 
+  } catch (error) {
+    // 4. ROLLBACK: Se la rete cade, ripristiniamo la situazione per tutta l'app!
+    console.error(`Errore aggiornamento task ${id}, ripristino UI...`, error);
+    setTasks(previousTasks);
+    throw error; // (Opzionale: qui puoi lanciare un toast/notifica di errore)
+  }
   };
 
   const deleteTask = async (id: number) => {
     try {
-      await fetch(apiUrl(`/tasks/${id}`), {
-        method: 'DELETE',
-        headers: authHeaders() // <-- MODIFICATO QUI
-      });
-      setTasks((taskPrecedenti) => taskPrecedenti.filter((t) => t.id !== id));
-    } catch (error) {
-      console.error("Errore nell'eliminazione della task");
+      // 1. Chiamata al server (il DB eliminerà a cascata le sottotask da solo!)
+      await api.delete(`/tasks/${id}`);
+      
+      // 2. Addio "Magia in RAM"! Ricarichiamo semplicemente l'array pulito
+      await fetchTasks();
+    } catch (error) { 
+      console.error("Errore eliminazione task", error); 
     }
   };
 
-  useEffect(() => {
-    if (token) {
-      fetchTasks();
-    }
-  }, [token]);
+  useEffect(() => { fetchTasks(); }, [token]);
 
    return (
-    <TasksContext.Provider value={{ tasks, fetchTasks,addTask, updateTask, deleteTask }}>
+    <TasksContext.Provider value={{ tasks, fetchTasks, addTask, updateTask, deleteTask }}>
       {children}
     </TasksContext.Provider>
   );

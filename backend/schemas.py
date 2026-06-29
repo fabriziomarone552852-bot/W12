@@ -31,7 +31,6 @@ class CategoryGenre(IntEnum):
 VALID_DAILY_ENTRY_TYPES = {"Obiettivo", "Priorità", "Nota"}
 VALID_COUNTDOWN_STATUS = {"active", "closed"}
 VALID_SHOPPING_GROUP_ROLE_CODES = {"reader", "editor", "admin", "owner"}
-VALID_HABIT_TYPES = {"R", "H"}
 
 
 class Token(BaseModel):
@@ -450,13 +449,14 @@ class ShoppingGroupMemberResponse(ORMBaseModel):
     group_id: int
     user_id: int
     role_id: int
-    added_by_user_id: int
+    added_by_user_id: Optional[int] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     removed_at: Optional[datetime] = None
 
 
 class ShoppingListCreate(StrictBaseModel):
+    owner_id: Optional[int] = None
     group_id: Optional[int] = None
     visibility_id: int
     status_id: Optional[int] = None
@@ -643,7 +643,17 @@ class ShoppingSupplierResponse(ORMBaseModel):
     deleted_at: Optional[datetime] = None
 
 
-from domains.audit.schemas import SharedActivityLogResponse  # noqa: F401
+class SharedActivityLogResponse(ORMBaseModel):
+    id: int
+    module_code_id: int
+    entity_type_id: int
+    action_type_id: int
+    entity_id: str
+    performed_by_user_id: int
+    created_at: datetime
+    payload_before: Optional[str] = None
+    payload_after: Optional[str] = None
+
 
 class NotificationCreate(StrictBaseModel):
     user_id: int
@@ -868,7 +878,8 @@ class HabitBase(StrictBaseModel):
     @field_validator("tipo")
     @classmethod
     def validate_tipo(cls, value: str) -> str:
-        if value not in VALID_HABIT_TYPES:
+        allowed = {"R", "H"}
+        if value not in allowed:
             raise ValueError("tipo non valido")
         return value
 
@@ -898,7 +909,8 @@ class HabitUpdate(StrictBaseModel):
     def validate_tipo(cls, value: Optional[str]) -> Optional[str]:
         if value is None:
             return value
-        if value not in VALID_HABIT_TYPES:
+        allowed = {"R", "H"}
+        if value not in allowed:
             raise ValueError("tipo non valido")
         return value
 
@@ -922,11 +934,11 @@ class SupplierPriceSummary(BaseModel):
 
 
 class PriceHistoryPoint(BaseModel):
-    purchase_date: date
-    price: Decimal
-    is_offer: bool
+    data_acquisto: datetime
+    prezzo: Decimal
+    in_offerta: bool
     supplier_id: int
-    supplier_name: str
+    supplier_nome: str
 
 
 TaskResponse.model_rebuild()

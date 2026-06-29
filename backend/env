@@ -1,0 +1,2 @@
+APP_ENV=dev
+DATABASE_URL=postgresql://PostGre:Password-Robusta@192.168.187.176:5433/family-smart

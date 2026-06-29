@@ -1,11 +1,14 @@
 import os
 
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-from config import get_database_url
+load_dotenv()
 
-DATABASE_URL = get_database_url()
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if not DATABASE_URL:
+    raise ValueError("Variabile d'ambiente DATABASE_URL non trovata. Controlla il file .env.")
 
 engine_kwargs = {
     "pool_pre_ping": True,

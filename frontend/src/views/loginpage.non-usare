@@ -1,0 +1,99 @@
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+
+const LoginPage: React.FC = () => {
+  const { login, loading, error, clearError } = useAuth();
+  const navigate = useNavigate();
+
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    clearError();
+    try {
+      await login(username, password);
+      // dopo il login, manda a /tasks
+      navigate('/tasks', { replace: true });
+    } catch {
+      // l'errore è già gestito in AuthContext (setError)
+    }
+  };
+
+  return (
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#f3f4f6',
+      }}
+    >
+      <div
+        style={{
+          width: 320,
+          padding: 24,
+          borderRadius: 8,
+          background: '#fff',
+          boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
+          fontFamily: 'system-ui, sans-serif',
+        }}
+      >
+        <h1 style={{ margin: '0 0 16px', fontSize: 20 }}>Login</h1>
+
+        <form onSubmit={onSubmit} style={{ display: 'grid', gap: 12 }}>
+          <div>
+            <label
+              style={{
+                display: 'block',
+                fontWeight: 600,
+                marginBottom: 4,
+              }}
+            >
+              Username
+            </label>
+            <input
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="username"
+              required
+              style={{ width: '100%' }}
+            />
+          </div>
+
+          <div>
+            <label
+              style={{
+                display: 'block',
+                fontWeight: 600,
+                marginBottom: 4,
+              }}
+            >
+              Password
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              required
+              style={{ width: '100%' }}
+            />
+          </div>
+
+          {error && (
+            <p style={{ color: 'red', fontSize: 13, margin: 0 }}>{error}</p>
+          )}
+
+          <button type="submit" disabled={loading}>
+            {loading ? 'Accesso in corso...' : 'Accedi'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+export default LoginPage;

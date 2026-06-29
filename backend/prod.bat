@@ -1,1 +1,0 @@
-set APP_ENV=prod && uvicorn main:app

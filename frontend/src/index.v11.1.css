@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+@layer components {
+  /* Layout Base */
+  .app-container { @apply flex h-screen bg-gray-100 font-sans text-gray-900; }
+  
+  /* Sidebar */
+  .sidebar { @apply w-64 bg-gray-900 text-white flex flex-col border-r border-gray-800 flex-shrink-0 z-10 shadow-xl; }
+  .sidebar-header { @apply p-6 border-b border-gray-800; }
+  .sidebar-nav { @apply flex-1 p-4 space-y-2 overflow-y-auto; }
+  .sidebar-footer { @apply flex items-center justify-between gap-2 p-4 border-t border-gray-800 bg-gray-900; }
+  
+  /* Link Sidebar */
+  .nav-link { @apply block px-4 py-3 rounded-lg transition-colors font-medium text-gray-400 hover:bg-gray-800 hover:text-white; }
+  .nav-link-active { @apply bg-blue-600 text-white shadow-md; }
+
+  /* Icona Impostazioni */
+  .btn-icon {
+	  @apply inline-flex items-center justify-center rounded-lg flex-shrink-0 cursor-pointer transition-colors duration-200;
+    @apply text-gray-400 bg-transparent;
+    @apply w-10 h-10; /* 32px */
+    text-decoration: none;
+  }
+
+  .btn-icon:hover {
+    @apply bg-gray-800 text-white;
+  }
+
+  .btn-icon-active {
+    @apply bg-blue-600 text-white shadow-md;
+  }
+  
+  /* Header Modificato per centratura assoluta */
+  .main-header { @apply h-20 bg-white border-b border-gray-200 flex items-center justify-between px-8 flex-shrink-0 z-0 relative; }
+  
+  /* NUOVA BARRA PROGRESSO (Centrata, Larga, Alta) */
+  .progress-container { @apply absolute left-1/2 transform -translate-x-1/2 w-[40%] min-w-[300px]; }
+  .progress-label-wrap { @apply flex justify-center text-[10px] font-bold text-gray-400 mb-1 uppercase tracking-widest; }
+  .progress-bar-bg { @apply w-full bg-gray-200 rounded-full h-8 overflow-hidden shadow-inner; }
+  .progress-bar-fill { @apply bg-green-500 h-full rounded-full transition-all duration-1000 ease-out flex items-center justify-end px-3 min-w-[3rem]; }
+  
+  /* Bottone Logout */
+  .btn-logout { @apply flex-1 flex items-center justify-center h-10 px-4 text-sm font-medium transition-colors duration-200 rounded-lg cursor-pointer; @apply text-red-400 bg-transparent hover:text-white hover:bg-red-600; }
+
+  
+}

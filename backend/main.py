@@ -1,13 +1,26 @@
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from config import load_app_env
+from api import (
+    analytics,
+    auth,
+    admin,
+    categories,
+    countdowns,
+    daily_entries,
+    events,
+    habit_log,
+    habits,
+    shopping,
+    sync,
+    tasks,
+    users,
+)
 
-app_env, _ = load_app_env()
+load_dotenv()
 
-from domains import auth, categories, countdowns, events, habits, planning, shopping, sync, system, tasks, users
-
-app = FastAPI(title=f"Smart Agenda API [{app_env}]", version="3.0")
+app = FastAPI(title="Smart Agenda API", version="2.0")
 
 origins = [
     "http://localhost:5173",
@@ -28,10 +41,10 @@ app.include_router(tasks.router)
 app.include_router(events.router)
 app.include_router(categories.router)
 app.include_router(shopping.router)
-app.include_router(system.analytics_router)
-app.include_router(system.admin_router)
-app.include_router(planning.daily_entries_router)
+app.include_router(analytics.router)
+app.include_router(admin.router)
+app.include_router(daily_entries.router)
 app.include_router(countdowns.router)
 app.include_router(habits.router)
-app.include_router(planning.router)
+app.include_router(habit_log.router)
 app.include_router(sync.router)

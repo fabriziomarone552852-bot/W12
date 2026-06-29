@@ -1,5 +1,6 @@
 // src/components/day/HabitsBar.tsx
 import React from 'react';
+import { PlusIcon } from '../shared/utils/Icons';
 
 export interface HabitItem {
   id: number;
@@ -16,7 +17,7 @@ interface HabitsBarProps {
 
 const HabitsBar: React.FC<HabitsBarProps> = ({ habits, onToggleHabit, onAddHabitClick }) => {
   return (
-    <div className=" rounded-xl  p-3 shrink-0 flex items-center justify-center gap-3 overflow-x-auto custom-scrollbar">
+    <div className="rounded-xl p-3 shrink-0 flex items-center justify-center gap-3 overflow-x-auto custom-scrollbar">
       
       {habits.map(h => (
         <button 
@@ -33,15 +34,12 @@ const HabitsBar: React.FC<HabitsBarProps> = ({ habits, onToggleHabit, onAddHabit
         </button>
       ))}
 
-      {/* Tasto + Nuovo Habit (Stile dashed) */}
       <button 
         onClick={onAddHabitClick}
         title="Nuova Abitudine"
         className="w-10 h-10 shrink-0 border-2 border-dashed border-gray-300 rounded-xl text-gray-400 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 hover:scale-110 active:scale-95 active:bg-blue-100 transition-all flex justify-center items-center focus:outline-none"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-        </svg>
+        <PlusIcon />
       </button>
       
     </div>

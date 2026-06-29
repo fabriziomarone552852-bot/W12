@@ -1,24 +1,24 @@
 from typing import Generic, List, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
-from schemas import TaskResponse, EventResponse
+from schemas import EventResponse, TaskResponse
 
 T = TypeVar("T")
 
 
 class PaginatedBase(BaseModel, Generic[T]):
-    items: List[T]
-    total: int
-    limit: int
-    offset: int
+    model_config = ConfigDict(from_attributes=True)
+
+    items: List[T] = Field(default_factory=list)
+    total: int = Field(..., ge=0)
+    limit: int = Field(..., ge=1)
+    offset: int = Field(..., ge=0)
 
 
 class PaginatedTasks(PaginatedBase[TaskResponse]):
     """Pagina di TaskResponse."""
-    pass
 
 
 class PaginatedEvents(PaginatedBase[EventResponse]):
     """Pagina di EventResponse."""
-    pass

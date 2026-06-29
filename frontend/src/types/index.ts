@@ -49,8 +49,30 @@ export interface DailyEntry {
   id: number;
   user_id: number;
   data_riferimento: string; // Formato YYYY-MM-DD
-  tipo: 'Obiettivo' | 'Priorità' | 'Countdown' | 'Nota'; // Mappato da VALID_DAILY_ENTRY_TYPES
+  tipo: 'Obiettivo' | 'Priorità' | 'Nota'; // Mappato da VALID_DAILY_ENTRY_TYPES
   testo: string;
+  immagine_url?: string | null;
+}
+
+export interface Countdown {
+  id: number;
+  user_id: number;
+  title: string;
+  target_date: string; // Formato YYYY-MM-DD
+  status: 'active' | 'closed'; // Mappato da VALID_COUNTDOWN_STATUS
+  immagine_url?: string | null;
+  created_at: string; // ISO datetime
+  updated_at?: string | null;
+  closed_at?: string | null;
+  reopened_at?: string | null;
+}
+
+export interface RawCountdown {
+  id: number;
+  title?: string;             // Proveniente dal nuovo modello Countdown
+  testo?: string;             // Proveniente dal vecchio modello DailyEntry
+  target_date?: string;       // Proveniente dal nuovo modello Countdown
+  data_riferimento?: string;  // Proveniente dal vecchio modello DailyEntry
   immagine_url?: string | null;
 }
 
@@ -80,3 +102,19 @@ export interface Habit {
   periods: HabitPeriod[];
   logs: HabitLog[];
 }
+
+export interface NoteItem {
+  id: number;
+  text: string;
+  dateStr: string;
+  color: string;
+  isNew?: boolean; // Il punto interrogativo significa che è opzionale
+}
+
+export const CategoryGenre = {
+  TASKS: 1,
+  EVENTS: 2,
+  COMMON: 3
+} as const;
+
+export type CategoryGenre = typeof CategoryGenre[keyof typeof CategoryGenre];
