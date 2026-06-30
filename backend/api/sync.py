@@ -25,7 +25,7 @@ def _to_utc_naive(dt: datetime) -> datetime:
     return dt.astimezone(UTC).replace(tzinfo=None)
 
 
-@router.get("/day", response_model=schemas.DaySyncResponse)
+@router.get("/day", response_model=schemas.DailyEntryResponse)
 def get_day_sync(
     data_riferimento: date = Query(...),
     current_user: models.User = Depends(deps.get_current_user),
@@ -130,7 +130,7 @@ def get_day_sync(
     )
 
     # 2. LA MAGIA FINALE: Convalidiamo manualmente tutto in Pydantic V2 prima del return!
-    return schemas.DaySyncResponse(
+    return schemas.DailyEntryResponse(
         data_riferimento=data_riferimento,
         obiettivo=schemas.DailyEntryResponse.model_validate(obiettivo) if obiettivo else None,
         priorita=[schemas.DailyEntryResponse.model_validate(p) for p in priorita],

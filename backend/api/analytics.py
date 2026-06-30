@@ -3,10 +3,10 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-import models
-import schemas
+from backend.core import models
+from backend.domains.shopping import schemas
 from . import deps
-from services.analytics_prices import get_item_price_metrics, get_price_history_series
+from backend.services.analytics_prices import get_item_price_metrics, get_price_history_series
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 

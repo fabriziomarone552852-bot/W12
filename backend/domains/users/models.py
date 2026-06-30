@@ -131,7 +131,7 @@ class User(Base):
     )
 
     __table_args__ = (
-        Index("ix_users_username_lower_unique", func.lower(User.username), unique=True),
+        Index("ix_users_username_lower_unique", func.lower(username), unique=True),
     )
 
     def __repr__(self) -> str:

@@ -1,12 +1,12 @@
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
+load_dotenv()
 # Import all models to register them with SQLAlchemy
 # This MUST be done before any API imports that use models
 from backend.core.models import *  # noqa: F401, F403
 
-from api import (
+from backend.api import (
     analytics,
     auth,
     admin,
@@ -22,13 +22,13 @@ from api import (
     users,
 )
 
-load_dotenv()
 
-app = FastAPI(title="Smart Agenda API", version="2.0")
+
+app = FastAPI(title="Smart Agenda API", version="3.0")
 
 origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
 ]
 
 app.add_middleware(
