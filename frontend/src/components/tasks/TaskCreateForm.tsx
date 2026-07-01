@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Category, Priorita, TaskCreateFormState } from '../../types/tasks';
+import type { Category, Priorita, TaskCreateFormState } from '@/types/tasks';
 
 interface TaskCreateFormProps {
   form: TaskCreateFormState;

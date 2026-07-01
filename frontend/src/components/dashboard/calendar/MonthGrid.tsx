@@ -1,12 +1,12 @@
 // src/components/dashboard/calendar/MonthGrid.tsx
 import React, { useRef } from 'react';
-import type { CalendarState } from '../../../hooks/useCalendarState';
-import type { CalendarEvent } from '../CalendarColumn';
-import { pad } from '../../../utils/dateUtils';
-import { isEventInDay } from '../../../utils/eventUtils';
-import { getHexColor } from '../../../utils/uiUtils';
-import type { Task } from '../../../types';
-import { TimeDisplay, DateRangeDisplay } from '../../shared/utils/DateTimeDisplays';
+import type { CalendarState } from '@/hooks/useCalendarState';
+import type { CalendarEvent } from '@/types';
+import { pad } from '@/utils/dateUtils';
+import { isEventInDay } from '@/utils/eventUtils';
+import { getHexColor } from '@/utils/uiUtils';
+import type { Task } from '@/types';
+import { TimeDisplay, DateRangeDisplay } from '@/components/shared/utils/DateTimeDisplays';
 
 interface MonthGridProps {
   state: CalendarState;

@@ -1,7 +1,7 @@
 // src/components/day/CountdownDetailModal.tsx
 import React, { useState } from 'react';
 import type { CountdownItem } from './CountdownWidget';
-import { calculateTimeLeft } from '../../utils/dateUtils'; 
+import { calculateTimeLeft } from '@/utils/dateUtils'; 
 import ConfirmDialog from '../shared/dialog/ConfirmDialog'; 
 import TickDisplay from './utils/TickDisplay';
 import { TrashIcon, EditIcon, CloseIcon } from '../shared/utils/Icons';

@@ -1,21 +1,21 @@
 // src/components/dashboard/EventNewModal.tsx
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { type Category, CategoryGenre } from '../../types';
-import type { CalendarEvent } from '../dashboard/CalendarColumn';
+import { useAuth } from '@/context/AuthContext';
+import { type Category, CategoryGenre } from '@/types';
+import type { CalendarEvent } from '@/types';
 import DatePicker from './utils/DatePicker'; 
-import { getLocalDateString, smontaOrario, pad, formatTimeToServer } from '../../utils/dateUtils'; 
+import { getLocalDateString, smontaOrario, pad, formatTimeToServer } from '@/utils/dateUtils'; 
 import CategorySelect from '../shared/utils/CategorySelect';
 import BaseModal from '../shared/dialog/BaseModal';
-import { useConfirm } from '../../context/ConfirmContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import { CancelIcon } from '../shared/utils/Icons';
-import { combineDateAndTime } from '../../utils/dateUtils';
-import { parseRRule, buildRRule } from '../../utils/rruleUtils';
+import { combineDateAndTime } from '@/utils/dateUtils';
+import { parseRRule, buildRRule } from '@/utils/rruleUtils';
 import { RecurrenceEditor } from './utils/RecurrenceEditor';
-import { useCategories } from '../../hooks/useCategories';
-import { useAgendaMutations } from '../../hooks/useAgendaMutations';
+import { useCategories } from '@/hooks/useCategories';
+import { useAgendaMutations } from '@/hooks/useAgendaMutations';
 import { useQuery } from '@tanstack/react-query';
-import { useApi } from '../../hooks/useApi';
+import { useApi } from '@/hooks/useApi';
 
 interface NewEventModalProps {
   isOpen: boolean; 

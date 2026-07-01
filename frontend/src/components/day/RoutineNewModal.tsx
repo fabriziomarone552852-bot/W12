@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import type { RoutineItem } from './RoutineColumn';
 import DatePicker from '../shared/utils/DatePicker'; 
-import { getLocalDateString } from '../../utils/dateUtils'; 
-import { parseRRule, buildRRule } from '../../utils/rruleUtils'; 
+import { getLocalDateString } from '@/utils/dateUtils'; 
+import { parseRRule, buildRRule } from '@/utils/rruleUtils'; 
 import BaseModal from '../shared/dialog/BaseModal';
 import { RecurrenceEditor } from '../shared/utils/RecurrenceEditor';
 

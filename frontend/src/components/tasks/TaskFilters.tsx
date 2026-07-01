@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Category } from '../../types/tasks';
+import type { Category } from '@/types/tasks';
 
 interface TaskFiltersProps {
   filtroStato: 'tutti' | 'aperti' | 'completati';

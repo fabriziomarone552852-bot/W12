@@ -1,6 +1,6 @@
 // src/components/shared/TimeInput.tsx
 import React from 'react';
-import { smontaOrario } from '../../../utils/dateUtils';
+import { smontaOrario } from '@/utils/dateUtils';
 import { CancelIcon } from './Icons';
 
 interface TimeInputProps {

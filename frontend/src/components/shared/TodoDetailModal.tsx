@@ -1,15 +1,15 @@
 // src/components/dashboard/TodoDetailModal.tsx
 import React, { useMemo } from 'react';
-import { type TaskTodo } from '../shared/TodoColumn';
-import type { Task } from '../../types';
+import { type TaskTodo } from '@/types';
+import type { Task } from '@/types';
 import BaseModal from '../shared/dialog/BaseModal'; 
-import { useConfirm } from '../../context/ConfirmContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import { Badge } from '../shared/utils/Badges';
 import { TrashIcon, EditIcon, LocationIcon } from '../shared/utils/Icons';
-import { formatToItalianShortDate } from '../../utils/dateUtils';
-import { useAgendaMutations } from '../../hooks/useAgendaMutations';
+import { formatToItalianShortDate } from '@/utils/dateUtils';
+import { useAgendaMutations } from '@/hooks/useAgendaMutations';
 import { useQuery } from '@tanstack/react-query';
-import { useApi } from '../../hooks/useApi';
+import { useApi } from '@/hooks/useApi';
 
 interface TaskDetailModalProps {
   isOpen: boolean;

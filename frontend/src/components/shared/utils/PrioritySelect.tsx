@@ -15,7 +15,7 @@ const PrioritySelect: React.FC<PrioritySelectProps> = ({ value, onChange }) => {
   return (
     <select 
       value={value} 
-      onChange={(e) => onChange(e.target.value as any)}
+      onChange={(e) => onChange(e.target.value as 'Alta' | 'Media' | 'Bassa')}
       className={`w-full px-3 py-2 border border-gray-200 rounded-xl text-sm font-bold uppercase transition-colors outline-none cursor-pointer ${styles[value]}`}
     >
       <option value="Bassa">Bassa</option>

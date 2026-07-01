@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import type { CountdownItem } from './CountdownWidget';
 import DatePicker from '../shared/utils/DatePicker';
 import TimeInput from '../shared/utils/TimeInput'; 
-import { combineDateAndTime, pad } from '../../utils/dateUtils'; 
+import { combineDateAndTime, pad } from '@/utils/dateUtils'; 
 import BaseModal from '../shared/dialog/BaseModal';
 
 interface CountdownNewModalProps {

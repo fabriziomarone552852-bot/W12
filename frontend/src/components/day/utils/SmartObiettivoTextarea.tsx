@@ -30,4 +30,5 @@ export const SmartObiettivoTextarea: React.FC<SmartObiettivoTextareaProps> = ({
       className={`w-full h-24 font-bold text-gray-800 border-none focus:ring-0 p-0 bg-transparent placeholder-gray-300 resize-none overflow-y-auto custom-scrollbar leading-tight transition-all duration-200 ${getObiettivoFontSize(text)}`}
     />
   );
+
 };

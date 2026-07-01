@@ -1,8 +1,8 @@
 // src/components/dashboard/calendar/CalendarHeader.tsx
 import React from 'react';
-import type { CalendarState } from '../../../hooks/useCalendarState';
-import { nomiMesiLungo, nomiMesiCorto, pad, getFirstDayIndex, getDaysInMonth, isSameWeek, getMondayOfCurrentWeek } from '../../../utils/dateUtils';
-import { BackIcon, ForwardIcon } from '../../shared/utils/Icons';
+import type { CalendarState } from '@/hooks/useCalendarState';
+import { nomiMesiLungo, nomiMesiCorto, pad, getFirstDayIndex, getDaysInMonth, isSameWeek, getMondayOfCurrentWeek } from '@/utils/dateUtils';
+import { BackIcon, ForwardIcon } from '@/components/shared/utils/Icons';
 
 interface CalendarHeaderProps {
   state: CalendarState;

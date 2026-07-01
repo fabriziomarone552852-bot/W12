@@ -1,9 +1,9 @@
 // src/components/dashboard/WeeklyFocusPopup.tsx
 import React, { useMemo } from 'react';
-import type { CalendarEvent } from './CalendarColumn';
-import { getHexColor, getDynamicStyles } from '../../utils/uiUtils';
-import { pad } from '../../utils/dateUtils';
-import { calculateDailyEventLayout, type DayEventItem } from '../../utils/eventUtils';
+import type { CalendarEvent } from '@/types';
+import { getHexColor, getDynamicStyles } from '@/utils/uiUtils';
+import { pad } from '@/utils/dateUtils';
+import { calculateDailyEventLayout, type DayEventItem } from '@/utils/eventUtils';
 
 interface WeeklyFocusPopupProps {
   dayNameShort: string;

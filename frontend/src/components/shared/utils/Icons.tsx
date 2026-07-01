@@ -36,15 +36,21 @@ export type IconName =
   | 'university'
   | 'warning';
   
-interface IconProps {
-  name: IconName;
-  className?: string; // Permette di sovrascrivere colori e dimensioni da Tailwind
-}
+// interface IconProps {
+//   name: IconName;
+//   className?: string; // Permette di sovrascrivere colori e dimensioni da Tailwind
+// }
 
 export const ArrowDownIcon = ({ className = "h-3 w-3 text-gray-400 my-0.5" }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
         <path fillRule="evenodd" d="M16.707 10.293a1 1 0 010 1.414l-6 6a1 1 0 01-1.414 0l-6-6a1 1 0 111.414-1.414L9 14.586V3a1 1 0 012 0v11.586l4.293-4.293a1 1 0 011.414 0z" clipRule="evenodd" />
     </svg>
+)
+
+export const ArrowRightIcon = ({ className = "h-2.5 w-2.5 mx-0.5 text-gray-400 inline shrink-0" }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
+    <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+  </svg>
 )
 
 export const ArrowRightLongIcon = ({ className = "h-4 w-4 shrink-0" }) => (
@@ -100,6 +106,12 @@ export const CloseIcon = ({ className = "w-5 h-5" }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
     </svg>
+)
+
+export const CloseFillIcon = ({ className = "h-4 w-4" }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
+    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+  </svg>
 )
 
 export const CountdownIcon = ({ className = "w-5 h-5 text-blue-500" }) => (
@@ -237,3 +249,4 @@ export const WarningIcon = ({ className = "w-6 h-6" }) => (
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
     </svg>
 )
+

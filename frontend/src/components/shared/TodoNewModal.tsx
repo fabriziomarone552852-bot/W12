@@ -1,19 +1,19 @@
 // src/components/dashboard/NewTaskModal.tsx
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { type Category, type Task, CategoryGenre } from '../../types';
-import { type TaskTodo } from '../shared/TodoColumn';
+import { useAuth } from '@/context/AuthContext';
+import { type Task, CategoryGenre } from '@/types';
+import { type TaskTodo } from '@/types';
 import DatePicker from './utils/DatePicker'; 
 import CategorySelect from './utils/CategorySelect'; 
 import BaseModal from '../shared/dialog/BaseModal';
-import { useConfirm } from '../../context/ConfirmContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import { CloseIcon, CheckCircleIcon } from '../shared/utils/Icons';
 import TaskTreeSelector from '../shared/utils/TaskTreeSelector';
 import PrioritySelect from '../shared/utils/PrioritySelect';
-import { useCategories } from '../../hooks/useCategories';
-import { useAgendaMutations } from '../../hooks/useAgendaMutations';
+import { useCategories } from '@/hooks/useCategories';
+import { useAgendaMutations } from '@/hooks/useAgendaMutations';
 import { useQuery } from '@tanstack/react-query';
-import { useApi } from '../../hooks/useApi';
+import { useApi } from '@/hooks/useApi';
 
 interface NewTaskModalProps {
   isOpen: boolean;

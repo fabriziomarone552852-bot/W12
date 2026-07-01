@@ -3,9 +3,9 @@ import React, { useRef } from 'react';
 import { Pagination } from '../shared/utils/Pagination';
 import { EmptyState } from '../shared/utils/EmptyState';
 import { AddButton } from '../shared/utils/AddButton';
-import { useAutoFitPagination } from '../../hooks/useAutoFitPagination';
+import { useAutoFitPagination } from '@/hooks/useAutoFitPagination';
 import { CheckIcon } from '../shared/utils/Icons';
-import { DEFAULT_COVER_IMAGE } from '../../utils/constants';
+import { DEFAULT_COVER_IMAGE } from '@/utils/constants';
 import { RoutineHitbox } from './RoutineHitbox';
 
 export interface RoutinePeriod {
@@ -77,7 +77,7 @@ const RoutineColumn: React.FC<RoutineColumnProps> = ({ routines, onUpdateRoutine
                 <div className="flex shrink-0 items-center justify-end">
                   {routine.targetCompletions === 1 ? (
                     <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 shadow-sm ${isCompleted ? 'bg-green-500 border-green-500' : 'border-white/50 bg-white/20'}`}>
-                      {isCompleted && <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                      {isCompleted && <CheckIcon className="w-4 h-4 text-white" />}
                     </div>
                   ) : routine.targetCompletions <= 10 ? (
                     <div className="grid grid-cols-5 gap-1.5 justify-items-end">
@@ -88,7 +88,7 @@ const RoutineColumn: React.FC<RoutineColumnProps> = ({ routines, onUpdateRoutine
                   ) : (
                     <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-300 shadow-sm ${isCompleted ? 'bg-green-500 border-green-500' : 'border-white/50 bg-white/20 backdrop-blur-sm'}`}>
                       {isCompleted ? (
-                        <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                        <CheckIcon className="w-5 h-5 text-white" />
                       ) : (
                         <span className="text-white font-black text-xs drop-shadow-md">{remaining}</span>
                       )}

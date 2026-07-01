@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Task } from '../../types/tasks';
+import type { Task } from '@/types/tasks';
 
 interface TaskListSectionProps {
   loading: boolean;

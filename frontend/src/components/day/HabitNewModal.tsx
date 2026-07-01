@@ -1,9 +1,9 @@
 // src/components/day/HabitNewModal.tsx
 import React, { useState, useEffect } from 'react';
-import { getLocalDateString } from '../../utils/dateUtils'; 
+import { getLocalDateString } from '@/utils/dateUtils'; 
 import BaseModal from '../shared/dialog/BaseModal';
 import { InfoIcon } from '../shared/utils/Icons';
-import { buildRRule } from '../../utils/rruleUtils';
+import { buildRRule } from '@/utils/rruleUtils';
 
 export interface HabitSavePayload {
   titolo: string;

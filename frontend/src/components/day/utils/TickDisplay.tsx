@@ -1,7 +1,7 @@
 // src/components/day/utils/TickDisplay.tsx
 import React, { useState, useEffect } from 'react';
-import { calculateTimeLeft, pad } from '../../../utils/dateUtils';
-import { useCurrentTime } from '../../../hooks/useCurrentTime';
+import { calculateTimeLeft, pad } from '@/utils/dateUtils';
+import { useCurrentTime } from '@/hooks/useCurrentTime';
 
 interface TickDisplayProps {
   targetDateStr: string;

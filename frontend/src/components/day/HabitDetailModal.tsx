@@ -1,8 +1,8 @@
 // src/components/day/HabitDetailModal.tsx
 import React from 'react';
 import BaseModal from '../shared/dialog/BaseModal';
-import { useHabitLogs } from '../../hooks/useHabitLogs';
-import { useConfirm } from '../../context/ConfirmContext';
+import { useHabitLogs } from '@/hooks/useHabitLogs';
+import { useConfirm } from '@/context/ConfirmContext';
 
 export interface HabitPeriod {
   id: number;

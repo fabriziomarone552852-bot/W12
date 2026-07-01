@@ -1,6 +1,6 @@
 // src/components/shared/utils/Badge.tsx
 import React from 'react';
-import { getTextColorForBackground } from '../../../utils/uiUtils'; // Assicurati che il percorso sia corretto
+import { getTextColorForBackground } from '@/utils/uiUtils'; // Assicurati che il percorso sia corretto
 
 interface BadgeProps {
   children: React.ReactNode;

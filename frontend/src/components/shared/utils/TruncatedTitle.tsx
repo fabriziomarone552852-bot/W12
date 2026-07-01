@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { useResizeObserver } from '../../../hooks/useResizeObserver';
+import { useResizeObserver } from '@/hooks/useResizeObserver';
 
 export const TruncatedTitle: React.FC<{ title: string; isDone?: boolean }> = ({ title, isDone }) => {
   const titleRef = useRef<HTMLSpanElement>(null);

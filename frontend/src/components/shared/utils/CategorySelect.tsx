@@ -1,9 +1,9 @@
 // src/components/shared/CategorySelect.tsx
 import React, { useState } from 'react';
-import { CategoryGenre, type Category } from '../../../types';
-import { useOutsideClick } from '../../../hooks/useOutsideClick';
+import { CategoryGenre, type Category } from '@/types';
+import { useOutsideClick } from '@/hooks/useOutsideClick';
 import { PlusIcon, DropdownIcon, CloseIcon } from './Icons';
-import { useCategories } from '../../../hooks/useCategories';
+import { useCategories } from '@/hooks/useCategories';
 
 interface CategorySelectProps {
   value: string;
@@ -23,7 +23,7 @@ const CategorySelect: React.FC<CategorySelectProps> = ({ value, onChange, genreT
 
   const activeColor = categories.find((c: Category) => c.name === value)?.colore || '#9CA3AF';
 
-  const wrapperRef = useOutsideClick(() => {
+  const wrapperRef = useOutsideClick<HTMLDivElement>(() => {
     if (isDropdownOpen) setIsDropdownOpen(false);
   });
 
@@ -71,7 +71,7 @@ const CategorySelect: React.FC<CategorySelectProps> = ({ value, onChange, genreT
   };
 
   return (
-    <div className="relative" ref={wrapperRef as any}>
+    <div className="relative" ref={wrapperRef}>
       <div className="flex justify-between items-center mb-1">
         <label className="text-xs font-bold text-gray-500 uppercase">Categoria</label>
         <button type="button" onClick={() => setIsNewModalOpen(true)} className="hover:bg-blue-100 text-gray-500 hover:text-blue-500 rounded p-0.5 transition-colors">

@@ -4,7 +4,7 @@ import type {
   Task,
   SubtaskFormState,
   EditTaskFormState,
-} from '../../types/tasks';
+} from '@/types/tasks';
 
 interface TaskRowsProps {
   tasks: Task[];

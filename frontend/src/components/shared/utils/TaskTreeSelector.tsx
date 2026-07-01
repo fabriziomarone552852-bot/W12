@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import type { Task } from '../../../types';
+import type { Task } from '@/types';
 
 interface TaskTreeSelectorProps {
   tasks: Task[];

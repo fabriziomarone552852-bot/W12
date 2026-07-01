@@ -4,29 +4,13 @@ import { TruncatedTitle } from './utils/TruncatedTitle';
 import { Pagination } from './utils/Pagination';
 import { EmptyState } from './utils/EmptyState';
 import { AddButton } from './utils/AddButton';
-import { sortTasks } from '../../utils/taskUtils';
-import { useConfirm } from '../../context/ConfirmContext';
-import { useAutoFitPagination } from '../../hooks/useAutoFitPagination';
+import { sortTasks } from '@/utils/taskUtils';
+import { useConfirm } from '@/context/ConfirmContext';
+import { useAutoFitPagination } from '@/hooks/useAutoFitPagination';
 import { CalendarIcon, CalendarXIcon, SwitchIcon } from './utils/Icons';
 import { Badge } from './utils/Badges';
+import { type TaskTodo } from '@/types';
 
-export interface TaskTodo {
-  id: number;
-  title: string;
-  deadline: string;
-  dateStr: string;
-  done: boolean;
-  priority: 'Alta' | 'Media' | 'Bassa';
-  category: string;
-  categoryColor?: string;
-  description: string;
-  location: string;
-  parent_id?: number | null;
-  isUrgentFromSubtask?: boolean;
-  hasActiveSubtasks?: boolean;
-  isPromotedSubtask?: boolean;
-  data_fatto?: string | null;
-}
 
 interface TodoColumnProps {
   todos: TaskTodo[];

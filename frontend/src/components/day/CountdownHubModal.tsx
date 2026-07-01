@@ -3,7 +3,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import type { CountdownItem } from './CountdownWidget';
 import BaseModal from '../shared/dialog/BaseModal';
 import { CountdownIcon, PlusIcon } from '../shared/utils/Icons';
-import { useCurrentTime } from '../../hooks/useCurrentTime';
+import { useCurrentTime } from '@/hooks/useCurrentTime';
 
 interface CountdownsHubModalProps {
   isOpen: boolean;

@@ -1,7 +1,8 @@
 // src/components/shared/utils/DatePicker.tsx
 import React, { useState, useEffect } from 'react';
-import { nomiMesiLungo, pad, getDaysInMonth, getFirstDayIndex, formatToItalianShortDate } from '../../../utils/dateUtils';
-import { useOutsideClick } from '../../../hooks/useOutsideClick';
+import { nomiMesiLungo, pad, getDaysInMonth, getFirstDayIndex, formatToItalianShortDate } from '@/utils/dateUtils';
+import { useOutsideClick } from '@/hooks/useOutsideClick';
+import { CalendarIcon, BackIcon, ForwardIcon } from './Icons';
 
 interface DatePickerProps {
   value: string; // Formato YYYY-MM-DD
@@ -44,9 +45,7 @@ const DatePicker: React.FC<DatePickerProps> = ({ value, onChange, isOpen, onClos
         <span className={value ? 'text-gray-700 font-medium' : 'text-gray-400 font-medium'}>
           {value ? formatToItalianShortDate(value) : placeholder}
         </span>
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
+        <CalendarIcon className="w-4 h-4 text-gray-400" />
       </div>
       
       {isOpen && (
@@ -57,11 +56,11 @@ const DatePicker: React.FC<DatePickerProps> = ({ value, onChange, isOpen, onClos
           
           <div className="flex justify-between items-center mb-4 px-2">
             <button type="button" onClick={() => setPickerMonthDate(new Date(year, month - 1, 1))} className="text-gray-400 hover:text-gray-800 transition-colors">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
+              <BackIcon className="w-4 h-4" />
             </button>
             <span className="font-bold text-gray-800 text-sm">{nomiMesiLungo[month]} {year}</span>
             <button type="button" onClick={() => setPickerMonthDate(new Date(year, month + 1, 1))} className="text-gray-400 hover:text-gray-800 transition-colors">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+              <ForwardIcon className="w-4 h-4" />
             </button>
           </div>
           

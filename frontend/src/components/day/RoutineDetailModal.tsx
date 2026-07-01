@@ -2,11 +2,11 @@
 import React, { useState, useMemo } from 'react';
 import type { RoutineItem, RoutinePeriod } from './RoutineColumn';
 import BaseModal from '../shared/dialog/BaseModal';
-import { useHabitLogs } from '../../hooks/useHabitLogs'; 
-import { translateRRule } from '../../utils/rruleUtils';
-import { useConfirm } from '../../context/ConfirmContext';
+import { useHabitLogs } from '@/hooks/useHabitLogs'; 
+import { translateRRule } from '@/utils/rruleUtils';
+import { useConfirm } from '@/context/ConfirmContext';
 import { EditIcon, TrashIcon, PauseIcon, PlayIcon } from '../shared/utils/Icons';
-import { formatToItalianShortDate } from '../../utils/dateUtils';
+import { formatToItalianShortDate } from '@/utils/dateUtils';
 import { Badge } from '../shared/utils/Badges';
 
 interface RoutineDetailModalProps {

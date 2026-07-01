@@ -1,27 +1,12 @@
 // src/components/dashboard/CalendarColumn.tsx
 import React, { useEffect } from 'react';
-import { useCalendarState } from '../../hooks/useCalendarState';
+import { useCalendarState } from '@/hooks/useCalendarState';
 import CalendarHeader from './calendar/CalendarHeader';
 import MonthGrid from './calendar/MonthGrid';
 import WeekGrid from './calendar/WeekGrid';
 import { PlusIcon } from '../shared/utils/Icons';
-import { type Task } from '../../types';
-
-export interface CalendarEvent {
-  id: number | string;   
-  originalId?: number;
-  time?: string;
-  endTime?: string;
-  dateStr?: string;
-  endDateStr?: string;
-  title: string;
-  category: string;
-  categoryColor?: string; 
-  description?: string;
-  location?: string;
-  tutto_il_giorno?: boolean;
-  rrule?: string;
-}
+import { type Task } from '@/types';
+import { type CalendarEvent } from '@/types';
 
 interface CalendarColumnProps {
   events: CalendarEvent[];

@@ -1,11 +1,11 @@
 // src/components/dashboard/calendar/WeekGrid.tsx
 import React from 'react';
-import type { CalendarState } from '../../../hooks/useCalendarState';
-import type { CalendarEvent } from '../CalendarColumn';
+import type { CalendarState } from '@/hooks/useCalendarState';
+import type { CalendarEvent } from '@/types';
 import WeeklyFocusPopup from '../WeeklyFocusPopup';
-import { pad } from '../../../utils/dateUtils';
-import { getEventSegmentsForDay, type DayEventItem } from '../../../utils/eventUtils';
-import { getHexColor, getDynamicStyles } from '../../../utils/uiUtils';
+import { pad } from '@/utils/dateUtils';
+import { getEventSegmentsForDay, type DayEventItem } from '@/utils/eventUtils';
+import { getHexColor, getDynamicStyles } from '@/utils/uiUtils';
 
 interface WeekGridProps {
   state: CalendarState;
