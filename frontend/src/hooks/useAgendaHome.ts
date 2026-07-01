@@ -3,13 +3,14 @@ import { useQuery } from '@tanstack/react-query';
 import { useApi } from './useApi';
 import type { Event, Task } from '../types';
 
-export const useAgendaHome = () => {
+export const useAgendaHome = (calendarViewDate: Date = new Date()) => {
   const api = useApi();
 
-  // Calcoliamo un range da -1 mese a +2 mesi per il calendario
-  const now = new Date();
-  const startStr = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
-  const endStr = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString().split('T')[0];
+  const year = calendarViewDate.getFullYear();
+  const month = calendarViewDate.getMonth();
+
+  const startStr = new Date(year, month - 1, 1).toISOString().split('T')[0];
+  const endStr = new Date(year, month + 2, 0).toISOString().split('T')[0];
 
   const { data: events, isLoading: eventsLoading } = useQuery<Event[]>({
     queryKey: ['events', startStr, endStr],

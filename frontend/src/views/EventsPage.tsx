@@ -4,7 +4,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { apiUrl } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useDebounce } from '../hooks/useDebounce';
-import { usePagination } from '../hooks/usePagination';
 
 export interface Category {
   id: number;
@@ -218,17 +217,16 @@ const EventsPage: React.FC = () => {
     authHeaderObj,
   ]);
 
-  const {
-    currentPage: safeCurrentPage,
-    setCurrentPage,
-    rowsPerPage,
-    setRowsPerPage,
-    totalItems,
-    totalPages,
-    startIndex,
-    endIndex,
-    paginatedData: paginatedEvents,
-  } = usePagination({ data: events });
+  // ⚠️ TEMPORANEO: Vecchia paginazione rimossa. Mostriamo tutto finché non refattorizziamo.
+  const safeCurrentPage = 1;
+  const setCurrentPage = () => {};
+  const rowsPerPage = 50;
+  const setRowsPerPage = () => {};
+  const totalItems = events.length;
+  const totalPages = 1;
+  const startIndex = 0;
+  const endIndex = events.length;
+  const paginatedEvents = events; // Mostriamo tutti i dati temporaneamente
 
   useEffect(() => {
     setCurrentPage(1);

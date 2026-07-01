@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useDebounce } from '../hooks/useDebounce';
-import { usePagination } from '../hooks/usePagination';
+
 import {
   createShoppingItem,
   createShoppingList,
@@ -151,8 +151,16 @@ export const useShoppingPage = () => {
     });
   }, [items, debouncedFiltroNome, debouncedFiltroNote]);
 
-  const pagination = usePagination({ data: filteredItems });
-  const { setCurrentPage } = pagination;
+  // ⚠️ TEMPORANEO: Vecchia paginazione rimossa. Mostriamo tutto finché non refattorizziamo.
+  const safeCurrentPage = 1;
+  const setCurrentPage = () => {};
+  const rowsPerPage = 50;
+  const setRowsPerPage = () => {};
+  const totalItems = filteredItems.length;
+  const totalPages = 1;
+  const startIndex = 0;
+  const endIndex = filteredItems.length;
+  const paginatedItems = filteredItems; // Mostriamo tutti i dati temporaneamente
 
   useEffect(() => {
     setCurrentPage(1);

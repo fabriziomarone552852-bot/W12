@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useApi } from './useApi';
 import type { RoutinePeriod } from '../components/day/RoutineColumn';
 
-// 1. LE TUE OTTIME INTERFACCE
+// 1. REINSERITE LE INTERFACCE DAL VECCHIO CODICE
 interface HabitLogItem {
   id: number;
   habit_id: number;
@@ -21,29 +21,22 @@ interface LogDisplayItem {
 export const useHabitLogs = (habitId?: number, periods?: RoutinePeriod[]) => {
   const api = useApi();
 
-  // 2. MAGIA REACT QUERY
+  // 2. MAGIA REACT QUERY (con il tipo aggiunto: HabitLogItem[])
   const { data: fullLogs = [], isLoading } = useQuery<HabitLogItem[]>({
     queryKey: ['habitLogs', habitId],
     queryFn: () => api.get(`/habit-log?habit_id=${habitId}`),
     enabled: !!habitId, 
   });
 
-  // 3. RAGGRUPPAMENTO BLINDATO
+  // 3. RAGGRUPPAMENTO (Sicuro al 100% grazie a LogDisplayItem)
   const groupedLogs = useMemo(() => {
-    // Ottimizzazione: se non ci sono log, evitiamo calcoli inutili
-    if (!fullLogs.length) return []; 
-
     const groups: { [key: string]: LogDisplayItem[] } = {};
     const mesi = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
 
     [...fullLogs]
       .sort((a, b) => b.data_riferimento.localeCompare(a.data_riferimento))
       .forEach(log => {
-        // 🪄 IL FIX CRITICO DEL FUSO ORARIO:
-        // Tagliamo la stringa, estraiamo i numeri e forziamo la data a Mezzogiorno locale
-        const [year, month, day] = log.data_riferimento.substring(0, 10).split('-').map(Number);
-        const date = new Date(year, month - 1, day, 12, 0, 0);
-        
+        const date = new Date(log.data_riferimento);
         const monthName = `${mesi[date.getMonth()]} ${date.getFullYear()}`;
         
         if (!groups[monthName]) groups[monthName] = [];

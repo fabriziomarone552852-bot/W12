@@ -38,12 +38,16 @@ const eventFormModal = useModal<{
   initialDate: string | null 
 }>();
 
-  const { events: eventiDalServer, tasks, isLoading } = useAgendaHome();
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  const { events: eventiDalServer, tasks, isLoading } = useAgendaHome(currentMonth);
   const { updateTask, deleteEvent } = useAgendaMutations();
   const { dbCategories } = useCategories();
   const navigate = useNavigate();
 
   const yearProgress = useMemo(() => calculateYearProgress(), []);
+
+  
 
   const handleGoToDay = (dateStr: string) => {
   // Passiamo la data direttamente tramite la memoria del Router!
@@ -82,6 +86,7 @@ const eventFormModal = useModal<{
 
   const handleDeleteEvent = async (id: number | string) => {
     await deleteEvent(id);
+    eventDetailModal.close();
   };
 
   if (isLoading) return <div className="flex justify-center items-center h-full">Caricamento...</div>;
@@ -112,6 +117,8 @@ const eventFormModal = useModal<{
         <div className="xl:col-span-6 flex flex-col h-full min-h-0">
           <CalendarColumn 
             events={calendarEvents} 
+            tasks={tasks}
+            onMonthChange={setCurrentMonth}
             onSelectEvent={event => eventDetailModal.open(event)}
             onDayClick={handleGoToDay} 
             onAddEventClick={(dataCliccata?: string) => {

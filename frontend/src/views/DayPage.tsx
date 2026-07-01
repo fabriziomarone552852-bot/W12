@@ -19,6 +19,7 @@ import HabitNewModal from '../components/day/HabitNewModal';
 import NotesSidebar from '../components/day/NotesSidebar';
 
 // --- IMPORT ARCHITETTURA NUOVA ---
+import { useDay } from '../context/DayContext';
 import { useAgendaDay } from '../hooks/useAgendaDay';
 import { useCategories } from '../hooks/useCategories'; 
 import { nomiMesiLungo, getDaysInMonth, getFirstDayIndex, formatDateString } from '../utils/dateUtils';
@@ -26,6 +27,7 @@ import { mapDayTasksToTodos } from '../utils/taskUtils';
 import { isHabitScheduledForDay } from '../utils/habitUtils';
 import { useModal } from '../hooks/useModals';
 import { BackIcon, ForwardIcon, UndoIcon } from '../components/shared/utils/Icons';
+import { SmartObiettivoTextarea } from '../components/day/utils/SmartObiettivoTextarea';
 
 import type { CalendarEvent } from '../components/dashboard/CalendarColumn';
 import type { Task, Event, Habit, RawCountdown, NoteItem, DailyEntry } from '../types';
@@ -36,17 +38,22 @@ const DayPage: React.FC = () => {
   // 1. STATO DELLA DATA (La Nuova Single Source of Truth per la UI)
   const location = useLocation();
 
-  // 3. Modifichiamo l'inizializzazione di targetDate!
-  // Se arriviamo dalla HomePage, userà quella data. Altrimenti, userà "Oggi".
-  const [targetDate, setTargetDate] = useState(() => {
-    if (location.state?.selectedDate) {
-      return new Date(location.state.selectedDate);
-    }
-    return new Date();
-  });
-  
-  const targetDateStr = useMemo(() => formatDateString(targetDate), [targetDate]);
+  // 1. STATO DELLA DATA (La VERA Source of Truth presa dal Context globale!)
+  // Sostituiamo completamente lo useState con i valori del context
+  const { dataRiferimento: targetDate, changeDate: setTargetDate } = useDay();
 
+  // 2. INTERCETTIAMO LA NAVIGAZIONE DALLA HOMEPAGE
+  // Se arriviamo dal calendario mensile, forziamo il Context ad aggiornarsi
+  useEffect(() => {
+    if (location.state?.selectedDate) {
+      setTargetDate(new Date(location.state.selectedDate));
+      // Puliamo lo state della location per evitare re-trigger strani se si ricarica la pagina
+      window.history.replaceState({}, document.title); 
+    }
+  }, [location.state?.selectedDate, setTargetDate]);
+  
+  // Creiamo la stringa sicura YYYY-MM-DD per React Query
+  const targetDateStr = useMemo(() => formatDateString(targetDate), [targetDate]);
   
 
   // 2. IL "CERVELLO" REACT QUERY
@@ -76,18 +83,7 @@ const DayPage: React.FC = () => {
   const [notes, setNotes] = useState<NoteItem[]>([]);
   const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
 
-  // Stati locali temporanei per gli input testo (per evitare lag durante la digitazione)
-  const [obiettivoText, setObiettivoText] = useState("");
-  const [prioritaTexts, setPrioritaTexts] = useState(["", "", ""]);
 
-  // Allineiamo lo stato locale al DB quando i dati arrivano da React Query
-  useEffect(() => {
-    if (dayData) {
-      setObiettivoText(dayData.obiettivo || "");
-      setPrioritaTexts(dayData.priorita || ["", "", ""]);
-      setNotes((dayData.note || []).map((n: DailyEntry) => ({ id: n.id!, text: n.testo, color: "bg-yellow-200 text-yellow-900", dateStr: n.data_riferimento })));
-    }
-  }, [dayData]);
 
   // --- MODALI ---
   const eventDetailModal = useModal<CalendarEvent>();
@@ -152,10 +148,28 @@ const DayPage: React.FC = () => {
     });
   }, [dayData?.habits, targetDateStr]);
 
+  // 🪄 MAGIA: Quando React Query ci dà i dati di un NUOVO giorno,
+  // sovrascriviamo le note in RAM, così non "sbordano" nei giorni successivi!
+  useEffect(() => {
+    if (dayData) {
+      setNotes((dayData.note || []).map((n: any) => ({ 
+        id: n.id, 
+        text: n.testo, 
+        color: "bg-yellow-200 text-yellow-900", 
+        dateStr: n.data_riferimento 
+      })));
+    } else {
+      setNotes([]); // Se stiamo caricando o non ci sono dati, svuota la lista!
+    }
+  }, [dayData]);
+
   // --- HANDLER NAVIGAZIONE ---
-  const handlePrevDay = () => setTargetDate(prev => { const d = new Date(prev); d.setDate(d.getDate() - 1); setPickerMonthDate(d); return d; });
-  const handleNextDay = () => setTargetDate(prev => { const d = new Date(prev); d.setDate(d.getDate() + 1); setPickerMonthDate(d); return d; });
+  const handlePrevDay = () => { const d = new Date(targetDate); d.setDate(d.getDate() - 1); setTargetDate(d); setPickerMonthDate(d); };
+
+  const handleNextDay = () => { const d = new Date(targetDate); d.setDate(d.getDate() + 1); setTargetDate(d); setPickerMonthDate(d); };
+
   const handleResetToday = () => { const d = new Date(); setTargetDate(d); setPickerMonthDate(d); };
+  
   const handleChangeDate = (d: Date) => { setTargetDate(d); setIsDatePickerOpen(false); };
 
   // --- HANDLER AZIONI (Ora sono leggerissimi grazie all'Hook!) ---
@@ -169,38 +183,10 @@ const DayPage: React.FC = () => {
     deleteEvent(originalId);
   };
 
-  const setSinglePrioritaText = (index: number, value: string) => {
-    const newTexts = [...prioritaTexts];
-    newTexts[index] = value;
-    setPrioritaTexts(newTexts);
-  };
-
   const handleAddNote = () => {
     const newId = Date.now();
     setNotes(prev => [{ id: newId, text: "", color: "bg-yellow-200 text-yellow-900", dateStr: targetDateStr, isNew: true}, ...prev]);
     setEditingNoteId(newId);
-  };
-
-  const handleNoteBlur = async (id: number) => {
-    setEditingNoteId(null);
-    const targetNote = notes.find(n => n.id === id);
-    if (!targetNote) return;
-    
-    if (targetNote.text.trim() === "") {
-      setNotes(prev => prev.filter(n => n.id !== id));
-      if (!targetNote.isNew) deleteNote(id);
-      return;
-    }
-    
-    // UI Ottimistica
-    setNotes(prev => prev.map(n => n.id === id ? { ...n, isNew: false } : n));
-    saveNote({ id: targetNote.isNew ? undefined : targetNote.id, text: targetNote.text, dateStr: targetDateStr });
-  };
-
-  const handleRemoveNoteClick = (e: React.MouseEvent, id: number, isNew?: boolean) => {
-    e.stopPropagation(); 
-    setNotes(prev => prev.filter(n => n.id !== id));
-    if (!isNew) deleteNote(id);
   };
 
   const getObiettivoFontSize = (text: string) => {
@@ -208,6 +194,18 @@ const DayPage: React.FC = () => {
     if (text.length < 65) return 'text-xl xl:text-2xl';
     if (text.length < 100) return 'text-lg xl:text-xl';
     return 'text-base font-semibold';
+  };
+
+  const handleAutoSaveNote = (id: number, text: string, isNew?: boolean) => {
+    // UI Ottimistica locale (aggiorna la RAM fittizia)
+    setNotes(prev => prev.map(n => n.id === id ? { ...n, text, isNew: false } : n));
+    // Salva nel Backend in background (React Query)
+    saveNote({ id: isNew ? undefined : id, text, dateStr: targetDateStr });
+  };
+
+  const handleDeleteNote = (id: number, isNew?: boolean) => {
+    setNotes(prev => prev.filter(n => n.id !== id));
+    if (!isNew) deleteNote(id); // Mutazione React Query
   };
 
   // Se i dati stanno caricando la prima volta
@@ -271,23 +269,41 @@ const DayPage: React.FC = () => {
         <div className={`bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col flex-1 xl:flex-row gap-6 py-5 z-10`}>
           <div className="flex-1 xl:border-r border-gray-200 xl:pr-8 flex flex-col justify-center relative h-full">
             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-2 shrink-0">Obiettivo del Giorno</h3>
-            <textarea 
-              value={obiettivoText} onChange={(e) => setObiettivoText(e.target.value)} onBlur={() => saveObiettivo(obiettivoText)} placeholder="Qual è il tuo obiettivo principale?" 
-              className={`w-full h-24 font-bold text-gray-800 border-none focus:ring-0 p-0 bg-transparent placeholder-gray-300 resize-none overflow-y-auto custom-scrollbar leading-tight transition-all duration-200 ${getObiettivoFontSize(obiettivoText)}`}
-            />
+            {(() => {
+              const obiettivoObj = dayData?.obiettivo;
+              const obiettivoTesto = obiettivoObj?.testo || "";
+              
+              return (
+                <SmartObiettivoTextarea 
+                  key={`obiettivo-${obiettivoObj?.id || 'empty'}-${targetDateStr}`}
+                  initialText={obiettivoTesto}
+                  onSave={(nuovoTesto) => saveObiettivo({ id: obiettivoObj?.id, text: nuovoTesto })}
+                />
+              );
+            })()}
           </div>
           <div className="flex-1 flex flex-col justify-center min-w-[280px]">
             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">Top 3 Priorities</h3>
             <ul className="space-y-2.5">
-              {[0, 1, 2].map(index => (
-                <li key={index} className="flex items-center gap-3">
-                  <span className="w-6 h-6 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xs font-bold shrink-0">{index + 1}</span>
-                  <input 
-                    type="text" value={prioritaTexts[index]} onChange={(e) => setSinglePrioritaText(index, e.target.value)} onBlur={() => savePriorita(index, prioritaTexts[index])}
-                    placeholder={`Priorità ${index + 1}`} className="w-full text-sm font-medium text-gray-700 border-none focus:ring-0 p-0 bg-transparent placeholder-gray-300" 
-                  />
-                </li>
-              ))}
+              {[0, 1, 2].map(index => {
+                // 🪄 ESTRAIAMO L'OGGETTO E POI IL TESTO IN MODO SICURO
+                const prioritaObj = dayData?.priorita?.[index];
+                const prioritaTesto = prioritaObj?.testo || ""; 
+                
+                return (
+                  <li key={`pri-row-${index}`} className="flex items-center gap-3">
+                    <span className="w-6 h-6 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xs font-bold shrink-0">{index + 1}</span>
+                    <input 
+                      key={`priorita-${index}-${prioritaObj?.id || 'empty'}-${targetDateStr}`} 
+                      type="text" 
+                      defaultValue={prioritaTesto} 
+                      onBlur={(e) => savePriorita({ id: prioritaObj?.id, text: e.target.value })} 
+                      placeholder={`Priorità ${index + 1}`} 
+                      className="w-full text-sm font-medium text-gray-700 border-none focus:ring-0 p-0 bg-transparent placeholder-gray-300" 
+                    />
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </div>
@@ -317,10 +333,17 @@ const DayPage: React.FC = () => {
 
       {/* NOTE ESTERNE */}
       <NotesSidebar 
-        isOpen={isNotesOpen} notes={notes} editingNoteId={editingNoteId}
-        onOpen={() => setIsNotesOpen(true)} onClose={() => setIsNotesOpen(false)}
-        onAddNote={handleAddNote} onChangeNote={(id, text) => setNotes(prev => prev.map(n => n.id === id ? { ...n, text } : n))}
-        onBlurNote={handleNoteBlur} onRemoveNote={handleRemoveNoteClick} setEditingNoteId={setEditingNoteId}
+        isOpen={isNotesOpen} 
+        notes={notes} 
+        editingNoteId={editingNoteId}
+        onOpen={() => setIsNotesOpen(true)} 
+        onClose={() => setIsNotesOpen(false)}
+        onAddNote={handleAddNote} 
+        
+        // Le nuove prop pulite!
+        onAutoSaveNote={handleAutoSaveNote}
+        onDeleteNote={handleDeleteNote}
+        clearEditingNoteId={() => setEditingNoteId(null)}
       />
 
       {/* MODALI EVENTI */}

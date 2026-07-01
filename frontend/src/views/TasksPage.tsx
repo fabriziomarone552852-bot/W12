@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { apiUrl } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useDebounce } from '../hooks/useDebounce';
-import { usePagination } from '../hooks/usePagination';
 import TaskFamilyPanel from '../components/tasks/TaskFamilyPanel';
 import TaskFilters from '../components/tasks/TaskFilters';
 import TaskCreateForm from '../components/tasks/TaskCreateForm';
@@ -202,17 +201,16 @@ const TasksPage: React.FC = () => {
   }, [rootTasks]);
   const activeSubtasks = useMemo(() => tasks.filter((t) => !!t.parent_id && !t.fatto).length, [tasks]);
 
-  const {
-    currentPage: safeCurrentPage,
-    setCurrentPage,
-    rowsPerPage,
-    setRowsPerPage,
-    totalItems,
-    totalPages,
-    startIndex,
-    endIndex,
-    paginatedData: paginatedRootTasks,
-  } = usePagination({ data: rootTasks });
+  // ⚠️ TEMPORANEO: Vecchia paginazione rimossa. Mostriamo tutto finché non refattorizziamo.
+  const safeCurrentPage = 1;
+  const setCurrentPage = () => {};
+  const rowsPerPage = 50;
+  const setRowsPerPage = () => {};
+  const totalItems = tasks.length;
+  const totalPages = 1;
+  const startIndex = 0;
+  const endIndex = tasks.length;
+  const paginatedTasks = tasks; // Mostriamo tutti i dati temporaneamente
 
   useEffect(() => {
     setCurrentPage(1);

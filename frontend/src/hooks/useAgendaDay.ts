@@ -147,6 +147,38 @@ export const useAgendaDay = (dateStr: string) => {
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['daySync', dateStr] })
   });
 
+  // --- MUTAZIONI OBIETTIVO E PRIORITÀ ---
+  
+  const saveObiettivoMutation = useMutation({
+    mutationFn: (data: { id?: number; text: string }) => {
+      const payload = { data_riferimento: dateStr, tipo: 'Obiettivo', testo: data.text };
+      
+      // Se l'utente svuota il testo e c'era un ID, cancelliamo la voce dal DB!
+      if (!data.text.trim() && data.id) return api.delete(`/daily-entries/${data.id}`);
+      if (!data.text.trim()) return Promise.resolve(); // Se è vuoto e nuovo, non facciamo nulla
+
+      // Altrimenti aggiorniamo o creiamo
+      return data.id 
+        ? api.patch(`/daily-entries/${data.id}`, payload)
+        : api.post('/daily-entries', payload);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['daySync', dateStr] })
+  });
+
+  const savePrioritaMutation = useMutation({
+    mutationFn: (data: { id?: number; text: string }) => {
+      const payload = { data_riferimento: dateStr, tipo: 'Priorità', testo: data.text };
+      
+      if (!data.text.trim() && data.id) return api.delete(`/daily-entries/${data.id}`);
+      if (!data.text.trim()) return Promise.resolve();
+
+      return data.id 
+        ? api.patch(`/daily-entries/${data.id}`, payload)
+        : api.post('/daily-entries', payload);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['daySync', dateStr] })
+  });
+
   // RITORNO TUTTO ALLA PAGINA DAYPAGE
   return {
     dayData,
@@ -160,17 +192,9 @@ export const useAgendaDay = (dateStr: string) => {
     deleteCountdown: deleteCountdownMutation.mutateAsync,
     saveHabit: saveHabitMutation.mutateAsync,
     deleteHabit: deleteHabitMutation.mutateAsync,
-    
-    // ✅ FIX: Collegate le VERE mutazioni, addio console.log finti!
     updateHabitLog: updateHabitLogMutation.mutateAsync,
     updateHabitCount: updateHabitLogMutation.mutateAsync, 
-
-    // (Questi puoi lasciarli come console.log finché non crei il backend per l'obiettivo e priorità)
-    saveObiettivo: async (text: string) => {
-      console.log("TODO: saveObiettivo chiamato con:", text);
-    }, 
-    savePriorita: async (index: number, text: string) => {
-      console.log("TODO: savePriorita chiamato con indice:", index, "e testo:", text);
-    }
+    saveObiettivo: saveObiettivoMutation.mutateAsync,
+    savePriorita: savePrioritaMutation.mutateAsync
   };
 };
