@@ -55,7 +55,7 @@ const TodoColumn: React.FC<TodoColumnProps> = ({ todos, selectedDate, onToggleTo
     currentPage, 
     totalPages, 
     setCurrentPage 
-  } = useAutoFitPagination(sortedTodos, listContainerRef, 76);
+  } = useAutoFitPagination(sortedTodos, listContainerRef, 76, 0);
 
   const toggleSortMode = () => {
     setSortMode(prev => prev === 'chrono' ? 'priority' : 'chrono');

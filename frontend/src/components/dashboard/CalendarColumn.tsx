@@ -1,10 +1,11 @@
 // src/components/dashboard/CalendarColumn.tsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useCalendarState } from '../../hooks/useCalendarState';
 import CalendarHeader from './calendar/CalendarHeader';
 import MonthGrid from './calendar/MonthGrid';
 import WeekGrid from './calendar/WeekGrid';
 import { PlusIcon } from '../shared/utils/Icons';
+import { type Task } from '../../types';
 
 export interface CalendarEvent {
   id: number | string;   
@@ -24,13 +25,23 @@ export interface CalendarEvent {
 
 interface CalendarColumnProps {
   events: CalendarEvent[];
+  tasks: Task[];
   onSelectEvent: (event: CalendarEvent) => void;
   onAddEventClick?: (dateStr?: string) => void; 
   onDayClick?: (dateStr: string) => void;
+  onMonthChange?: (newDate: Date) => void;
 }
 
-const CalendarColumn: React.FC<CalendarColumnProps> = ({ events, onSelectEvent, onAddEventClick, onDayClick }) => {
+const CalendarColumn: React.FC<CalendarColumnProps> = ({ events, tasks, onSelectEvent, onAddEventClick, onDayClick, onMonthChange }) => {
   const state = useCalendarState();
+
+  useEffect(() => {
+    if (onMonthChange && state.monthYear !== undefined && state.monthIndex !== undefined) {
+      const dataVisualizzata = new Date(state.monthYear, state.monthIndex, 1);
+      onMonthChange(dataVisualizzata);
+    }
+  }, [state.monthYear, state.monthIndex, onMonthChange]);
+
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 h-full flex flex-col relative">
@@ -41,6 +52,7 @@ const CalendarColumn: React.FC<CalendarColumnProps> = ({ events, onSelectEvent, 
         <MonthGrid 
           state={state} 
           events={events} 
+          tasks={tasks}
           onDayClick={onDayClick} 
           onAddEventClick={onAddEventClick} 
         />

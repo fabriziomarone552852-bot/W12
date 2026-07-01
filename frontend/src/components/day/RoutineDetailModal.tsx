@@ -25,7 +25,7 @@ const RoutineDetailModal: React.FC<RoutineDetailModalProps> = ({
   isAttiva = true, onSuspendClick, onResumeClick
 }) => {
   const { confirm } = useConfirm();
-  const { groupedLogs } = useHabitLogs(isOpen ? selectedRoutine?.id : undefined, selectedRoutine?.periods);
+  const { groupedLogs, isLoading } = useHabitLogs(isOpen ? selectedRoutine?.id : undefined, selectedRoutine?.periods);
 
   const periodsList = useMemo(() => {
     if (!selectedRoutine?.periods) return [];
@@ -60,9 +60,11 @@ const RoutineDetailModal: React.FC<RoutineDetailModalProps> = ({
         <h4 className="text-sm font-extrabold text-gray-800 uppercase tracking-wider flex items-center gap-2">Registro Storico</h4>
       </div>
       <div className="flex-1 overflow-y-auto custom-scrollbar py-2 px-3 max-h-[70vh]">
-        {groupedLogs.length === 0 ? (
-            <div className="p-4 text-center text-sm text-gray-400 italic">Nessun completamento registrato.</div>
-        ) : (
+        {isLoading ? (
+      <div className="p-4 text-center text-sm text-gray-400">Caricamento storico...</div>
+          ) : groupedLogs.length === 0 ? (
+              <div className="p-4 text-center text-sm text-gray-400 italic">Nessun completamento registrato.</div>
+          ) : (
           groupedLogs.map((monthGroup, idx) => (
             <div key={idx} className="mb-4 last:mb-0">
               <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 pl-1 sticky top-0 bg-white z-10 py-1">{monthGroup.month}</div>

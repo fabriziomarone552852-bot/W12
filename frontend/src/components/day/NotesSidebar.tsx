@@ -1,30 +1,84 @@
 // src/components/day/NotesSidebar.tsx
-import React, { useRef, useLayoutEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { NoteItem } from '../../types';
-import { CloseIcon, NoteIcon, TrashIcon, PlusIcon } from '../shared/utils/Icons';
+import { CloseIcon, TrashIcon, PlusIcon } from '../shared/utils/Icons';
 import { useAutoResizeTextArea } from '../../hooks/useAutoResizeTextArea';
+import { useDebounce } from '../../hooks/useDebounce';
 
-// --- MICRO-COMPONENTE PER LA SINGOLA NOTA IN MODIFICA ---
-const NoteEditor: React.FC<{
+// --- MICRO-COMPONENTE INTELLIGENTE (SMART COMPONENT) ---
+const SmartNoteCard: React.FC<{
   nota: NoteItem;
-  onChangeNote: (id: number, text: string) => void;
-  onBlurNote: (id: number) => void;
-}> = ({ nota, onChangeNote, onBlurNote }) => {
-  // Ogni nota ha il suo hook isolato per il resize!
-  const textareaRef = useAutoResizeTextArea(nota.text);
+  isInitiallyEditing: boolean;
+  onAutoSave: (id: number, text: string, isNew?: boolean) => void;
+  onDelete: (id: number, isNew?: boolean) => void;
+  clearNewStatus: () => void; // Serve per dire "Ok, sto scrivendo, non è più 'nuova'"
+}> = ({ nota, isInitiallyEditing, onAutoSave, onDelete, clearNewStatus }) => {
+  // Lo stato del testo vive SOLO qui dentro. La digitazione è fulminea!
+  const [isEditing, setIsEditing] = useState(isInitiallyEditing);
+  const [text, setText] = useState(nota.text);
+  
+  // Il Debounce aspetta 1 secondo (1000ms) dall'ultima battuta sulla tastiera
+  const debouncedText = useDebounce(text, 1000);
+  const textareaRef = useAutoResizeTextArea(text);
+
+  // LA MAGIA DELL'AUTO-SAVE
+  useEffect(() => {
+    // Se il testo è cambiato rispetto all'originale
+    if (debouncedText !== nota.text) {
+      if (debouncedText.trim() === "") {
+        onDelete(nota.id, nota.isNew);
+      } else {
+        onAutoSave(nota.id, debouncedText, nota.isNew);
+        clearNewStatus(); // Togliamo il flag isNew per non creare cloni
+      }
+    }
+  }, [debouncedText]); // Non mettiamo nota.text nelle dipendenze per evitare loop
+
+  const handleBlur = () => {
+    setIsEditing(false);
+    // Se esce sùbito dall'input senza aspettare il secondo del debounce:
+    if (text.trim() === "") {
+      onDelete(nota.id, nota.isNew);
+    } else if (text !== nota.text) {
+      onAutoSave(nota.id, text, nota.isNew);
+      clearNewStatus();
+    }
+  };
 
   return (
-    <textarea
-      ref={textareaRef}
-      autoFocus
-      value={nota.text}
-      onChange={(e) => onChangeNote(nota.id, e.target.value)}
-      onFocus={(e) => e.target.setSelectionRange(e.target.value.length, e.target.value.length)}
-      onBlur={() => onBlurNote(nota.id)}
-      placeholder="Scrivi qui la tua nota..."
-      className="w-full bg-transparent border-none focus:ring-0 resize-none outline-none text-sm font-medium leading-relaxed font-mono placeholder-yellow-800/40 p-0 overflow-hidden pr-6"
-      rows={1}
-    />
+    <div 
+      onClick={() => { if (!isEditing) setIsEditing(true); }} 
+      className={`p-4 rounded-br-2xl rounded-tl-lg rounded-tr-lg rounded-bl-lg shadow-md relative group min-h-[5rem] transition-colors ${nota.color} ${isEditing ? 'cursor-text ring-2 ring-yellow-400/50' : 'cursor-pointer hover:shadow-lg'}`}
+    >
+      <div className="absolute bottom-0 right-0 w-4 h-4 bg-black/10 rounded-tl-lg rounded-br-2xl pointer-events-none"></div>
+      
+      {/* Bottone elimina protetto per non far partire l'edit mode */}
+      <button 
+        onClick={(e) => { e.stopPropagation(); onDelete(nota.id, nota.isNew); }} 
+        className="absolute top-2 right-2 text-yellow-800/40 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full bg-yellow-300/30 hover:bg-yellow-300/80 z-10" 
+        title="Elimina nota"
+      >
+        <TrashIcon className="w-4 h-4" />
+      </button>
+
+      {isEditing ? (
+        <textarea
+          ref={textareaRef}
+          autoFocus
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onFocus={(e) => e.target.setSelectionRange(e.target.value.length, e.target.value.length)}
+          onBlur={handleBlur}
+          placeholder="Scrivi qui la tua nota..."
+          className="w-full bg-transparent border-none focus:ring-0 resize-none outline-none text-sm font-medium leading-relaxed font-mono placeholder-yellow-800/40 p-0 overflow-hidden pr-6 custom-scrollbar"
+          rows={1}
+        />
+      ) : (
+        <p className="text-sm font-medium leading-relaxed font-mono whitespace-pre-wrap break-words pr-6">
+          {text || <span className="text-yellow-800/40 italic">Nota vuota... Clicca per scrivere.</span>}
+        </p>
+      )}
+    </div>
   );
 };
 
@@ -35,14 +89,15 @@ interface NotesSidebarProps {
   onOpen: () => void;
   onClose: () => void;
   onAddNote: () => void;
-  onChangeNote: (id: number, text: string) => void;
-  onBlurNote: (id: number) => void;
-  onRemoveNote: (e: React.MouseEvent, id: number, isNew?: boolean) => void;
-  setEditingNoteId: (id: number | null) => void;
+  // Guarda come si sono semplificate le prop!
+  onAutoSaveNote: (id: number, text: string, isNew?: boolean) => void;
+  onDeleteNote: (id: number, isNew?: boolean) => void;
+  clearEditingNoteId: () => void;
 }
 
-const NotesSidebar: React.FC<NotesSidebarProps> = ({ isOpen, notes, editingNoteId, onOpen, onClose, onAddNote, onChangeNote, onBlurNote, onRemoveNote, setEditingNoteId }) => {
-  
+const NotesSidebar: React.FC<NotesSidebarProps> = ({ 
+  isOpen, notes, editingNoteId, onOpen, onClose, onAddNote, onAutoSaveNote, onDeleteNote, clearEditingNoteId 
+}) => {
   return (
     <>
       <div onClick={onOpen} className="fixed right-0 top-1/2 -translate-y-1/2 translate-x-8 hover:translate-x-0 w-20 hover:w-28 h-14 bg-[#fde047] hover:bg-[#facc15] text-yellow-900 rounded-l-2xl shadow-[-5px_0_15px_rgba(0,0,0,0.1)] flex items-center justify-start pl-3 cursor-pointer transition-all duration-300 z-30 border border-y-yellow-300 border-l-yellow-300 group">
@@ -57,41 +112,25 @@ const NotesSidebar: React.FC<NotesSidebarProps> = ({ isOpen, notes, editingNoteI
             Note
           </h2>
           <button onClick={onClose} className="text-gray-400 hover:text-red-500 transition-colors">
-            {/* Sostituito con la nostra Icona centralizzata */}
             <CloseIcon />
           </button>
         </div>
         
         <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-gray-50/50 custom-scrollbar">
-          
           <button onClick={onAddNote} className="w-full py-2.5 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 active:scale-95 active:bg-blue-100 transition-all flex justify-center items-center font-bold text-sm gap-2">
-             {/* Sostituito con la nostra Icona centralizzata */}
             <PlusIcon />
             Nuova Nota
           </button>
 
           {notes.map(nota => (
-            <div key={nota.id} onClick={() => { if (editingNoteId !== nota.id) setEditingNoteId(nota.id); }} className={`p-4 rounded-br-2xl rounded-tl-lg rounded-tr-lg rounded-bl-lg shadow-md relative group cursor-text min-h-[5rem] transition-colors ${nota.color}`}>
-              <div className="absolute bottom-0 right-0 w-4 h-4 bg-black/10 rounded-tl-lg rounded-br-2xl pointer-events-none"></div>
-              
-              <button onClick={(e) => onRemoveNote(e, nota.id, nota.isNew)} className="absolute top-2 right-2 text-yellow-800/40 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full bg-yellow-300/30 hover:bg-yellow-300/80 z-10" title="Elimina nota">
-                {/* Sostituito con la nostra Icona centralizzata (piccolina) */}
-                <TrashIcon className="w-4 h-4" />
-              </button>
-
-              {editingNoteId === nota.id ? (
-                /* Richiamo il micro-componente pulitissimo */
-                <NoteEditor 
-                  nota={nota} 
-                  onChangeNote={onChangeNote} 
-                  onBlurNote={onBlurNote} 
-                />
-              ) : (
-                <p className="text-sm font-medium leading-relaxed font-mono whitespace-pre-wrap break-words pr-6">
-                  {nota.text || <span className="text-yellow-800/40 italic">Nota vuota... Clicca per scrivere.</span>}
-                </p>
-              )}
-            </div>
+            <SmartNoteCard 
+              key={nota.id}
+              nota={nota}
+              isInitiallyEditing={editingNoteId === nota.id}
+              onAutoSave={onAutoSaveNote}
+              onDelete={onDeleteNote}
+              clearNewStatus={clearEditingNoteId}
+            />
           ))}
         </div>
       </div>

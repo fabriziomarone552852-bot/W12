@@ -39,7 +39,7 @@ interface RoutineColumnProps {
 const RoutineColumn: React.FC<RoutineColumnProps> = ({ routines, onUpdateRoutine, onAddRoutineClick, onSelectRoutine }) => {
   const listContainerRef = useRef<HTMLDivElement>(null);
 
-  const { visibleItems: visibleRoutines, currentPage, totalPages, setCurrentPage } = useAutoFitPagination(routines, listContainerRef, 92);
+  const { visibleItems: visibleRoutines, currentPage, totalPages, setCurrentPage } = useAutoFitPagination(routines, listContainerRef, 92, 12);
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 h-full flex flex-col justify-between relative overflow-hidden">

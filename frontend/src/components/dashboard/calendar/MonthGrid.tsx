@@ -7,17 +7,16 @@ import { isEventInDay } from '../../../utils/eventUtils';
 import { getHexColor } from '../../../utils/uiUtils';
 import type { Task } from '../../../types';
 import { TimeDisplay, DateRangeDisplay } from '../../shared/utils/DateTimeDisplays';
-import { useAgendaHome } from '../../../hooks/useAgendaHome';
 
 interface MonthGridProps {
   state: CalendarState;
   events: CalendarEvent[];
+  tasks: Task[];
   onDayClick?: (dateStr: string) => void;
   onAddEventClick?: (dateStr: string) => void;
 }
 
-const MonthGrid: React.FC<MonthGridProps> = ({ state, events, onDayClick, onAddEventClick }) => {
-  const { tasks } = useAgendaHome();
+const MonthGrid: React.FC<MonthGridProps> = ({ state, events, tasks, onDayClick, onAddEventClick }) => {
   const { monthYear, monthIndex, mainFirstDayIndex, mainDaysInMonth, hoveredDay, setHoveredDay, todayStr } = state;
 
   const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
