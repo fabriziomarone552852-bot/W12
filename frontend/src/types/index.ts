@@ -118,3 +118,37 @@ export const CategoryGenre = {
 } as const;
 
 export type CategoryGenre = typeof CategoryGenre[keyof typeof CategoryGenre];
+
+export interface TaskTodo {
+  id: number;
+  title: string;
+  deadline: string;
+  dateStr: string;
+  done: boolean;
+  priority: 'Alta' | 'Media' | 'Bassa';
+  category: string;
+  categoryColor?: string;
+  description: string;
+  location: string;
+  parent_id?: number | null;
+  isUrgentFromSubtask?: boolean;
+  hasActiveSubtasks?: boolean;
+  isPromotedSubtask?: boolean;
+  data_fatto?: string | null;
+}
+
+export interface CalendarEvent {
+  id: number | string;   
+  originalId?: number;
+  time?: string;
+  endTime?: string;
+  dateStr?: string;
+  endDateStr?: string;
+  title: string;
+  category: string;
+  categoryColor?: string; 
+  description?: string;
+  location?: string;
+  tutto_il_giorno?: boolean;
+  rrule?: string;
+}

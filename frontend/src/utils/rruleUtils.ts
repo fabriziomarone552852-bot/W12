@@ -25,9 +25,13 @@ export const translateRRule = (rruleString?: string, startDateStr?: string): str
         3: 'Giovedì', 4: 'Venerdì', 5: 'Sabato', 6: 'Domenica'
       };
       
-      const days = options.byweekday.map((d: any) => daysMap[d.weekday !== undefined ? d.weekday : d]).join(', ');
+      const days = options.byweekday.map((d: number | { weekday: number }) => {
+      // Usiamo una Type Guard (typeof) per capire con cosa stiamo lavorando
+      const dayIndex = typeof d === 'number' ? d : d.weekday;
+      return daysMap[dayIndex];
+      }).join(', ');
       return `${base} di ${days}`;
-    } 
+      } 
     
     // 2. SECONDA SCELTA: Settimanale senza BYDAY esplicito, usiamo la nostra data di inizio sicura
     if (options.freq === RRule.WEEKLY && startDateStr) {

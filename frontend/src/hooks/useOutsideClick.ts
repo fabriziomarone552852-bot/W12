@@ -1,12 +1,14 @@
 import { useEffect, useRef } from 'react';
 
-export const useOutsideClick = (callback: () => void) => {
-  const ref = useRef<HTMLDivElement>(null);
+// 1. Aggiungiamo il Generic <T extends HTMLElement = HTMLDivElement>
+// Questo dice: "Accetto qualsiasi elemento HTML, ma se non mi specifichi niente, assumo che sia un Div"
+export const useOutsideClick = <T extends HTMLElement = HTMLDivElement>(callback: () => void) => {
   
-  // 1. Salviamo l'ultima versione della callback in una ref
+  // 2. Usiamo T invece di bloccare la Ref su HTMLDivElement
+  const ref = useRef<T>(null);
+  
   const savedCallback = useRef(callback);
 
-  // 2. Aggiorniamo la ref se la callback cambia (non scatena re-render!)
   useEffect(() => {
     savedCallback.current = callback;
   }, [callback]);
@@ -14,7 +16,7 @@ export const useOutsideClick = (callback: () => void) => {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
       if (ref.current && !ref.current.contains(event.target as Node)) {
-        savedCallback.current(); // 3. Chiamiamo sempre la versione più recente
+        savedCallback.current();
       }
     };
 
@@ -25,7 +27,7 @@ export const useOutsideClick = (callback: () => void) => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('touchstart', handleClickOutside);
     };
-  }, []); // 4. ARRAY VUOTO! I listener vengono attaccati UNA sola volta.
+  }, []);
 
   return ref;
 };

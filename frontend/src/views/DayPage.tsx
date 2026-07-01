@@ -4,7 +4,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import EventsColumn from '../components/shared/EventsColumn';
 import EventDetailModal from '../components/shared/EventDetailModal';
 import NewEventModal from '../components/shared/EventNewModal';
-import TodoColumn, { type TaskTodo } from '../components/shared/TodoColumn';
+import TodoColumn from '../components/shared/TodoColumn';
+import { type TaskTodo } from '../types';
 import TaskDetailModal from '../components/shared/TodoDetailModal';
 import NewTaskModal from '../components/shared/TodoNewModal';
 import CountdownWidget, { type CountdownItem } from '../components/day/CountdownWidget';
@@ -29,7 +30,7 @@ import { useModal } from '../hooks/useModals';
 import { BackIcon, ForwardIcon, UndoIcon } from '../components/shared/utils/Icons';
 import { SmartObiettivoTextarea } from '../components/day/utils/SmartObiettivoTextarea';
 
-import type { CalendarEvent } from '../components/dashboard/CalendarColumn';
+import type { CalendarEvent } from '../types';
 import type { Task, Event, Habit, RawCountdown, NoteItem, DailyEntry } from '../types';
 import { useLocation } from 'react-router-dom';
 
@@ -152,7 +153,7 @@ const DayPage: React.FC = () => {
   // sovrascriviamo le note in RAM, così non "sbordano" nei giorni successivi!
   useEffect(() => {
     if (dayData) {
-      setNotes((dayData.note || []).map((n: any) => ({ 
+      setNotes((dayData.note || []).map((n: DailyEntry) => ({ 
         id: n.id, 
         text: n.testo, 
         color: "bg-yellow-200 text-yellow-900", 
@@ -426,10 +427,12 @@ const DayPage: React.FC = () => {
         routineToEdit={routineFormModal.data} 
         onSave={(payload) => { 
             saveHabit({ 
-              payload, 
-              id: routineFormModal.data?.id, 
+            existingId: routineFormModal.data?.id, 
+            data: {
+              ...payload,
               periodId: routineFormModal.data?.periodId 
-            }); 
+            }
+          });
           routineFormModal.close(); 
         }} 
       />
@@ -440,10 +443,15 @@ const DayPage: React.FC = () => {
         onClose={habitFormModal.close} 
         onSave={(newHabit) => { 
           saveHabit({ 
-            titolo: newHabit.titolo, tipo: 'H', immagine_url: newHabit.immagine_url, 
-            rrule: 'FREQ=DAILY;INTERVAL=1', data_inizio: new Date().toISOString().substring(0, 10), 
-            target_completamenti: 1 
-          }); 
+            data: {
+              titolo: newHabit.titolo, 
+              tipo: 'H', 
+              immagine_url: newHabit.immagine_url, 
+              rrule: 'FREQ=DAILY;INTERVAL=1', 
+              data_inizio: new Date().toISOString().substring(0, 10), 
+              target_completamenti: 1 
+            }
+          });
           habitFormModal.close(); 
         }} 
       />

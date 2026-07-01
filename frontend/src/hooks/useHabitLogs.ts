@@ -63,4 +63,5 @@ export const useHabitLogs = (habitId?: number, periods?: RoutinePeriod[]) => {
   }, [fullLogs, periods]);
 
   return { groupedLogs, isLoading };
+
 };

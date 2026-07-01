@@ -22,4 +22,5 @@ export const useDay = () => {
   const context = useContext(DayContext);
   if (!context) throw new Error("useDay deve essere usato all'interno di un DayProvider");
   return context;
+
 };

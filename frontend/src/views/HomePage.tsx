@@ -5,8 +5,9 @@ import { useAgendaMutations } from '../hooks/useAgendaMutations';
 import { useNavigate } from 'react-router-dom';
 import { useCategories } from '../hooks/useCategories';
 
-import CalendarColumn, { type CalendarEvent } from '../components/dashboard/CalendarColumn';
-import TodoColumn, { type TaskTodo } from '../components/shared/TodoColumn';
+import CalendarColumn from '../components/dashboard/CalendarColumn';
+import TodoColumn from '../components/shared/TodoColumn';
+import { type TaskTodo } from '../types';
 import EventsColumn from '../components/shared/EventsColumn';
 
 import NewTaskModal from '../components/shared/TodoNewModal';
@@ -22,6 +23,7 @@ import { useModal } from '../hooks/useModals';
 import { getUpcomingTasks } from '../utils/taskUtils';
 import { Badge } from '../components/shared/utils/Badges';
 import { EmptyState } from '../components/shared/utils/EmptyState';
+import type { Event as AgendaEvent, CalendarEvent } from '../types';
 
 const HomePage: React.FC = () => {
   // 1. Modali di Dettaglio (il dato è l'elemento selezionato)
@@ -59,18 +61,18 @@ const eventFormModal = useModal<{
   const mappedTodos = useMemo(() => mapTasksToTodos(tasks || [], oggiStr), [tasks, oggiStr]);
   
   const calendarEvents = useMemo(() => {
-    return (eventiDalServer || []).map((e: any) => ({
+    return (eventiDalServer || []).map((e: AgendaEvent) => ({
       id: `${e.id}-${e.data_inizio.substring(0, 10)}`, // ID univoco per il frontend
       originalId: e.id,
       title: e.titolo,
       dateStr: e.data_inizio.substring(0, 10),
-      endDateStr: e.data_fine ? e.data_fine.substring(0, 10) : '',
+      endDateStr: e.data_fine ? e.data_fine.substring(0, 10) : undefined,
       time: e.tutto_il_giorno ? undefined : e.data_inizio.substring(11, 16),
       endTime: e.tutto_il_giorno || !e.data_fine ? undefined : e.data_fine.substring(11, 16),
       category: e.category?.name || e.category_name || 'Generico',
       categoryColor: e.category?.colore || '#9ca3af',
       tutto_il_giorno: e.tutto_il_giorno,
-      rrule: e.rrule
+      rrule: e.rrule || undefined,
     }));
   }, [eventiDalServer]);
 
@@ -214,5 +216,6 @@ const eventFormModal = useModal<{
     </div>
   );
 };
+
 
 export default HomePage;

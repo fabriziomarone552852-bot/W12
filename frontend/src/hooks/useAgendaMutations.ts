@@ -29,9 +29,11 @@ export const useAgendaMutations = () => {
       
       const previousTasks = queryClient.getQueryData(['tasks']);
       
-      queryClient.setQueryData(['tasks'], (oldData: any) => {
+      queryClient.setQueryData(['tasks'], (oldData: Task[] | undefined) => {
         if (!oldData) return oldData;
-        return oldData.map((t: any) => t.id === id ? { ...t, ...data } : t);
+        return oldData.map((t: Task) => 
+          t.id === id ? { ...t, ...data } : t
+        );
       });
       
       return { previousTasks };

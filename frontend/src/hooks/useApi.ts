@@ -1,51 +1,65 @@
 // src/hooks/useApi.ts
 import { useCallback } from 'react';
-import { apiUrl } from '../api/client';
-import { useAuth } from '../context/AuthContext';
+import { apiClient } from '../api/client'; 
+import axios, { AxiosError, type AxiosRequestConfig } from 'axios';
+
+interface ApiErrorData {
+  detail?: string;
+  message?: string;
+}
 
 export const useApi = () => {
-  const { authHeaders } = useAuth();
+  // Non ci serve più useAuth() qui dentro! L'interceptor fa tutto da solo.
 
-  const request = useCallback(async (endpoint: string, options: RequestInit = {}) => {
-    // 1. Usiamo la classe nativa Headers per normalizzare qualsiasi formato di options.headers
-    const headers = new Headers(options.headers);
-
-    // 2. Aggiungiamo gli header di autenticazione
-    const currentAuthHeaders = authHeaders();
-    Object.entries(currentAuthHeaders).forEach(([key, value]) => {
-      headers.set(key, value as string);
-    });
-
-    // 3. Se stiamo inviando un body (POST/PATCH), aggiungiamo automaticamente il Content-Type
-    if (options.body && typeof options.body === 'string' && !headers.has('Content-Type')) {
-      headers.set('Content-Type', 'application/json');
+  // Funzione per formattare gli errori esattamente come facevi prima
+  // 🪄 3. (error: unknown) è la best-practice. Non diamo nulla per scontato!
+  const handleAxiosError = (error: unknown) => {
+    // Verifichiamo se è un errore generato da Axios
+    if (axios.isAxiosError(error)) {
+      const axiosError = error as AxiosError<ApiErrorData>;
+      if (axiosError.response) {
+        throw new Error(
+          axiosError.response.data?.detail || 
+          axiosError.response.data?.message || 
+          `Errore API: ${axiosError.response.status}`
+        );
+      }
     }
+    
+    // Se è un errore generico (es. internet staccato)
+    const genericError = error as Error;
+    throw new Error(genericError.message || "Errore di rete o server non raggiungibile");
+  };
 
-    // 4. Eseguiamo la fetch
-    const response = await fetch(apiUrl(endpoint), {
-      ...options,
-      headers, // Passiamo la nostra istanza sicura di Headers
-    });
-
-    // 5. Gestione Errori Centralizzata
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || `Errore API: ${response.status}`);
+  const get = useCallback(async (endpoint: string, options?: AxiosRequestConfig) => {
+    try {
+      const response = await apiClient.get(endpoint, options);
+      return response.status === 204 ? null : response.data;
+    } catch (error) { 
+      return handleAxiosError(error); 
     }
+  }, []);
 
-    // 6. Gestione risposte vuote (es. DELETE 204 No Content)
-    if (response.status === 204) {
-      return null;
-    }
+  const post = useCallback(async <T = unknown>(endpoint: string, body?: T) => {
+    try {
+      const response = await apiClient.post(endpoint, body);
+      return response.status === 204 ? null : response.data;
+    } catch (error) { return handleAxiosError(error); }
+  }, []);
 
-    // 7. Restituiamo l'oggetto JSON
-    return response.json();
-  }, [authHeaders]);
+  const patch = useCallback(async <T = unknown>(endpoint: string, body: T) => {
+    try {
+      const response = await apiClient.patch(endpoint, body);
+      return response.status === 204 ? null : response.data;
+    } catch (error) { return handleAxiosError(error); }
+  }, []);
 
-  // Metodi scorciatoia
-  const get = useCallback((endpoint: string, options?: RequestInit) => request(endpoint, { method: 'GET', ...options }), [request]);  const post = useCallback(<T = unknown>(endpoint: string, body?: T) => request(endpoint, { method: 'POST', body: body ? JSON.stringify(body) : undefined }), [request]);
-  const patch = useCallback(<T = unknown>(endpoint: string, body: T) => request(endpoint, { method: 'PATCH', body: JSON.stringify(body) }), [request]);
-  const del = useCallback((endpoint: string) => request(endpoint, { method: 'DELETE' }), [request]);
+  const del = useCallback(async (endpoint: string) => {
+    try {
+      const response = await apiClient.delete(endpoint);
+      return response.status === 204 ? null : response.data;
+    } catch (error) { return handleAxiosError(error); }
+  }, []);
 
-  return { get, post, patch, delete: del, request };
+  return { get, post, patch, delete: del };
 };

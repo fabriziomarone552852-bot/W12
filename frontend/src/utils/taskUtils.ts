@@ -1,6 +1,6 @@
 // src/utils/taskUtils.ts
 import type { Task } from '../types';
-import type { TaskTodo } from '../components/shared/TodoColumn';
+import type { TaskTodo } from '../types';
 import { formatToItalianShortDate } from './dateUtils'; 
 
 // ------------------------------------------------------------------

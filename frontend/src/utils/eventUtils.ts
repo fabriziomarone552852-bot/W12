@@ -1,5 +1,5 @@
 // src/utils/eventUtils.ts
-import type { CalendarEvent } from '../components/dashboard/CalendarColumn';
+import type { CalendarEvent } from '../types';
 import { pad } from './dateUtils';
 import type { Event } from '../types';
 

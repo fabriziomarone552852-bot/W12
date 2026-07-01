@@ -35,4 +35,5 @@ export const useAgendaHome = (calendarViewDate: Date = new Date()) => {
     tasks: tasks || [],
     isLoading: eventsLoading || tasksLoading
   };
+
 };
