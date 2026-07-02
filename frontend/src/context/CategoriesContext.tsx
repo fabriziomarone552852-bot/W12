@@ -1,8 +1,8 @@
 // src/context/CategoriesContext.tsx
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-import { useApi } from '../hooks/useApi';
-import type { Category, CategoryGenre } from '../types';
+import { useApi } from '@/hooks/useApi';
+import type { Category, CategoryGenre } from '@/types';
 
 interface CategoriesContextType {
   dbCategories: Category[];

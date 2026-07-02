@@ -1,7 +1,7 @@
 // src/hooks/useAgendaMutations.ts
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApi } from './useApi';
-import type { Task, Event } from '../types';
+import type { Task, Event } from '@/types';
 
 export const useAgendaMutations = () => {
   const api = useApi();

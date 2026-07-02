@@ -1,21 +1,21 @@
 // src/router/AppRouter.tsx
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 
 // Pagine
-import HomePage from '../views/HomePage';
-import DayPage from '../views/DayPage';
-import TasksPage from '../views/TasksPage';
-import EventsPage from '../views/EventsPage';
-import CategoriesPage from '../views/CategoriesPage';
-import CategoryEditPage from '../views/CategoryEditPage';
-import UserSettingsPage from '../views/UserSettingsPage';
-import LoginScreen from '../views/LoginScreen';
+import HomePage from '@/views/HomePage';
+import DayPage from '@/views/DayPage';
+import TasksPage from '@/views/TasksPage';
+import EventsPage from '@/views/EventsPage';
+import CategoriesPage from '@/views/CategoriesPage';
+import CategoryEditPage from '@/views/CategoryEditPage';
+import UserSettingsPage from '@/views/UserSettingsPage';
+import LoginScreen from '@/views/LoginScreen';
 import ShoppingPage from "../views/ShoppingPage";
 
 // Layout
-import AppShellLayout from '../components/AppShellLayout';
+import AppShellLayout from '@/components/AppShellLayout';
 
 const AppRouter: React.FC = () => {
   const { isAuthenticated, logout } = useAuth();

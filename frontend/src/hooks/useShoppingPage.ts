@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { useDebounce } from '../hooks/useDebounce';
+import { useAuth } from '@/context/AuthContext';
+import { useDebounce } from '@/hooks/useDebounce';
 
 import {
   createShoppingItem,
@@ -15,7 +15,7 @@ import {
   toggleShoppingItemDone,
   updateShoppingItem,
   updateShoppingList,
-} from '../api/shoppingApi';
+} from '@/api/shoppingApi';
 import type {
   ItemFormState,
   ListFormState,
@@ -24,7 +24,7 @@ import type {
   ShoppingListItem,
   ShoppingSupplier,
   SupplierFormState,
-} from '../components/shared/shopping/types';
+} from '@/components/shared/shopping/types';
 
 const makeEmptyListForm = (): ListFormState => ({ owner_id: '', group_id: '', visibility_id: '', status_id: '', name: '', description: '' });
 const makeEmptyItemForm = (shopping_list_id = ''): ItemFormState => ({ shopping_list_id, name_original: '', quantity: '', unit_id: '', notes: '', status_id: '' });

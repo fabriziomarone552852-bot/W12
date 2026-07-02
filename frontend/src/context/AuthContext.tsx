@@ -1,7 +1,9 @@
 // src/context/AuthContext.tsx
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { apiUrl } from '../api/client';
-import type { TokenResponse, UserResponse } from '../types/auth';
+import axios from 'axios';
+// 🪄 Usiamo gli alias eleganti!
+import { apiUrl } from '@/api/client';
+import type { TokenResponse, UserResponse } from '@/types/auth';
 
 interface AuthContextValue {
   token: string | null;
@@ -18,7 +20,6 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // 1. Passaggio a localStorage! Sopravvive a refresh e nuove tab
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
   
   const [user, setUser] = useState<UserResponse | null>(() => {
@@ -59,7 +60,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     clearError();
   }, []);
 
-  // 2. Ascoltiamo il vigile (L'interceptor Axios) se ci dice di sloggare
   useEffect(() => {
     const handleForceLogout = () => {
       console.warn("Sessione completamente scaduta, logout forzato.");
@@ -78,23 +78,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       body.append('username', normalizedUsername);
       body.append('password', password);
 
-      const res = await fetch(apiUrl('/login'), {
-        method: 'POST',
+      // 1. Chiamata Axios per il login (Prende i Token)
+      const res = await axios.post<TokenResponse>(apiUrl('/login'), body, {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: body.toString(),
       });
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.detail ?? 'Errore di login');
+      const tokenData = res.data;
+      persistTokens(tokenData.access_token, tokenData.refresh_token ?? null);
+
+      // 2. Chiamata Axios per ottenere i VERI dati dell'utente
+      const userRes = await axios.get<UserResponse>(apiUrl('/users/me'), {
+        headers: { Authorization: `Bearer ${tokenData.access_token}` }
+      });
+      
+      persistUser(userRes.data);
+
+    } catch (e: unknown) { // 🪄 TYPE NARROWING PERFETTO
+      let msg = 'Errore di login';
+      
+      if (axios.isAxiosError(e)) {
+        msg = e.response?.data?.detail || e.message || 'Errore del server';
+      } else if (e instanceof Error) {
+        msg = e.message;
       }
-
-      const data = await res.json();
-      persistTokens(data.access_token, data.refresh_token);
-      persistUser({ id: 0, username: normalizedUsername, email: '' } as UserResponse);
-
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Errore di login';
+      
       setError(msg);
       persistTokens(null, null);
       persistUser(null);
@@ -105,27 +112,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const register = async (username: string, email: string, password: string) => {
-    // Il register rimane identico a come l'avevi scritto
     setLoading(true);
     clearError();
     try {
       const normalizedUsername = username.trim().toLowerCase();
       const normalizedEmail = email.trim().toLowerCase();
 
-      const res = await fetch(apiUrl('/register'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: normalizedUsername, email: normalizedEmail, password }),
+      await axios.post(apiUrl('/register'), { 
+        username: normalizedUsername, 
+        email: normalizedEmail, 
+        password 
       });
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.detail ?? 'Errore di registrazione');
-      }
-
+      // Login automatico dopo la registrazione!
       await login(normalizedUsername, password);
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Errore di registrazione';
+    } catch (e: unknown) { // 🪄 TYPE NARROWING PERFETTO ANCHE QUI
+      let msg = 'Errore di registrazione';
+      
+      if (axios.isAxiosError(e)) {
+        msg = e.response?.data?.detail || e.message || 'Errore del server';
+      } else if (e instanceof Error) {
+        msg = e.message;
+      }
+      
       setError(msg);
       throw e;
     } finally {

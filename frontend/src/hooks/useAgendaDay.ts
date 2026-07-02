@@ -3,17 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApi } from './useApi';
 
 // 🪄 1. Importiamo TUTTI i tipi che compongono una giornata
-import type { Task, Habit, HabitLog, Event, Countdown, DailyEntry } from '../types'; 
-
-interface DaySyncResponse {
-  tasks: Task[];
-  habits: Habit[];
-  events?: Event[];
-  countdowns?: Countdown[];
-  obiettivi?: DailyEntry[];
-  priorita?: DailyEntry[];
-  note?: DailyEntry[];
-}
+import type { Task, Habit, HabitLog, Event, Countdown, DailyEntry, DaySyncResponse } from '@/types';
 
 // 🪄 3. Creiamo l'interfaccia esatta per i dati che inviamo quando creiamo un'abitudine
 interface HabitFormData {
@@ -45,7 +35,36 @@ export const useAgendaDay = (dateStr: string) => {
 
   const { data: dayData, isLoading, isError } = useQuery({
     queryKey: ['daySync', dateStr],
-    queryFn: () => api.get(`/sync/day?data_riferimento=${dateStr}`)
+    queryFn: async () => {
+      // 1. Scarichiamo i dati "grezzi"
+      const rawData = await api.get(`/sync/day?data_riferimento=${dateStr}`);
+
+      // 2. 🪄 NORMALIZZAZIONE STRICT TYPESCRIPT
+      const safeData: DaySyncResponse = {
+        ...rawData,
+        // Livello 1: Assicuriamoci che i macro-gruppi esistano
+        events: rawData?.events || [],
+        countdowns: rawData?.countdowns || [],
+        obiettivi: rawData?.obiettivi || [],
+        priorita: rawData?.priorita || [],
+        note: rawData?.note || [],
+        
+        // Livello 2: Pulizia profonda sui Task (Usiamo il tipo Task!)
+        tasks: (rawData?.tasks || []).map((t: Task) => ({
+          ...t,
+          subtasks: t.subtasks || [] 
+        })),
+
+        // Livello 3: Pulizia profonda sulle Abitudini (Usiamo il tipo Habit!)
+        habits: (rawData?.habits || []).map((h: Habit) => ({
+          ...h,
+          periods: h.periods || [], 
+          logs: h.logs || []        
+        }))
+      };
+
+      return safeData;
+    }
   });
 
   // --- MUTAZIONI ESISTENTI ---
@@ -69,7 +88,7 @@ export const useAgendaDay = (dateStr: string) => {
 
       return { previousDayData };
     },
-    onError: (err, newTodo, context) => {
+    onError: (err, newTask, context) => {
       console.error("Errore nel toggle, ripristino UI...", err);
       if (context?.previousDayData) {
         queryClient.setQueryData(['daySync', dateStr], context.previousDayData);

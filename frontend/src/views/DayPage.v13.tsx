@@ -1,34 +1,44 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useLocation } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
 
 // --- IMPORT COMPONENTI ---
-import { type CountdownItem } from '@/components/day/CountdownWidget';
-import { type RoutineItem } from '@/components/day/RoutineColumn';
-import { type HabitItem } from '@/components/day/HabitsBar';
+import EventsColumn from '@/components/shared/EventsColumn';
+import EventDetailModal from '@/components/shared/EventDetailModal';
+import NewEventModal from '@/components/shared/EventNewModal';
+import TaskColumn from '@/components/shared/TaskColumn';
+import { type TaskTask } from '@/types';
+import TaskDetailModal from '@/components/shared/TaskDetailModal';
+import NewTaskModal from '@/components/shared/TaskNewModal';
+import CountdownWidget, { type CountdownItem } from '@/components/day/CountdownWidget';
+import CountdownsHubModal from '@/components/day/CountdownHubModal';
+import CountdownNewModal from '@/components/day/CountdownNewModal';
+import CountdownDetailModal from '@/components/day/CountdownDetailModal';
+import RoutineColumn, { type RoutineItem } from '@/components/day/RoutineColumn';
+import RoutineNewModal from '@/components/day/RoutineNewModal';
+import RoutineDetailModal from '@/components/day/RoutineDetailModal';
+import HabitsBar, { type HabitItem } from '@/components/day/HabitsBar';
+import HabitNewModal from '@/components/day/HabitNewModal';
 import NotesSidebar from '@/components/day/NotesSidebar';
 
 // --- IMPORT ARCHITETTURA NUOVA ---
 import { useDay } from '@/context/DayContext';
 import { useAgendaDay } from '@/hooks/useAgendaDay';
+import { useCategories } from '@/hooks/useCategories'; 
 import { nomiMesiLungo, getDaysInMonth, getFirstDayIndex, formatDateString } from '@/utils/dateUtils';
 import { mapDayTasksToTasks } from '@/utils/taskUtils';
 import { isHabitScheduledForDay } from '@/utils/habitUtils';
+import { useModal } from '@/hooks/useModals';
 import { BackIcon, ForwardIcon, UndoIcon } from '@/components/shared/utils/Icons';
 import { SmartObiettivoTextarea } from '@/components/day/utils/SmartObiettivoTextarea';
+import { NotesSection } from '@/components/day/NotesSections';
 
-import type { CalendarEvent } from '@/types';
-import type { Task, Event, Habit, RawCountdown, DailyEntry, DaySyncResponse } from '@/types';
+import type { CalendarEvent, DaySyncResponse } from '@/types';
+import type { Task, Event, Habit, RawCountdown, NoteItem, DailyEntry } from '@/types';
+import { useLocation } from 'react-router-dom';
 
-// --- SECTIONS ---
-import { EventsSection } from '@/components/day/views/EventsSection';
-import { TasksSection } from '@/components/day/views/TasksSection';
-import { CountdownsSection } from '@/components/day/views/CountdownsSection';
-import { HabitsRoutinesSection } from '@/components/day/views/HabitsRoutinesSection';
 
 const DayPage: React.FC = () => {
   // 1. STATO DELLA DATA (La Nuova Single Source of Truth per la UI)
-  const navigate = useNavigate();
   const location = useLocation();
 
   // 1. STATO DELLA DATA (La VERA Source of Truth presa dal Context globale!)
@@ -41,15 +51,12 @@ const DayPage: React.FC = () => {
     if (location.state?.selectedDate) {
       setTargetDate(new Date(location.state.selectedDate));
       // Puliamo lo state della location per evitare re-trigger strani se si ricarica la pagina
-      navigate(location.pathname, { 
-        replace: true, 
-        state: {} // o null, a seconda di cosa volevi pulire
-        }); 
+      window.history.replaceState({}, document.title); 
     }
   }, [location.state?.selectedDate, setTargetDate]);
   
   // Creiamo la stringa sicura YYYY-MM-DD per React Query
-  const targetDateStr = formatDateString(targetDate);
+  const targetDateStr = useMemo(() => formatDateString(targetDate), [targetDate]);
   
 
   // 2. IL "CERVELLO" REACT QUERY
@@ -70,11 +77,27 @@ const DayPage: React.FC = () => {
     savePriorita
   } = useAgendaDay(targetDateStr);
 
+  const { dbCategories } = useCategories();
+
   // 3. STATI UI
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [pickerMonthDate, setPickerMonthDate] = useState<Date>(targetDate);
   const [isNotesOpen, setIsNotesOpen] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
+
+
+
+  // --- MODALI ---
+  const eventDetailModal = useModal<CalendarEvent>();
+  const eventFormModal = useModal<{ eventToEdit: CalendarEvent | null; initialDate: string | null }>();
+  const taskDetailModal = useModal<TaskTask>();
+  const taskFormModal = useModal<TaskTask>();
+  const countdownHubModal = useModal(); 
+  const countdownDetailModal = useModal<CountdownItem>();
+  const countdownFormModal = useModal<CountdownItem>();
+  const routineDetailModal = useModal<RoutineItem>();
+  const routineFormModal = useModal<RoutineItem>();
+  const habitFormModal = useModal();
 
   // --- LABELS DATE ---
   const today = new Date();
@@ -83,63 +106,51 @@ const DayPage: React.FC = () => {
   const formattedDate = targetDate.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
 
   // --- MAPPATURA DATI (Leggiamo SOLO da dayData) ---
-  const mappedTasks = mapDayTasksToTasks(dayData?.tasks || [], targetDateStr);
+  const mappedTasks = useMemo(() => mapDayTasksToTasks(dayData?.tasks || [], targetDateStr), [dayData?.tasks, targetDateStr]);
 
   const queryClient = useQueryClient();
 
-  const mappedEvents: CalendarEvent[] = (dayData?.events || []).map((e: Event) => ({
-    id: `${e.id}-${e.data_inizio.substring(0,10)}`, 
-    originalId: e.id,
-    time: e.tutto_il_giorno ? undefined : e.data_inizio.substring(11, 16),
-    endTime: (e.tutto_il_giorno || !e.data_fine) ? undefined : e.data_fine.substring(11, 16),
-    title: e.titolo, 
-    category: e.category?.name || e.category_name || 'Generico', 
-    categoryColor: e.category?.colore || '#9ca3af',
-    dateStr: targetDateStr, 
-    description: e.descrizione || undefined, 
-    location: e.luogo || undefined, 
-    tutto_il_giorno: e.tutto_il_giorno, 
-    rrule: e.rrule || undefined
-  }));
+  const mappedEvents = useMemo<CalendarEvent[]>(() => {
+    return (dayData?.events || []).map((e: Event) => ({
+      id: `${e.id}-${e.data_inizio.substring(0,10)}`, 
+      originalId: e.id,
+      time: e.tutto_il_giorno ? undefined : e.data_inizio.substring(11, 16),
+      endTime: (e.tutto_il_giorno || !e.data_fine) ? undefined : e.data_fine.substring(11, 16),
+      title: e.titolo, 
+      category: e.category?.name || e.category_name || 'Generico', 
+      categoryColor: e.category?.colore || '#9ca3af',
+      dateStr: targetDateStr, 
+      description: e.descrizione || undefined, 
+      location: e.luogo || undefined, 
+      tutto_il_giorno: e.tutto_il_giorno, 
+      rrule: e.rrule || undefined
+    }));
+  }, [dayData?.events, targetDateStr]);
 
-  const mappedCountdowns: CountdownItem[] = (dayData?.countdowns || []).map((c: RawCountdown) => ({
-    id: c.id, 
-    title: c.title || c.testo || 'Senza Titolo', 
-    targetDateStr: c.target_date || c.data_riferimento || '', 
-    imageUrl: c.immagine_url || 'https://images.unsplash.com/photo-1506744626753-143283d115a0?q=80&w=800'
-  }));
+  const mappedCountdowns = useMemo<CountdownItem[]>(() => {
+    return (dayData?.countdowns || []).map((c: RawCountdown) => ({
+      id: c.id, 
+      title: c.title || c.testo || 'Senza Titolo', 
+      targetDateStr: c.target_date || c.data_riferimento || '', 
+      imageUrl: c.immagine_url || 'https://images.unsplash.com/photo-1506744626753-143283d115a0?q=80&w=800'
+    }));
+  }, [dayData?.countdowns]);
 
-  const mappedRoutines: RoutineItem[] = (dayData?.habits || [])
-    .filter((h: Habit) => h.tipo === 'R' && isHabitScheduledForDay(h, targetDateStr))
-    .map((h: Habit) => {
+  const mappedRoutines = useMemo<RoutineItem[]>(() => {
+    return (dayData?.habits || []).filter((h: Habit) => h.tipo === 'R' && isHabitScheduledForDay(h, targetDateStr)).map((h: Habit) => {
       const activePeriod = (h.periods || []).find(p => p.data_inizio <= targetDateStr && (!p.data_fine || p.data_fine >= targetDateStr)) || (h.periods?.[0] || { target: 1, id: 0, data_inizio: new Date().toISOString() });
       const log = (h.logs || []).find(l => l.data_riferimento === targetDateStr) || { count: 0 };
-      return { 
-        id: h.id, 
-        title: h.titolo, 
-        imageUrl: h.immagine_url || 'https://images.unsplash.com/photo-1506744626753-143283d115a0?q=80&w=800', 
-        currentCompletions: log.count, 
-        targetCompletions: activePeriod.target, 
-        titolo: h.titolo, 
-        rrule: h.rrule || undefined, 
-        data_inizio: activePeriod.data_inizio, 
-        periodId: activePeriod.id, 
-        periods: h.periods || [] 
-      };
+      return { id: h.id, title: h.titolo, imageUrl: h.immagine_url || 'https://images.unsplash.com/photo-1506744626753-143283d115a0?q=80&w=800', currentCompletions: log.count, targetCompletions: activePeriod.target, titolo: h.titolo, rrule: h.rrule || undefined, data_inizio: activePeriod.data_inizio, periodId: activePeriod.id, periods: h.periods || [] };
     });
+  }, [dayData?.habits, targetDateStr]);
 
-  const mappedHabits: HabitItem[] = (dayData?.habits || [])
-    .filter((h: Habit) => h.tipo === 'H' && isHabitScheduledForDay(h, targetDateStr))
-    .map((h: Habit) => {
+  const mappedHabits = useMemo<HabitItem[]>(() => {
+    return (dayData?.habits || []).filter((h: Habit) => h.tipo === 'H' && isHabitScheduledForDay(h, targetDateStr)).map((h: Habit) => {
       const period = h.periods && h.periods.length > 0 ? h.periods[0] : { target: 1 };
       const log = h.logs && h.logs.length > 0 ? h.logs[0] : { count: 0 };
-      return { 
-        id: h.id, 
-        title: h.titolo, 
-        icon: h.immagine_url || '✨', 
-        done: log.count >= period.target 
-      };
+      return { id: h.id, title: h.titolo, icon: h.immagine_url || '✨', done: log.count >= period.target };
     });
+  }, [dayData?.habits, targetDateStr]);
 
   const mappedNotes = useMemo(() => {
   if (!dayData?.note) return [];
@@ -167,12 +178,17 @@ const DayPage: React.FC = () => {
     toggleTask({ id, isDone }); 
   };
 
+  const handleDeleteEvent = (id: number | string) => {
+    const originalId = String(id).split('-')[0];
+    deleteEvent(originalId);
+  };
+
   const handleAddNote = () => {
   const newId = Date.now();
   setEditingNoteId(newId); // Focus automatico
 
   // 🪄 Usiamo 'daySync' e la tipizzazione corretta!
-  queryClient.setQueryData(['daySync', targetDateStr], (oldData: DaySyncResponse | undefined) => {
+  queryClient.setQueryData(['daySync', targetDateStr], (oldData: any) => {
     if (!oldData) return oldData;
     return {
       ...oldData,
@@ -186,11 +202,11 @@ const DayPage: React.FC = () => {
 
 const handleAutoSaveNote = (id: number, text: string, isNew?: boolean) => {
   // 1. Aggiornamento istantaneo nella UI
-  queryClient.setQueryData(['daySync', targetDateStr], (oldData: DaySyncResponse | undefined) => {
+  queryClient.setQueryData(['daySync', targetDateStr], (oldData: any) => {
     if (!oldData) return oldData;
     return {
       ...oldData,
-      note: (oldData.note || []).map((n: DailyEntry & { isNew?: boolean }) => 
+      note: (oldData.note || []).map((n: any) => 
         n.id === id ? { ...n, testo: text, isNew: false } : n
       )
     };
@@ -202,11 +218,11 @@ const handleAutoSaveNote = (id: number, text: string, isNew?: boolean) => {
 
 const handleDeleteNote = (id: number, isNew?: boolean) => {
   // 1. Rimuovi istantaneamente dalla UI
-  queryClient.setQueryData(['daySync', targetDateStr], (oldData: DaySyncResponse | undefined) => {
+  queryClient.setQueryData(['daySync', targetDateStr], (oldData: any) => {
     if (!oldData) return oldData;
     return {
       ...oldData,
-      note: (oldData.note || []).filter((n: DailyEntry & { isNew?: boolean }) => n.id !== id)
+      note: (oldData.note || []).filter((n: any) => n.id !== id)
     };
   });
 
@@ -215,6 +231,13 @@ const handleDeleteNote = (id: number, isNew?: boolean) => {
     deleteNote(id); 
   }
 };
+
+  const getObiettivoFontSize = (text: string) => {
+    if (text.length < 35) return 'text-2xl xl:text-3xl';
+    if (text.length < 65) return 'text-xl xl:text-2xl';
+    if (text.length < 100) return 'text-lg xl:text-xl';
+    return 'text-base font-semibold';
+  };
 
   // Se i dati stanno caricando la prima volta
   if (isLoading && !dayData) return <div className="flex h-full items-center justify-center font-bold text-gray-500 animate-pulse">Caricamento agenda...</div>;
@@ -278,7 +301,7 @@ const handleDeleteNote = (id: number, isNew?: boolean) => {
           <div className="flex-1 xl:border-r border-gray-200 xl:pr-8 flex flex-col justify-center relative h-full">
             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-2 shrink-0">Obiettivo del Giorno</h3>
             {(() => {
-              const obiettivoObj = dayData?.obiettivi?.[0];
+              const obiettivoObj = dayData?.obiettivo;
               const obiettivoTesto = obiettivoObj?.testo || "";
               
               return (
@@ -320,37 +343,22 @@ const handleDeleteNote = (id: number, isNew?: boolean) => {
       {/* SEZIONE CENTRALE */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 flex-1 min-h-0">
         
-        <div className="xl:col-span-4 h-full flex flex-col min-h-0">
-            <EventsSection 
-              events={mappedEvents} 
-              targetDate={targetDate} 
-              targetDateStr={targetDateStr} 
-              deleteEvent={deleteEvent} 
-            />
-          </div>
-
-        <div className="xl:col-span-4 flex flex-col gap-3 h-full min-h-0 w-full min-w-0">
-          <TasksSection 
-              tasks={mappedTasks} 
-              targetDate={targetDate} 
-              onToggleTask={handleToggleTask} 
-            />
-          <CountdownsSection 
-              countdowns={mappedCountdowns} 
-              saveCountdown={saveCountdown} 
-              deleteCountdown={deleteCountdown} 
-            />
+        <div className="xl:col-span-4 h-full overflow-hidden flex flex-col min-h-0">
+          <EventsColumn events={mappedEvents} selectedDate={targetDate} onSelectEvent={(ev) => eventDetailModal.open(ev)} onAddEventClick={() => { eventFormModal.open({ eventToEdit: null, initialDate: targetDateStr }); }} />
         </div>
 
-        <div className="xl:col-span-4 h-full min-h-0 w-full min-w-0">
-          <HabitsRoutinesSection 
-            habits={mappedHabits}
-            routines={mappedRoutines}
-            updateHabitLog={updateHabitLog}
-            updateHabitCount={updateHabitCount}
-            saveHabit={saveHabit}
-            deleteHabit={deleteHabit}
-          />
+        <div className="xl:col-span-4 flex flex-col gap-3 h-full min-h-0 w-full min-w-0">
+          <div className="flex-1 overflow-hidden flex flex-col min-h-0 w-full min-w-0">
+             <TaskColumn tasks={mappedTasks} selectedDate={targetDate} onToggleTask={handleToggleTask} onSelectTask={(task) => taskDetailModal.open(task)} onAddTaskClick={() => taskFormModal.open(null)}/>
+          </div>
+          <div className="shrink-0 pb-2">
+            <CountdownWidget countdowns={mappedCountdowns} onClick={() => countdownHubModal.open()} />
+          </div>
+        </div>
+
+        <div className="xl:col-span-4 flex flex-col gap-6 h-full min-h-0">
+          <HabitsBar habits={mappedHabits} onToggleHabit={(id) => updateHabitLog({ habitId: id, delta: 1 })} onAddHabitClick={() => habitFormModal.open()} />
+          <RoutineColumn routines={mappedRoutines} onUpdateRoutine={(id, delta) => updateHabitCount({ habitId: id, delta })} onAddRoutineClick={() => { routineFormModal.open(null); }} onSelectRoutine={(routine) => routineDetailModal.open(routine)} />
         </div>
       </div>
 
@@ -368,7 +376,115 @@ const handleDeleteNote = (id: number, isNew?: boolean) => {
         onDeleteNote={handleDeleteNote}
         clearEditingNoteId={() => setEditingNoteId(null)}
       />
-      
+
+      {/* MODALI EVENTI */}
+      <EventDetailModal 
+        isOpen={eventDetailModal.isOpen} 
+        onClose={eventDetailModal.close} 
+        selectedEvent={eventDetailModal.data} 
+        onDeleteClick={(id) => { handleDeleteEvent(id); eventDetailModal.close(); }} 
+        onEditClick={() => { 
+          eventFormModal.open({ eventToEdit: eventDetailModal.data!, initialDate: null });
+          eventDetailModal.close(); 
+        }} 
+      />
+      <NewEventModal 
+        isOpen={eventFormModal.isOpen} 
+        initialDate={eventFormModal.data?.initialDate} 
+        onClose={() => { eventFormModal.close() }} 
+        eventToEdit={eventFormModal.data?.eventToEdit} 
+        onEventSaved={() => {}} 
+      />
+
+      {/* MODALI TASKS */}
+      <TaskDetailModal 
+        isOpen={taskDetailModal.isOpen} 
+        onClose={taskDetailModal.close} 
+        selectedTask={taskDetailModal.data} 
+        onToggleTask={handleToggleTask} 
+        onSelectTask={(task) => taskDetailModal.open(task)} 
+        tasks={mappedTasks} 
+        onEditClick={() => { 
+          taskFormModal.open(taskDetailModal.data); 
+          taskDetailModal.close(); 
+        }} 
+      />
+      <NewTaskModal 
+        isOpen={taskFormModal.isOpen} 
+        onClose={() => { taskFormModal.close() }} 
+        taskToEdit={taskFormModal.data} 
+      />
+
+      {/* MODALI COUNTDOWN */}
+      <CountdownsHubModal 
+        isOpen={countdownHubModal.isOpen} 
+        onClose={countdownHubModal.close} 
+        countdowns={mappedCountdowns} 
+        onSelectCountdown={(cd) => countdownDetailModal.open(cd)} 
+        onNewClick={() => countdownFormModal.open(null)} 
+      />
+      <CountdownDetailModal 
+        isOpen={countdownDetailModal.isOpen} 
+        onClose={countdownDetailModal.close} 
+        countdown={countdownDetailModal.data} 
+        onEditClick={() => { 
+          countdownFormModal.open(countdownDetailModal.data); 
+          countdownDetailModal.close(); 
+        }} 
+        onDeleteClick={(id) => { deleteCountdown(id); countdownDetailModal.close(); }} 
+      />
+      <CountdownNewModal 
+        isOpen={countdownFormModal.isOpen} 
+        onClose={countdownFormModal.close} 
+        countdownToEdit={countdownFormModal.data} 
+        onSave={(newCd) => { saveCountdown(newCd); countdownFormModal.close(); }} 
+      />
+
+      {/* MODALI ROUTINE */}
+      <RoutineDetailModal 
+        isOpen={routineDetailModal.isOpen} 
+        onClose={routineDetailModal.close} 
+        selectedRoutine={routineDetailModal.data} 
+        onEditClick={() => { 
+          routineFormModal.open(routineDetailModal.data); 
+          routineDetailModal.close(); 
+        }} 
+        onDeleteClick={(id) => { deleteHabit(id); routineDetailModal.close(); }} 
+      />
+      <RoutineNewModal 
+        isOpen={routineFormModal.isOpen} 
+        onClose={routineFormModal.close} 
+        routineToEdit={routineFormModal.data} 
+        onSave={(payload) => { 
+            saveHabit({ 
+            existingId: routineFormModal.data?.id, 
+            data: {
+              ...payload,
+              periodId: routineFormModal.data?.periodId 
+            }
+          });
+          routineFormModal.close(); 
+        }} 
+      />
+
+      {/* MODALE HABIT */}
+      <HabitNewModal 
+        isOpen={habitFormModal.isOpen} 
+        onClose={habitFormModal.close} 
+        onSave={(newHabit) => { 
+          saveHabit({ 
+            data: {
+              titolo: newHabit.titolo, 
+              tipo: 'H', 
+              immagine_url: newHabit.immagine_url, 
+              rrule: 'FREQ=DAILY;INTERVAL=1', 
+              data_inizio: new Date().toISOString().substring(0, 10), 
+              target_completamenti: 1 
+            }
+          });
+          habitFormModal.close(); 
+        }} 
+      />
     </div>
   );
 };

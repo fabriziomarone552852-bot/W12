@@ -1,9 +1,9 @@
 import React from 'react';
-import ShoppingListsColumn from '../components/shared/shopping/ShoppingListsColumn';
-import ShoppingItemsColumn from '../components/shared/shopping/ShoppingItemsColumn';
-import ShoppingControlsColumn from '../components/shared/shopping/ShoppingControlsColumn';
-import { useShoppingPage } from '../hooks/useShoppingPage';
-import { shoppingButtonPrimaryClass, shoppingCardClass, shoppingInputClass } from '../components/shared/shopping/shoppingUi';
+import ShoppingListsColumn from '@/components/shared/shopping/ShoppingListsColumn';
+import ShoppingItemsColumn from '@/components/shared/shopping/ShoppingItemsColumn';
+import ShoppingControlsColumn from '@/components/shared/shopping/ShoppingControlsColumn';
+import { useShoppingPage } from '@/hooks/useShoppingPage';
+import { shoppingButtonPrimaryClass, shoppingCardClass, shoppingInputClass } from '@/components/shared/shopping/shoppingUi';
 
 const ShoppingPage: React.FC = () => {
   const {

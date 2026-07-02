@@ -1,5 +1,7 @@
 // src/types/index.ts
 
+// src/types/index.ts
+
 // --- CATEGORIE ---
 export interface Category {
   id: number;
@@ -16,7 +18,7 @@ export interface Task {
   descrizione?: string | null;
   data_start: string;
   data_scadenza?: string | null;
-  priorita: 'Alta' | 'Media' | 'Bassa'; // Mappato dal PrioritaEnum del backend
+  priorita: 'Alta' | 'Media' | 'Bassa';
   category_id?: number | null;
   category?: Category | null;
   category_name?: string | null;
@@ -25,7 +27,9 @@ export interface Task {
   data_fatto?: string | null;
   user_id: number;
   parent_id?: number | null;
-  subtasks?: Task[];
+  
+  // 🪄 FIX: Rimosso il "?"! Ora è garantito che sia un array (al massimo vuoto)
+  subtasks: Task[]; 
 }
 
 // --- EVENTI ---
@@ -48,8 +52,8 @@ export interface Event {
 export interface DailyEntry {
   id: number;
   user_id: number;
-  data_riferimento: string; // Formato YYYY-MM-DD
-  tipo: 'Obiettivo' | 'Priorità' | 'Nota'; // Mappato da VALID_DAILY_ENTRY_TYPES
+  data_riferimento: string; 
+  tipo: 'Obiettivo' | 'Priorità' | 'Nota';
   testo: string;
   immagine_url?: string | null;
 }
@@ -58,10 +62,10 @@ export interface Countdown {
   id: number;
   user_id: number;
   title: string;
-  target_date: string; // Formato YYYY-MM-DD
-  status: 'active' | 'closed'; // Mappato da VALID_COUNTDOWN_STATUS
+  target_date: string; 
+  status: 'active' | 'closed';
   immagine_url?: string | null;
-  created_at: string; // ISO datetime
+  created_at: string; 
   updated_at?: string | null;
   closed_at?: string | null;
   reopened_at?: string | null;
@@ -69,10 +73,10 @@ export interface Countdown {
 
 export interface RawCountdown {
   id: number;
-  title?: string;             // Proveniente dal nuovo modello Countdown
-  testo?: string;             // Proveniente dal vecchio modello DailyEntry
-  target_date?: string;       // Proveniente dal nuovo modello Countdown
-  data_riferimento?: string;  // Proveniente dal vecchio modello DailyEntry
+  title?: string;             
+  testo?: string;             
+  target_date?: string;       
+  data_riferimento?: string;  
   immagine_url?: string | null;
 }
 
@@ -96,9 +100,11 @@ export interface Habit {
   id: number;
   user_id: number;
   titolo: string;
-  tipo: 'R' | 'H'; // R = Routine, H = Habit
+  tipo: 'R' | 'H'; 
   rrule?: string | null;
   immagine_url?: string | null;
+  
+  // Rigorosi: sono sempre array!
   periods: HabitPeriod[];
   logs: HabitLog[];
 }
@@ -108,7 +114,7 @@ export interface NoteItem {
   text: string;
   dateStr: string;
   color: string;
-  isNew?: boolean; // Il punto interrogativo significa che è opzionale
+  isNew?: boolean; 
 }
 
 export const CategoryGenre = {
@@ -151,4 +157,14 @@ export interface CalendarEvent {
   location?: string;
   tutto_il_giorno?: boolean;
   rrule?: string;
+}
+
+export interface DaySyncResponse {
+  tasks: Task[];
+  habits: Habit[];
+  events?: Event[];
+  countdowns?: Countdown[];
+  obiettivi?: DailyEntry[];
+  priorita?: DailyEntry[];
+  note?: DailyEntry[];
 }

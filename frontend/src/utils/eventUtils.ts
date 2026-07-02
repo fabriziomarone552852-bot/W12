@@ -1,7 +1,7 @@
 // src/utils/eventUtils.ts
-import type { CalendarEvent } from '../types';
+import type { CalendarEvent } from '@/types';
 import { pad } from './dateUtils';
-import type { Event } from '../types';
+import type { Event } from '@/types';
 
 export interface DayEventItem {
   ev: CalendarEvent;

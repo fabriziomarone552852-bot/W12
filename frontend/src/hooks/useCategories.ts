@@ -17,15 +17,19 @@ export const useCategories = () => {
     staleTime: Infinity,
   });
 
-  // 2. Creazione
+  // 2. Creazione (AGGIUNTO : Promise<Category>)
   const addCategoryMutation = useMutation({
-    mutationFn: (newCat: Partial<Category>) => api.post('/categories', newCat),
+    mutationFn: async (newCat: Partial<Category>): Promise<Category> => {
+      return await api.post('/categories', newCat);
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] })
   });
 
-  // 3. Aggiornamento (Promozione a COMMON)
+  // 3. Aggiornamento (AGGIUNTO : Promise<Category>)
   const updateCategoryMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string | number; data: Partial<Category> }) => api.patch(`/categories/${id}`, data),
+    mutationFn: async ({ id, data }: { id: string | number; data: Partial<Category> }): Promise<Category> => {
+      return await api.patch(`/categories/${id}`, data);
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] })
   });
 

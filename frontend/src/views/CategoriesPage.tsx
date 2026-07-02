@@ -1,9 +1,9 @@
 // src/views/CategoriesPage.tsx
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { apiUrl } from '../api/client';
-import { useAuth } from '../context/AuthContext';
-import CategoryForm, { type CategoryFormValues } from '../components/CategoryForm';
+import { apiUrl } from '@/api/client';
+import { useAuth } from '@/context/AuthContext';
+import CategoryForm, { type CategoryFormValues } from '@/components/CategoryForm';
 
 export interface Category {
   id: number;

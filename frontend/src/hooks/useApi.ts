@@ -1,6 +1,6 @@
 // src/hooks/useApi.ts
 import { useCallback } from 'react';
-import { apiClient } from '../api/client'; 
+import { apiClient } from '@/api/client'; 
 import axios, { AxiosError, type AxiosRequestConfig } from 'axios';
 
 interface ApiErrorData {

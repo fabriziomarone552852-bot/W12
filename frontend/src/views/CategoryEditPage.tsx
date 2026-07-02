@@ -1,10 +1,10 @@
 // src/views/CategoryEditPage.tsx
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { apiUrl } from '../api/client';
-import { useAuth } from '../context/AuthContext';
-import CategoryForm, { type CategoryFormValues } from '../components/CategoryForm';
-import type { Category } from './CategoriesPage';
+import { apiUrl } from '@/api/client';
+import { useAuth } from '@/context/AuthContext';
+import CategoryForm, { type CategoryFormValues } from '@/components/CategoryForm';
+import type { Category } from '@/CategoriesPage';
 
 const CategoryEditPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();

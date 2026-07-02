@@ -1,4 +1,4 @@
-import type { Habit } from '../types';
+import type { Habit } from '@/types';
 
 export const isHabitScheduledForDay = (h: Habit, targetDate: string): boolean => {
   if (!h.rrule) return true; // Senza regola = mostra tutti i giorni

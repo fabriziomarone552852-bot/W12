@@ -1,7 +1,7 @@
 // src/views/UserSettingsPage.tsx
 import React, { useEffect, useMemo, useState } from 'react';
-import { apiUrl } from '../api/client';
-import { useAuth } from '../context/AuthContext';
+import { apiUrl } from '@/api/client';
+import { useAuth } from '@/context/AuthContext';
 
 interface UserSettings {
   id: number;

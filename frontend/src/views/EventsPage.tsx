@@ -1,9 +1,9 @@
 // src/views/EventsPage.tsx
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { apiUrl } from '../api/client';
-import { useAuth } from '../context/AuthContext';
-import { useDebounce } from '../hooks/useDebounce';
+import { apiUrl } from '@/api/client';
+import { useAuth } from '@/context/AuthContext';
+import { useDebounce } from '@/hooks/useDebounce';
 
 export interface Category {
   id: number;

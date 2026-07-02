@@ -1,13 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { apiUrl } from '../api/client';
-import { useAuth } from '../context/AuthContext';
-import { useDebounce } from '../hooks/useDebounce';
-import TaskFamilyPanel from '../components/tasks/TaskFamilyPanel';
-import TaskFilters from '../components/tasks/TaskFilters';
-import TaskCreateForm from '../components/tasks/TaskCreateForm';
-import TaskListSection from '../components/tasks/TaskListSection';
-import TaskRows from '../components/tasks/TaskRows';
+import { apiUrl } from '@/api/client';
+import { useAuth } from '@/context/AuthContext';
+import { useDebounce } from '@/hooks/useDebounce';
+import TaskFamilyPanel from '@/components/tasks/TaskFamilyPanel';
+import TaskFilters from '@/components/tasks/TaskFilters';
+import TaskCreateForm from '@/components/tasks/TaskCreateForm';
+import TaskListSection from '@/components/tasks/TaskListSection';
+import TaskRows from '@/components/tasks/TaskRows';
 import type {
   Task,
   Priorita,
@@ -15,7 +15,7 @@ import type {
   TaskCreateFormState,
   SubtaskFormState,
   EditTaskFormState,
-} from '../types/tasks';
+} from '@/types/tasks';
 
 interface LocationState {
   createdCategory?: Category;
