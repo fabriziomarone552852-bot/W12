@@ -182,8 +182,8 @@ const TaskNewModal: React.FC<TaskNewModalProps> = ({ isOpen, onClose, taskToEdit
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="relative">
+        <div className="grid grid-cols-2 gap-4 items-end">
+          <div className="w-full">
             <CategorySelect  
               value={newTaskForm.category} 
               onChange={(catName) => setNewTaskForm({...newTaskForm, category: catName})} 
@@ -191,7 +191,7 @@ const TaskNewModal: React.FC<TaskNewModalProps> = ({ isOpen, onClose, taskToEdit
             />
           </div>
 
-          <div className="relative">
+          <div className="w-full">
             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Priorità</label>
             {/* 🪄 MAGIA: PrioritySelect pulitissimo! */}
             <PrioritySelect 
@@ -201,8 +201,8 @@ const TaskNewModal: React.FC<TaskNewModalProps> = ({ isOpen, onClose, taskToEdit
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="relative">
+        <div className="grid grid-cols-2 gap-4 items-end">
+          <div className="w-full">
             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Scadenza</label>
             <DatePicker 
               value={newTaskForm.data_scadenza}
@@ -213,7 +213,7 @@ const TaskNewModal: React.FC<TaskNewModalProps> = ({ isOpen, onClose, taskToEdit
             />
           </div>
 
-          <div>
+          <div className="w-full">
             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Luogo</label>
             <input type="text" placeholder="Es. Scrivania..." value={newTaskForm.luogo} onChange={(e) => setNewTaskForm({...newTaskForm, luogo: e.target.value})} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500" />
           </div>

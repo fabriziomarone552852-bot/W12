@@ -25,8 +25,8 @@ const TimeInput: React.FC<TimeInputProps> = ({ value, onChange, disabled = false
   };
 
   return (
-    <div className="relative flex items-center h-[46px] w-full">
-      <div className={`w-full h-full flex items-center justify-center gap-1 px-3 border border-gray-200 rounded-xl text-sm transition-colors shadow-sm ${disabled ? 'bg-gray-100' : 'bg-white focus-within:border-blue-500'}`}>
+    <div className="relative flex items-center w-full">
+      <div className={`w-full flex items-center justify-center gap-1 px-3 py-2 border border-gray-200 rounded-xl text-sm transition-colors shadow-sm ${disabled ? 'bg-gray-100' : 'bg-white focus-within:border-blue-500'}`}>
         <input
           type="text" placeholder="HH" maxLength={2} inputMode="numeric" disabled={disabled}
           value={orario.ore}

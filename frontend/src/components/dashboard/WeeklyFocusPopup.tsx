@@ -1,5 +1,5 @@
 // src/components/dashboard/WeeklyFocusPopup.tsx
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import type { CalendarEvent } from '@/types';
 import { getHexColor, getDynamicStyles } from '@/utils/uiUtils';
 import { pad } from '@/utils/dateUtils';
@@ -9,7 +9,7 @@ interface WeeklyFocusPopupProps {
   dayNameShort: string;
   dayNum: number;
   monthNum: number;
-  rawDayEvents: DayEventItem[]; // 2. Usiamo l'interfaccia importata!
+  rawDayEvents: DayEventItem[]; 
   popupRect: { left: number; width: number };
   onSelectEvent: (ev: CalendarEvent) => void;
   closePopup: () => void;
@@ -19,15 +19,46 @@ const WeeklyFocusPopup: React.FC<WeeklyFocusPopupProps> = ({
   dayNameShort, dayNum, monthNum, rawDayEvents, popupRect, onSelectEvent, closePopup 
 }) => {
   
-  // 3. LA MAGIA: Tutto il calcolo è ridotto a questa singola riga di useMemo!
+  // 1. Calcolo degli eventi (Intatto dal secondo codice)
   const { totalHeight, hourY, expandedHours, highlightedHours, overlayEvents } = useMemo(() => {
     return calculateDailyEventLayout(rawDayEvents);
   }, [rawDayEvents]);
 
+  // 2. NUOVO: Stato per memorizzare la coordinata X "sicura"
+  const [safeLeft, setSafeLeft] = useState<number>(0);
+
+  // 3. INTEGRAZIONE: Calcoliamo lo spazio per non uscire dallo schermo
+  useEffect(() => {
+    // La larghezza del nostro popup è 26rem, che equivale a 416px. 
+    // La metà è 208px. Arrotondiamo a 216px per avere un piccolo margine di respiro (padding).
+    const POPUP_HALF_WIDTH = 216; 
+    const MARGIN = 16; // 16px di distanza minima dal bordo del browser
+
+    // Questo è il punto in cui il popup VORREBBE stare (al centro della colonna)
+    const idealCenter = popupRect.left + (popupRect.width / 2);
+
+    // Calcoliamo i confini massimi oltre i quali non può andare
+    // maxCenter = impedisce di uscire a destra (Domenica)
+    // minCenter = impedisce di uscire a sinistra (Lunedì)
+    const maxCenter = window.innerWidth - POPUP_HALF_WIDTH - MARGIN;
+    const minCenter = POPUP_HALF_WIDTH + MARGIN;
+
+    // MAGIA MATEMATICA: Math.min lo ferma prima del bordo destro, Math.max lo ferma prima del bordo sinistro.
+    const clampedCenter = Math.max(minCenter, Math.min(idealCenter, maxCenter));
+
+    setSafeLeft(clampedCenter);
+  }, [popupRect]);
+
   return (
     <div 
       className="fixed z-[100] transition-all duration-200 ease-out animate-fadeIn shadow-[0_25px_70px_rgba(0,0,0,0.55)] rounded-2xl border border-gray-700 bg-gray-900 overflow-hidden flex flex-col cursor-default"
-      style={{ top: '5vh', height: '90vh', left: popupRect.left + (popupRect.width / 2), width: '26rem', transform: 'translateX(-50%)' }}
+      style={{ 
+        top: '5vh', 
+        height: '90vh', 
+        width: '26rem', 
+        left: safeLeft || popupRect.left, // Usiamo la X sicura calcolata
+        transform: 'translateX(-50%)' 
+      }}
       onClick={(e) => e.stopPropagation()} 
     >
       <div className="p-4 border-b border-gray-800 bg-gray-950 shrink-0 shadow-sm z-10">

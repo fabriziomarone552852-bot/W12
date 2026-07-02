@@ -91,8 +91,9 @@ const CountdownNewModal: React.FC<CountdownNewModalProps> = ({ isOpen, onClose, 
             <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Es. Esame di Stato, Compleanno..." className="w-full bg-white border border-gray-200 text-gray-800 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block p-3 shadow-sm" required />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4 items-end">
             <div>
+              <div className="w-full">
               <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Data Scadenza</label>
               {/* MAGIA 1: DatePicker */}
               <DatePicker 
@@ -102,13 +103,16 @@ const CountdownNewModal: React.FC<CountdownNewModalProps> = ({ isOpen, onClose, 
                 onToggle={() => setIsDatePickerOpen(!isDatePickerOpen)}
                 onClose={() => setIsDatePickerOpen(false)}
               />
+              </div>
             </div>
 
             <div>
+              <div className="relative w-full">
                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Ora Scadenza</label>
                {/* MAGIA 2: TimeInput */}
                <TimeInput value={timeStr} onChange={setTimeStr} />
             </div>
+          </div>
           </div>
 
           <div>
