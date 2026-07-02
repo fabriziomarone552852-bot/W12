@@ -69,6 +69,7 @@ const HabitNewModal: React.FC<HabitNewModalProps> = ({ isOpen, onClose, onSave }
       confirmText="Crea"
       isConfirmDisabled={!form.titolo.trim()}
       isLoading={isSaving} 
+      overflowVisible={true}
     >
       {/* Da qui in poi c'è SOLO l'HTML che riguarda strettamente il form! */}
       <form id="habit-form" onSubmit={handleSubmit} className="space-y-5">

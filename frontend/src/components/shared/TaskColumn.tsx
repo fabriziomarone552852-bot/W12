@@ -9,14 +9,14 @@ import { useConfirm } from '@/context/ConfirmContext';
 import { useAutoFitPagination } from '@/hooks/useAutoFitPagination';
 import { CalendarIcon, CalendarXIcon, SwitchIcon } from '@/components/shared/utils/Icons';
 import { Badge } from '@/components/shared/utils/Badges';
-import { type TaskTask } from '@/types';
+import { type TaskSummary } from '@/types';
 
 
 interface TaskColumnProps {
-  tasks: TaskTask[];
+  tasks: TaskSummary[];
   selectedDate?: Date; 
   onToggleTask: (id: number, e: React.MouseEvent) => void;
-  onSelectTask: (task: TaskTask) => void;
+  onSelectTask: (task: TaskSummary) => void;
   onAddTaskClick: () => void;
 }
 

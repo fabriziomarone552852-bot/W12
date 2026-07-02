@@ -1,11 +1,10 @@
 // src/components/dashboard/TaskDetailModal.tsx
 import React, { useMemo } from 'react';
-import { type TaskTask } from '@/types';
-import type { Task } from '@/types';
+import type { Task, TaskSummary } from '@/types';
 import BaseModal from '@/components/shared/dialog/BaseModal'; 
 import { useConfirm } from '@/context/ConfirmContext';
 import { Badge } from '@/components/shared/utils/Badges';
-import { TrashIcon, EditIcon, LocationIcon } from '@/components/shared/utils/Icons';
+import { TrashIcon, EditIcon, LocationIcon, PlusIcon } from '@/components/shared/utils/Icons';
 import { formatToItalianShortDate } from '@/utils/dateUtils';
 import { useAgendaMutations } from '@/hooks/useAgendaMutations';
 import { useQuery } from '@tanstack/react-query';
@@ -14,15 +13,16 @@ import { useApi } from '@/hooks/useApi';
 interface TaskDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
-  selectedTask: TaskTask | null;
+  selectedTask: TaskSummary | null;
   onToggleTask: (id: number) => void;
-  onSelectTask: (task: TaskTask) => void;
-  tasks: TaskTask[]; 
+  onSelectTask: (task: TaskSummary) => void;
+  tasks: TaskSummary[]; 
   onEditClick: () => void; 
+  onAddSubtask?: (parentId: number) => void;
 }
 
 const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ 
-  isOpen, onClose, selectedTask, onToggleTask, onSelectTask, onEditClick
+  isOpen, onClose, selectedTask, onToggleTask, onSelectTask, onEditClick, onAddSubtask
 }) => {
   const { updateTask, deleteTask } = useAgendaMutations();
   const api = useApi();
@@ -109,13 +109,13 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     });
   };
 
-  // 1. IL RENDER DELL'ALBERO (Ritorna l'HTML della lista laterale)
+  // 1. IL RENDER DELL'ALBERO AGGIORNATO (Data a destra sullo stesso rigo)
   const renderTaskTree = (nodeId: number, depth: number = 0): React.ReactNode => {
     const node = tasks.find((t: Task) => t.id === nodeId);
     if (!node) return null;
 
     const children = tasksByParent.get(nodeId) || [];
-    const isSelected = selectedTask.id === nodeId;
+    const isSelected = selectedTask?.id === nodeId;
 
     return (
       <div key={node.id} className="w-full">
@@ -134,9 +134,11 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
             className="w-4 h-4 mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0 mr-2"
           />
 
-          <span 
+          {/* Contenitore principale modificato con flex, items-center e justify-between */}
+          <div 
+            className="flex-1 flex items-center justify-between gap-2 cursor-pointer" 
             onClick={() => {
-              const formattedTask: TaskTask = {
+              const formattedTask: TaskSummary = {
                 id: node.id,
                 title: node.titolo,
                 deadline: node.data_scadenza ? formatToItalianShortDate(node.data_scadenza) : 'Nessuna',
@@ -151,14 +153,42 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
               };
               onSelectTask(formattedTask);
             }}
-            className={`break-words cursor-pointer flex-1 ${
-              node.fatto ? "line-through text-gray-400" : isSelected ? "font-extrabold text-gray-900" : "text-gray-700"
-            }`}
           >
-            {node.titolo}
-          </span>
+            {/* Titolo della Task (flex-1 e min-w-0 servono a gestire i testi lunghi senza rompere il flex) */}
+            <span className={`break-words flex-1 min-w-0 ${
+              node.fatto ? "line-through text-gray-400" : isSelected ? "font-extrabold text-gray-900" : "text-gray-700"
+            }`}>
+              {node.titolo}
+            </span>
+            
+            {/* Solo la Data di scadenza all'estremità destra senza prefissi */}
+            {node.data_scadenza && (
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 whitespace-nowrap ${
+                node.fatto ? 'bg-gray-100 text-gray-400' : 'text-red-500'
+              }`}>
+                {formatToItalianShortDate(node.data_scadenza)}
+              </span>
+            )}
+          </div>
         </div>
+
+        {/* PULSANTE "+" */}
+        <div 
+          className="py-1 flex items-center gap-1.5 text-xs font-bold text-gray-400 hover:text-blue-600 cursor-pointer transition-colors"
+          style={{ paddingLeft: `${12 + ((depth + 1) * 16)}px` }}
+          onClick={(e) => {
+            e.stopPropagation(); 
+            if (onAddSubtask) {
+              onAddSubtask(node.id);
+            }
+          }}
+        >
+          <span className="text-lg leading-none mt-[-2px]">+</span> Aggiungi sottotask
+        </div>
+
+        {/*  RENDER DEI FIGLI */}
         {children.map((child: Task) => renderTaskTree(child.id, depth + 1))}
+
       </div>
     );
   };

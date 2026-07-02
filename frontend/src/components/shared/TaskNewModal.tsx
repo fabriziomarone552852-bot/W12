@@ -1,8 +1,8 @@
-// src/components/dashboard/NewTaskModal.tsx
+// src/components/shared/TaskNewModal.tsx
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { type Task, CategoryGenre } from '@/types';
-import { type TaskTask } from '@/types';
+import { type TaskSummary } from '@/types';
 import DatePicker from '@/components/shared/utils/DatePicker'; 
 import CategorySelect from '@/components/shared/utils/CategorySelect'; 
 import BaseModal from '@/components/shared/dialog/BaseModal';
@@ -15,13 +15,14 @@ import { useAgendaMutations } from '@/hooks/useAgendaMutations';
 import { useQuery } from '@tanstack/react-query';
 import { useApi } from '@/hooks/useApi';
 
-interface NewTaskModalProps {
+interface TaskNewModalProps {
   isOpen: boolean;
   onClose: () => void;
-  taskToEdit?: TaskTask | null;
+  taskToEdit?: TaskSummary | null;
+  initialParentId?: number | null;
 }
 
-const NewTaskModal: React.FC<NewTaskModalProps> = ({ isOpen, onClose, taskToEdit }) => {
+const TaskNewModal: React.FC<TaskNewModalProps> = ({ isOpen, onClose, taskToEdit, initialParentId }) => {
   const {  user } = useAuth();
   const { addTask, updateTask } = useAgendaMutations();
   const [isSaving, setIsSaving] = useState(false);
@@ -70,15 +71,21 @@ const NewTaskModal: React.FC<NewTaskModalProps> = ({ isOpen, onClose, taskToEdit
         setIsSubtaskPanelOpen(!!taskToEdit.parent_id);
       } else {
         setNewTaskForm({
-          titolo: '', descrizione: '', data_start: new Date().toISOString().slice(0, 10),
-          data_scadenza: '', priorita: 'Bassa', category: '', luogo: '', parent_id: ''
+          titolo: '', 
+          descrizione: '', 
+          data_start: new Date().toISOString().slice(0, 10),
+          data_scadenza: '', 
+          priorita: 'Bassa', 
+          category: '', 
+          luogo: '', 
+          parent_id: initialParentId ? initialParentId.toString() : ''
         });
-        setIsSubtaskPanelOpen(false);
+        setIsSubtaskPanelOpen(!!initialParentId);
       }
     } else {
       setIsDatePickerOpen(false);
     }
-  }, [isOpen, taskToEdit]);
+  }, [isOpen, taskToEdit, initialParentId]);
 
 
   const handleSalvaNuovaTask = async (e: React.FormEvent) => {
@@ -149,6 +156,7 @@ const NewTaskModal: React.FC<NewTaskModalProps> = ({ isOpen, onClose, taskToEdit
         confirmText={taskToEdit ? 'Aggiorna Task' : 'Salva Task'}
         isLoading={isSaving}
         isConfirmDisabled={!newTaskForm.titolo.trim()}
+        overflowVisible={true}
       >
         <form id="task-form" onSubmit={handleSalvaNuovaTask} className="space-y-4">
         <div>
@@ -216,4 +224,4 @@ const NewTaskModal: React.FC<NewTaskModalProps> = ({ isOpen, onClose, taskToEdit
   );
 };
 
-export default NewTaskModal;
+export default TaskNewModal;

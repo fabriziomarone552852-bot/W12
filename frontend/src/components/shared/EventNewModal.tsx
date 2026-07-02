@@ -175,6 +175,7 @@ const NewEventModal: React.FC<NewEventModalProps> = ({
         confirmText={eventToEdit ? 'Aggiorna Evento' : 'Salva Evento'}
         isLoading={isSaving}
         isConfirmDisabled={!newEventForm.titolo.trim()}
+        overflowVisible={true}
       >
         <form id="event-form" onSubmit={handleSalvaNuovoEvento} className="space-y-4">
             <div>

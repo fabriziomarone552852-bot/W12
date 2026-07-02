@@ -1,5 +1,5 @@
 // src/components/shared/CategorySelect.tsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { CategoryGenre, type Category } from '@/types';
 import { useOutsideClick } from '@/hooks/useOutsideClick';
 import { PlusIcon, DropdownIcon, CloseIcon } from './Icons';
@@ -20,12 +20,22 @@ const CategorySelect: React.FC<CategorySelectProps> = ({ value, onChange, genreT
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [newCatForm, setNewCatForm] = useState({ name: '', colore: '#3B82F6' });
   const [errorMsg, setErrorMsg] = useState('');
+  const [openUpwards, setOpenUpwards] = useState(false);
 
   const activeColor = categories.find((c: Category) => c.name === value)?.colore || '#9CA3AF';
 
   const wrapperRef = useOutsideClick<HTMLDivElement>(() => {
     if (isDropdownOpen) setIsDropdownOpen(false);
   });
+
+  useEffect(() => {
+    if (isDropdownOpen && wrapperRef.current) {
+      const rect = wrapperRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      // Categoria ha un max-h-48 (circa 192px), usiamo 220px di margine
+      setOpenUpwards(spaceBelow < 220); 
+    }
+  }, [isDropdownOpen]);
 
   const handleSaveNew = async () => {
     const nomePulito = newCatForm.name.trim();
@@ -88,7 +98,9 @@ const CategorySelect: React.FC<CategorySelectProps> = ({ value, onChange, genreT
       </div>
 
       {isDropdownOpen && (
-        <div className="absolute z-30 w-full mt-1 bg-white border border-gray-100 rounded-xl shadow-xl py-1 animate-fadeIn max-h-48 overflow-y-auto">
+        <div className={`absolute z-[100] w-full bg-white border border-gray-100 rounded-xl shadow-xl py-1 animate-fadeIn max-h-48 overflow-y-auto ${
+          openUpwards ? 'bottom-full mb-2' : 'top-full mt-1'
+        }`}>
           {categories.map((cat: Category) => (
             <div key={cat.id} onClick={() => { onChange(cat.name); setIsDropdownOpen(false); }} className="px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer flex items-center gap-2 transition-colors">
               <span className="w-3 h-3 rounded-full border border-gray-200 shrink-0" style={{ backgroundColor: cat.colore || '#9CA3AF' }}></span>

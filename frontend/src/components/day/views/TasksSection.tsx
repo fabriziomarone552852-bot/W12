@@ -1,56 +1,31 @@
 // src/components/day/views/TasksSection.tsx
 import React from 'react';
 import TaskColumn from '@/components/shared/TaskColumn';
-import TaskDetailModal from '@/components/shared/TaskDetailModal';
-import NewTaskModal from '@/components/shared/TaskNewModal';
 import { useModal } from '@/hooks/useModals';
-import type { TaskTask } from '@/types';
+import type { TaskSummary } from '@/types';
+import { useTaskModals } from '@/context/TaskModalContext';
 
 interface TasksSectionProps {
-  tasks: TaskTask[];
+  tasks: TaskSummary[];
   targetDate: Date;
   onToggleTask: (id: number) => void;
 }
 
-export const TasksSection: React.FC<TasksSectionProps> = ({ 
-  tasks, 
-  targetDate, 
-  onToggleTask 
-}) => {
-  // I modali dei task ora vivono qui!
-  const taskDetailModal = useModal<TaskTask>();
-  const taskFormModal = useModal<TaskTask>();
+export const TasksSection: React.FC<TasksSectionProps> = ({ tasks, targetDate, onToggleTask }) => {
+  const { openTaskDetail, openTaskForm } = useTaskModals();
 
   return (
     <>
       <div className="flex-1 overflow-hidden flex flex-col min-h-0 w-full min-w-0">
         <TaskColumn 
-          tasks={tasks} 
-          selectedDate={targetDate} 
-          onToggleTask={onToggleTask} 
-          onSelectTask={(task) => taskDetailModal.open(task)} 
-          onAddTaskClick={() => taskFormModal.open(null)}
-        />
-      </div>
-
-      <TaskDetailModal 
-        isOpen={taskDetailModal.isOpen} 
-        onClose={taskDetailModal.close} 
-        selectedTask={taskDetailModal.data} 
-        onToggleTask={onToggleTask} 
-        onSelectTask={(task) => taskDetailModal.open(task)} 
         tasks={tasks} 
-        onEditClick={() => { 
-          taskFormModal.open(taskDetailModal.data); 
-          taskDetailModal.close(); 
-        }} 
+        selectedDate={targetDate} 
+        onToggleTask={onToggleTask} 
+        onSelectTask={openTaskDetail} 
+        onAddTaskClick={() => openTaskForm()}
       />
-      
-      <NewTaskModal 
-        isOpen={taskFormModal.isOpen} 
-        onClose={taskFormModal.close} 
-        taskToEdit={taskFormModal.data} 
-      />
+    </div>
+
     </>
   );
 };

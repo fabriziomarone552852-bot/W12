@@ -12,6 +12,7 @@ interface BaseModalProps {
   sidePanel?: ReactNode;
   headerActions?: ReactNode; 
   hideDefaultClose?: boolean; 
+  overflowVisible?: boolean;
   
   // --- NUOVE PROPS MAGICHE PER IL FOOTER AUTOMATICO ---
   onConfirm?: (e?: React.MouseEvent) => void;
@@ -29,7 +30,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
   sidePanel, headerActions, hideDefaultClose = false,
   onConfirm, onCancel, confirmText = 'Salva', cancelText = 'Annulla', 
   isConfirmDisabled = false, formId,
-  isLoading = false
+  isLoading = false, overflowVisible = false
 }) => {
   if (!isOpen) return null;
 
@@ -97,7 +98,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
             </div>
           </div>
 
-          <div className="p-6 overflow-y-auto custom-scrollbar">{children}</div>
+          <div className={`p-6 custom-scrollbar ${overflowVisible ? 'overflow-visible' : 'overflow-y-auto'}`}>{children}</div>
 
           {activeFooter && <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl shrink-0">{activeFooter}</div>}
           

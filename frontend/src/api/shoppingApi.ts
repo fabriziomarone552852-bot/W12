@@ -1,177 +1,143 @@
-import { apiUrl } from '@/api/client';
+// src/api/shoppingApi.ts
+// API layer per Shopping - usa useApi() come useAgendaHome (non fetch raw)
+import { useApi } from '../hooks/useApi';
 import type {
-  ItemFormState,
-  ListFormState,
-  PurchaseFormState,
+  ShoppingGroup,
+  ShoppingGroupMember,
   ShoppingList,
   ShoppingListItem,
   ShoppingPrice,
   ShoppingSupplier,
+  ListFormState,
+  ItemFormState,
   SupplierFormState,
-} from '@/components/shared/shopping/types';
+  PurchaseFormState,
+  InviteFormState,
+} from '../types/shopping';
 
-type ApiOk<T> = { ok: true; data: T; status: number };
-type ApiErr = { ok: false; error: string; status: number };
-export type ApiResult<T> = ApiOk<T> | ApiErr;
+// Helper: converte form state → payload API (string → number dove necessario)
+function listFormToPayload(form: ListFormState) {
+  return {
+    owner_id: form.owner_id ? Number(form.owner_id) : undefined,
+    group_id: form.group_id ? Number(form.group_id) : null,
+    visibility_id: Number(form.visibility_id),
+    status_id: form.status_id ? Number(form.status_id) : undefined,
+    name: form.name,
+    description: form.description || null,
+  };
+}
 
-const getErrorMessage = async (res: Response, fallback: string) => {
-  try {
-    const data = await res.json();
-    return data?.detail || data?.message || fallback;
-  } catch {
-    return fallback;
-  }
-};
+function itemFormToPayload(form: ItemFormState) {
+  return {
+    shopping_list_id: Number(form.shopping_list_id),
+    name_original: form.name_original,
+    quantity: form.quantity ? Number(form.quantity) : null,
+    unit_id: form.unit_id ? Number(form.unit_id) : null,
+    notes: form.notes || null,
+    status_id: form.status_id ? Number(form.status_id) : undefined,
+  };
+}
 
-export const fetchShoppingLists = async (headers: HeadersInit): Promise<ApiResult<ShoppingList[]>> => {
-  const res = await fetch(apiUrl('/shopping/lists'), { headers });
-  if (!res.ok) return { ok: false, error: await getErrorMessage(res, 'Errore caricamento liste'), status: res.status };
-  const data = await res.json();
-  return { ok: true, data: Array.isArray(data) ? data : data.items ?? [], status: res.status };
-};
+function supplierFormToPayload(form: SupplierFormState) {
+  return {
+    name: form.name,
+    status_id: form.status_id ? Number(form.status_id) : undefined,
+  };
+}
 
-export const fetchShoppingItems = async (
-  headers: HeadersInit,
-  filters: { shopping_list_id?: string; stato?: 'tutti' | 'aperti' | 'completati' },
-): Promise<ApiResult<ShoppingListItem[]>> => {
-  const params = new URLSearchParams();
-  if (filters.shopping_list_id) params.set('shopping_list_id', filters.shopping_list_id);
-  if (filters.stato === 'completati') params.set('is_purchased', 'true');
-  if (filters.stato === 'aperti') params.set('is_purchased', 'false');
-  const res = await fetch(apiUrl(`/shopping/items${params.toString() ? `?${params.toString()}` : ''}`), { headers });
-  if (!res.ok) return { ok: false, error: await getErrorMessage(res, 'Errore caricamento articoli'), status: res.status };
-  const data = await res.json();
-  return { ok: true, data: Array.isArray(data) ? data : data.items ?? [], status: res.status };
-};
+function purchaseFormToPayload(form: PurchaseFormState) {
+  return {
+    supplier_id: form.supplier_id ? Number(form.supplier_id) : null,
+    purchase_date: form.purchase_date,
+    price: Number(form.price),
+    currency_id: form.currency_id ? Number(form.currency_id) : null,
+    offer_flag_id: form.offer_flag_id ? Number(form.offer_flag_id) : null,
+    product_name_original: form.product_name_original || null,
+    product_name_normalized: form.product_name_normalized || null,
+  };
+}
 
-export const fetchShoppingSuppliers = async (headers: HeadersInit): Promise<ApiResult<ShoppingSupplier[]>> => {
-  const res = await fetch(apiUrl('/shopping/suppliers'), { headers });
-  if (!res.ok) return { ok: false, error: await getErrorMessage(res, 'Errore caricamento fornitori'), status: res.status };
-  const data = await res.json();
-  return { ok: true, data: Array.isArray(data) ? data : data.items ?? [], status: res.status };
-};
+function inviteFormToPayload(form: InviteFormState) {
+  return {
+    username: form.username || null,
+    email: form.email || null,
+    role_code: form.role_code,
+  };
+}
 
-export const createShoppingSupplier = async (headers: HeadersInit, form: SupplierFormState): Promise<ApiResult<ShoppingSupplier>> => {
-  const res = await fetch(apiUrl('/shopping/suppliers'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...headers },
-    body: JSON.stringify({
-      name: form.name,
-      status_id: form.status_id ? Number(form.status_id) : undefined,
-    }),
-  });
-  if (!res.ok) return { ok: false, error: await getErrorMessage(res, 'Errore creazione fornitore'), status: res.status };
-  return { ok: true, data: await res.json(), status: res.status };
-};
+// ── Hook factory ──
+export const useShoppingApi = () => {
+  const api = useApi();
 
-export const createShoppingList = async (headers: HeadersInit, form: ListFormState): Promise<ApiResult<ShoppingList>> => {
-  const res = await fetch(apiUrl('/shopping/lists'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...headers },
-    body: JSON.stringify({
-      owner_id: form.owner_id ? Number(form.owner_id) : undefined,
-      group_id: form.group_id ? Number(form.group_id) : null,
-      visibility_id: Number(form.visibility_id),
-      status_id: form.status_id ? Number(form.status_id) : undefined,
-      name: form.name,
-      description: form.description || null,
-    }),
-  });
-  if (!res.ok) return { ok: false, error: await getErrorMessage(res, 'Errore creazione lista'), status: res.status };
-  return { ok: true, data: await res.json(), status: res.status };
-};
+  // Groups
+  const fetchGroups = () => api.get<ShoppingGroup[]>('/shopping/groups');
+  const createGroup = (name: string, description?: string) =>
+    api.post<ShoppingGroup>('/shopping/groups', { name, description: description || null });
+  const updateGroup = (groupId: number, data: Partial<{ name: string; description: string | null; status_id: number }>) =>
+    api.patch<ShoppingGroup>(`/shopping/groups/${groupId}`, data);
+  const deleteGroup = (groupId: number) => api.del(`/shopping/groups/${groupId}`);
 
-export const createShoppingItem = async (headers: HeadersInit, form: ItemFormState): Promise<ApiResult<ShoppingListItem>> => {
-  const res = await fetch(apiUrl('/shopping/items'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...headers },
-    body: JSON.stringify({
-      shopping_list_id: Number(form.shopping_list_id),
-      name_original: form.name_original,
-      quantity: form.quantity ? Number(form.quantity) : null,
-      unit_id: form.unit_id ? Number(form.unit_id) : null,
-      notes: form.notes || null,
-      status_id: form.status_id ? Number(form.status_id) : undefined,
-    }),
-  });
-  if (!res.ok) return { ok: false, error: await getErrorMessage(res, 'Errore creazione articolo'), status: res.status };
-  return { ok: true, data: await res.json(), status: res.status };
-};
+  // Group Members
+  const fetchMembers = (groupId: number) =>
+    api.get<ShoppingGroupMember[]>(`/shopping/groups/${groupId}/members`);
+  const addMember = (groupId: number, userId: number, roleId: number) =>
+    api.post<ShoppingGroupMember>(`/shopping/groups/${groupId}/members`, { user_id: userId, role_id: roleId });
+  const inviteMember = (groupId: number, form: InviteFormState) =>
+    api.post<ShoppingGroupMember>(`/shopping/groups/${groupId}/invite`, inviteFormToPayload(form));
+  const updateMemberRole = (groupId: number, userId: number, roleCode: string) =>
+    api.patch<ShoppingGroupMember>(`/shopping/groups/${groupId}/members/${userId}`, { role_code: roleCode });
+  const removeMember = (groupId: number, userId: number) =>
+    api.del(`/shopping/groups/${groupId}/members/${userId}`);
 
-export const updateShoppingItem = async (headers: HeadersInit, itemId: number, form: ItemFormState): Promise<ApiResult<ShoppingListItem>> => {
-  const res = await fetch(apiUrl(`/shopping/items/${itemId}`), {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...headers },
-    body: JSON.stringify({
-      shopping_list_id: Number(form.shopping_list_id),
-      name_original: form.name_original,
-      quantity: form.quantity ? Number(form.quantity) : null,
-      unit_id: form.unit_id ? Number(form.unit_id) : null,
-      notes: form.notes || null,
-      status_id: form.status_id ? Number(form.status_id) : undefined,
-    }),
-  });
-  if (!res.ok) return { ok: false, error: await getErrorMessage(res, 'Errore aggiornamento articolo'), status: res.status };
-  return { ok: true, data: await res.json(), status: res.status };
-};
+  // Lists
+  const fetchLists = () => api.get<ShoppingList[]>('/shopping/lists');
+  const createList = (form: ListFormState) =>
+    api.post<ShoppingList>('/shopping/lists', listFormToPayload(form));
+  const updateList = (listId: number, form: Partial<ListFormState>) =>
+    api.patch<ShoppingList>(`/shopping/lists/${listId}`, listFormToPayload(form as ListFormState));
+  const deleteList = (listId: number) => api.del(`/shopping/lists/${listId}`);
 
-export const updateShoppingList = async (headers: HeadersInit, listId: number, form: ListFormState): Promise<ApiResult<ShoppingList>> => {
-  const res = await fetch(apiUrl(`/shopping/lists/${listId}`), {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...headers },
-    body: JSON.stringify({
-      owner_id: form.owner_id ? Number(form.owner_id) : undefined,
-      group_id: form.group_id ? Number(form.group_id) : null,
-      visibility_id: Number(form.visibility_id),
-      status_id: form.status_id ? Number(form.status_id) : undefined,
-      name: form.name,
-      description: form.description || null,
-    }),
-  });
-  if (!res.ok) return { ok: false, error: await getErrorMessage(res, 'Errore aggiornamento lista'), status: res.status };
-  return { ok: true, data: await res.json(), status: res.status };
-};
+  // Items
+  const fetchItems = (params?: { shopping_list_id?: number; is_purchased?: boolean }) => {
+    const qs = new URLSearchParams();
+    if (params?.shopping_list_id != null) qs.set('shopping_list_id', String(params.shopping_list_id));
+    if (params?.is_purchased != null) qs.set('is_purchased', String(params.is_purchased));
+    const query = qs.toString() ? `?${qs.toString()}` : '';
+    return api.get<ShoppingListItem[]>(`/shopping/items${query}`);
+  };
+  const createItem = (form: ItemFormState) =>
+    api.post<ShoppingListItem>('/shopping/items', itemFormToPayload(form));
+  const updateItem = (itemId: number, data: Partial<ItemFormState>) =>
+    api.patch<ShoppingListItem>(`/shopping/items/${itemId}`, itemFormToPayload(data as ItemFormState));
+  const deleteItem = (itemId: number) => api.del(`/shopping/items/${itemId}`);
 
-export const deleteShoppingItem = async (headers: HeadersInit, itemId: number): Promise<ApiResult<null>> => {
-  const res = await fetch(apiUrl(`/shopping/items/${itemId}`), { method: 'DELETE', headers });
-  if (!res.ok) return { ok: false, error: await getErrorMessage(res, 'Errore eliminazione articolo'), status: res.status };
-  return { ok: true, data: null, status: res.status };
-};
+  // Suppliers
+  const fetchSuppliers = () => api.get<ShoppingSupplier[]>('/shopping/suppliers');
+  const createSupplier = (form: SupplierFormState) =>
+    api.post<ShoppingSupplier>('/shopping/suppliers', supplierFormToPayload(form));
+  const updateSupplier = (supplierId: number, form: Partial<SupplierFormState>) =>
+    api.patch<ShoppingSupplier>(`/shopping/suppliers/${supplierId}`, supplierFormToPayload(form as SupplierFormState));
+  const deleteSupplier = (supplierId: number) => api.del(`/shopping/suppliers/${supplierId}`);
 
-export const deleteShoppingList = async (headers: HeadersInit, listId: number): Promise<ApiResult<null>> => {
-  const res = await fetch(apiUrl(`/shopping/lists/${listId}`), { method: 'DELETE', headers });
-  if (!res.ok) return { ok: false, error: await getErrorMessage(res, 'Errore eliminazione lista'), status: res.status };
-  return { ok: true, data: null, status: res.status };
-};
+  // Prices
+  const addPrice = (itemId: number, form: PurchaseFormState) =>
+    api.post<ShoppingPrice>(`/shopping/items/${itemId}/prices`, purchaseFormToPayload(form));
+  const updatePrice = (priceId: number, data: Partial<PurchaseFormState>) =>
+    api.patch<ShoppingPrice>(`/shopping/prices/${priceId}`, purchaseFormToPayload(data as PurchaseFormState));
+  const deletePrice = (priceId: number) => api.del(`/shopping/prices/${priceId}`);
 
-export const toggleShoppingItemDone = async (headers: HeadersInit, item: ShoppingListItem): Promise<ApiResult<ShoppingListItem>> => {
-  const res = await fetch(apiUrl(`/shopping/items/${item.id}`), {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...headers },
-    body: JSON.stringify({ is_purchased: !item.is_purchased }),
-  });
-  if (!res.ok) return { ok: false, error: await getErrorMessage(res, 'Errore aggiornamento stato articolo'), status: res.status };
-  return { ok: true, data: await res.json(), status: res.status };
-};
-
-export const createShoppingPrice = async (
-  headers: HeadersInit,
-  itemId: number,
-  form: PurchaseFormState,
-): Promise<ApiResult<ShoppingPrice>> => {
-  const res = await fetch(apiUrl(`/shopping/items/${itemId}/prices`), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...headers },
-    body: JSON.stringify({
-      supplier_id: form.supplier_id ? Number(form.supplier_id) : null,
-      purchase_date: form.purchase_date,
-      price: Number(form.price),
-      currency_id: form.currency_id ? Number(form.currency_id) : null,
-      offer_flag_id: form.offer_flag_id ? Number(form.offer_flag_id) : null,
-      product_name_original: form.product_name_original || null,
-      product_name_normalized: form.product_name_normalized || null,
-    }),
-  });
-  if (!res.ok) return { ok: false, error: await getErrorMessage(res, 'Errore registrazione acquisto'), status: res.status };
-  return { ok: true, data: await res.json(), status: res.status };
+  return {
+    // Groups
+    fetchGroups, createGroup, updateGroup, deleteGroup,
+    // Members
+    fetchMembers, addMember, inviteMember, updateMemberRole, removeMember,
+    // Lists
+    fetchLists, createList, updateList, deleteList,
+    // Items
+    fetchItems, createItem, updateItem, deleteItem,
+    // Suppliers
+    fetchSuppliers, createSupplier, updateSupplier, deleteSupplier,
+    // Prices
+    addPrice, updatePrice, deletePrice,
+  };
 };

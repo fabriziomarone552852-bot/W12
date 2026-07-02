@@ -1,319 +1,206 @@
-import React from 'react';
-import type { ShoppingList, ShoppingListItem } from '@/types';
-import { shoppingButtonPrimaryClass, shoppingButtonSecondaryClass, shoppingCardClass, shoppingIconButtonClass, shoppingInputClass } from './shoppingUi';
-
-export type ItemFormState = {
-  shopping_list_id: string;
-  name_original: string;
-  quantity: string;
-  unit_id: string;
-  notes: string;
-  status_id: string;
-};
+// src/components/shared/shopping/ShoppingItemsColumn.tsx
+import React, { useState, useMemo } from 'react';
+import { useShoppingMutations } from '../../../hooks/useShoppingMutations';
+import { useModal } from '../../../hooks/useModals';
+import { useAutoFitPagination } from '../../../hooks/useAutoFitPagination';
+import { useDebounce } from '../../../hooks/useDebounce';
+import type { ShoppingList, ShoppingListItem, ItemFormState, PurchaseFormState } from '../../../types/shopping';
+import { shoppingButtonPrimaryClass, shoppingButtonSecondaryClass, shoppingCardClass, shoppingInputClass } from './shoppingUi';
 
 interface ShoppingItemsColumnProps {
-  loading: boolean;
+  items: ShoppingListItem[];
   lists: ShoppingList[];
-  currentListName: string;
-  filtroListaId: string;
-  filtroStato: 'tutti' | 'aperti' | 'completati';
-  filtroNome: string;
-  filtroNote: string;
-  setFiltroListaId: (value: string) => void;
-  setFiltroStato: (value: 'tutti' | 'aperti' | 'completati') => void;
-  setFiltroNome: (value: string) => void;
-  setFiltroNote: (value: string) => void;
-  resetFiltri: () => void;
-  totalItems: number;
-  startIndex: number;
-  endIndex: number;
-  rowsPerPage: number;
-  setRowsPerPage: (rows: number) => void;
-  safeCurrentPage: number;
-  totalPages: number;
-  setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
-  paginatedData: ShoppingListItem[];
-  editingItemId: number | null;
-  editItemForm: ItemFormState;
-  setEditItemForm: React.Dispatch<React.SetStateAction<ItemFormState>>;
-  startEditItem: (item: ShoppingListItem) => void;
-  saveEditItem: (itemId: number) => void;
-  cancelEditItem: () => void;
-  toggleFatto: (item: ShoppingListItem) => void;
-  deleteItem: (item: ShoppingListItem) => void;
+  loading: boolean;
+  activeListId: string;
 }
 
-const ROWS_PER_PAGE_OPTIONS = [10, 20, 50];
+const ShoppingItemsColumn: React.FC<ShoppingItemsColumnProps> = ({ items, lists, loading, activeListId }) => {
+  const mutations = useShoppingMutations();
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const createModal = useModal<string>(); // shopping_list_id
+  const editModal = useModal<ShoppingListItem>();
+  const purchaseModal = useModal<ShoppingListItem>();
 
-const ShoppingItemsColumn: React.FC<ShoppingItemsColumnProps> = ({
-  loading,
-  lists,
-  currentListName,
-  filtroListaId,
-  filtroStato,
-  filtroNome,
-  filtroNote,
-  setFiltroListaId,
-  setFiltroStato,
-  setFiltroNome,
-  setFiltroNote,
-  resetFiltri,
-  totalItems,
-  startIndex,
-  endIndex,
-  rowsPerPage,
-  setRowsPerPage,
-  safeCurrentPage,
-  totalPages,
-  setCurrentPage,
-  paginatedData,
-  editingItemId,
-  editItemForm,
-  setEditItemForm,
-  startEditItem,
-  saveEditItem,
-  cancelEditItem,
-  toggleFatto,
-  deleteItem,
-}) => {
+  const [filtroStato, setFiltroStato] = useState<'tutti' | 'aperti' | 'completati'>('tutti');
+  const [filtroNome, setFiltroNome] = useState('');
+  const debouncedNome = useDebounce(filtroNome);
+  const [itemForm, setItemForm] = useState<ItemFormState>({ shopping_list_id: '', name_original: '', quantity: '', unit_id: '', notes: '', status_id: '' });
+  const [editForm, setEditForm] = useState<ItemFormState>({ shopping_list_id: '', name_original: '', quantity: '', unit_id: '', notes: '', status_id: '' });
+  const [purchaseForm, setPurchaseForm] = useState<PurchaseFormState>({ supplier_id: '', price: '', purchase_date: new Date().toISOString().slice(0, 10), currency_id: '', offer_flag_id: '', product_name_original: '', product_name_normalized: '' });
+
+  const filteredItems = useMemo(() => {
+    let result = items;
+    if (filtroStato === 'aperti') result = result.filter((i) => !i.is_purchased);
+    if (filtroStato === 'completati') result = result.filter((i) => i.is_purchased);
+    const n = debouncedNome.trim().toLowerCase();
+    if (n) result = result.filter((i) => i.name_original.toLowerCase().includes(n));
+    return result;
+  }, [items, filtroStato, debouncedNome]);
+
+  const { visibleItems, currentPage, totalPages, setCurrentPage } = useAutoFitPagination(filteredItems, containerRef, 40, 8);
+
+  const currentListName = lists.find((l) => String(l.id) === activeListId)?.name ?? 'Tutte le liste';
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!itemForm.name_original.trim()) return;
+    await mutations.createItem(itemForm);
+    setItemForm({ shopping_list_id: itemForm.shopping_list_id, name_original: '', quantity: '', unit_id: '', notes: '', status_id: '' });
+    createModal.close();
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editModal.data) return;
+    await mutations.updateItem({ id: editModal.data.id, data: editForm });
+    editModal.close();
+  };
+
+  const handleToggle = async (item: ShoppingListItem) => {
+    if (!item.is_purchased) {
+      purchaseModal.open(item);
+      return;
+    }
+    await mutations.updateItem({ id: item.id, data: { is_purchased: false } });
+  };
+
+  const handleDelete = async (item: ShoppingListItem) => {
+    if (!window.confirm(`Eliminare "${item.name_original}"?`)) return;
+    await mutations.deleteItem(item.id);
+  };
+
+  const handlePurchase = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!purchaseModal.data) return;
+    await mutations.addPrice({ itemId: purchaseModal.data.id, form: purchaseForm });
+    purchaseModal.close();
+    setPurchaseForm({ supplier_id: '', price: '', purchase_date: new Date().toISOString().slice(0, 10), currency_id: '', offer_flag_id: '', product_name_original: '', product_name_normalized: '' });
+  };
+
+  const startEdit = (item: ShoppingListItem) => {
+    setEditForm({
+      shopping_list_id: String(item.shopping_list_id),
+      name_original: item.name_original,
+      quantity: item.quantity == null ? '' : String(item.quantity),
+      unit_id: item.unit_id == null ? '' : String(item.unit_id),
+      notes: item.notes ?? '',
+      status_id: String(item.status_id),
+    });
+    editModal.open(item);
+  };
+
   return (
-    <div className="flex min-w-0 flex-col gap-5">
-      <div className={`${shoppingCardClass} p-4 lg:p-5`}>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Shopping</h1>
-            <p className="mt-1 text-sm text-gray-500">Vista operativa con filtri, articoli e stato acquisti.</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <div className="rounded-2xl bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700">{currentListName}</div>
-            <div className="rounded-2xl bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-600">{totalItems} articoli</div>
-          </div>
-        </div>
+    <div className="flex flex-col h-full min-h-0 gap-3">
+      <div className="flex items-center justify-between shrink-0">
+        <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider">{currentListName}</h2>
+        <button type="button" onClick={() => { setItemForm({ shopping_list_id: activeListId, name_original: '', quantity: '', unit_id: '', notes: '', status_id: '' }); createModal.open(activeListId); }} className={shoppingButtonPrimaryClass + ' text-xs'} disabled={!activeListId}>
+          + Articolo
+        </button>
       </div>
 
-      <div className={`${shoppingCardClass} p-4 lg:p-5`}>
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">Filtri articoli</h2>
-            <p className="text-sm text-gray-500">Ricerca per lista, stato, nome o note.</p>
-          </div>
-          <button type="button" onClick={resetFiltri} className={shoppingButtonSecondaryClass} disabled={loading}>
-            Reset filtri
-          </button>
-        </div>
-
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Lista</label>
-            <select className={shoppingInputClass} value={filtroListaId} onChange={(e) => setFiltroListaId(e.target.value)}>
-              <option value="">Tutte le liste</option>
-              {lists.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Stato</label>
-            <select className={shoppingInputClass} value={filtroStato} onChange={(e) => setFiltroStato(e.target.value as 'tutti' | 'aperti' | 'completati')}>
-              <option value="tutti">Tutti</option>
-              <option value="aperti">Solo aperti</option>
-              <option value="completati">Solo completati</option>
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Nome contiene</label>
-            <input className={shoppingInputClass} value={filtroNome} onChange={(e) => setFiltroNome(e.target.value)} />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Note contengono</label>
-            <input className={shoppingInputClass} value={filtroNote} onChange={(e) => setFiltroNote(e.target.value)} />
-          </div>
-        </div>
+      <div className="flex gap-2 shrink-0">
+        <input className={shoppingInputClass + ' flex-1'} placeholder="Cerca..." value={filtroNome} onChange={(e) => setFiltroNome(e.target.value)} />
+        <select className={shoppingInputClass + ' w-32'} value={filtroStato} onChange={(e) => setFiltroStato(e.target.value as any)}>
+          <option value="tutti">Tutti</option>
+          <option value="aperti">Aperti</option>
+          <option value="completati">Completati</option>
+        </select>
       </div>
 
-      <div className={`${shoppingCardClass} min-w-0 p-4 lg:p-5`}>
-        <div className="mb-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">Elenco articoli</h2>
-            <p className="text-sm text-gray-500">{totalItems === 0 ? 'Nessun articolo trovato.' : `Mostrando ${startIndex + 1}-${endIndex} di ${totalItems} articoli.`}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <label htmlFor="rowsPerPageShopping" className="text-sm font-medium text-gray-600">Righe</label>
-            <select id="rowsPerPageShopping" className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm" value={rowsPerPage} onChange={(e) => setRowsPerPage(Number(e.target.value))}>
-              {ROWS_PER_PAGE_OPTIONS.map((option) => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
+      <div ref={containerRef} className="flex-1 overflow-y-auto space-y-1.5 min-h-0">
         {loading ? (
-          <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-8 text-sm text-gray-500">Caricamento articoli...</div>
-        ) : totalItems === 0 ? (
-          <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-8 text-sm text-gray-500">Nessun risultato trovato con i filtri correnti.</div>
+          <p className="text-xs text-gray-400 text-center py-4">Caricamento...</p>
+        ) : visibleItems.length === 0 ? (
+          <p className="text-xs text-gray-400 text-center py-4">Nessun articolo.</p>
         ) : (
-          <>
-            <div className="hidden overflow-hidden rounded-2xl border border-gray-200 xl:block">
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                    <tr>
-                      <th className="px-4 py-3">Nome</th>
-                      <th className="px-4 py-3">Note</th>
-                      <th className="px-4 py-3">Lista</th>
-                      <th className="px-4 py-3 text-center">Comprato</th>
-                      <th className="px-4 py-3">Ultimo prezzo</th>
-                      <th className="px-4 py-3 text-right">Azioni</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 bg-white">
-                    {paginatedData.map((item) => {
-                      const listName = lists.find((l) => l.id === item.shopping_list_id)?.name ?? '-';
-                      const lastPrice = item.prices?.[0];
-                      const isEditing = editingItemId === item.id;
-
-                      return (
-                        <React.Fragment key={item.id}>
-                          <tr className="align-top hover:bg-gray-50/80">
-                            <td className="px-4 py-4 font-semibold text-gray-800">{item.name_original}</td>
-                            <td className="px-4 py-4 text-gray-500">{item.notes || '-'}</td>
-                            <td className="px-4 py-4 text-gray-600">{listName}</td>
-                            <td className="px-4 py-4 text-center">
-                              <input type="checkbox" checked={item.is_purchased} onChange={() => toggleFatto(item)} disabled={loading} className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                            </td>
-                            <td className="px-4 py-4 text-gray-600">
-                              {lastPrice ? `${lastPrice.price}${lastPrice.supplier?.name ? ` (${lastPrice.supplier.name})` : ''}` : '-'}
-                            </td>
-                            <td className="px-4 py-4">
-                              <div className="flex justify-end gap-2">
-                                <button type="button" onClick={() => startEditItem(item)} className={shoppingIconButtonClass}>Modifica</button>
-                                <button type="button" onClick={() => deleteItem(item)} className={shoppingIconButtonClass}>Elimina</button>
-                              </div>
-                            </td>
-                          </tr>
-                          {isEditing && (
-                            <tr>
-                              <td colSpan={6} className="bg-blue-50/60 px-4 py-4">
-                                <div className="grid gap-3 rounded-2xl border border-blue-100 bg-white p-4 md:grid-cols-2">
-                                  <div>
-                                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Lista</label>
-                                    <select className={shoppingInputClass} value={editItemForm.shopping_list_id} onChange={(e) => setEditItemForm((p) => ({ ...p, shopping_list_id: e.target.value }))}>
-                                      {lists.map((l) => (
-                                        <option key={l.id} value={l.id}>{l.name}</option>
-                                      ))}
-                                    </select>
-                                  </div>
-                                  <div>
-                                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Nome originale</label>
-                                    <input className={shoppingInputClass} value={editItemForm.name_original} onChange={(e) => setEditItemForm((p) => ({ ...p, name_original: e.target.value }))} />
-                                  </div>
-                                  <div>
-                                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Quantità</label>
-                                    <input type="number" step="any" className={shoppingInputClass} value={editItemForm.quantity} onChange={(e) => setEditItemForm((p) => ({ ...p, quantity: e.target.value }))} />
-                                  </div>
-                                  <div>
-                                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Unità ID</label>
-                                    <input type="number" className={shoppingInputClass} value={editItemForm.unit_id} onChange={(e) => setEditItemForm((p) => ({ ...p, unit_id: e.target.value }))} />
-                                  </div>
-                                  <div className="md:col-span-2">
-                                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Note</label>
-                                    <textarea className={`${shoppingInputClass} min-h-[92px] resize-none`} value={editItemForm.notes} onChange={(e) => setEditItemForm((p) => ({ ...p, notes: e.target.value }))} />
-                                  </div>
-                                  <div>
-                                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Status ID</label>
-                                    <input type="number" className={shoppingInputClass} value={editItemForm.status_id} onChange={(e) => setEditItemForm((p) => ({ ...p, status_id: e.target.value }))} />
-                                  </div>
-                                  <div className="md:col-span-2 flex gap-2">
-                                    <button type="button" onClick={() => saveEditItem(item.id)} className={shoppingButtonPrimaryClass}>Salva modifiche</button>
-                                    <button type="button" onClick={cancelEditItem} className={shoppingButtonSecondaryClass}>Annulla</button>
-                                  </div>
-                                </div>
-                              </td>
-                            </tr>
-                          )}
-                        </React.Fragment>
-                      );
-                    })}
-                  </tbody>
-                </table>
+          visibleItems.map((item) => (
+            <div key={item.id} className={`${shoppingCardClass} p-2.5 flex items-center gap-2`}>
+              <button type="button" onClick={() => handleToggle(item)} className={`shrink-0 w-5 h-5 rounded-full border-2 transition ${item.is_purchased ? 'bg-green-500 border-green-500' : 'border-gray-300 hover:border-green-400'}`}>
+                {item.is_purchased && <span className="text-white text-xs flex items-center justify-center">✓</span>}
+              </button>
+              <div className="min-w-0 flex-1">
+                <p className={`text-sm truncate ${item.is_purchased ? 'line-through text-gray-400' : 'text-gray-800'}`}>{item.name_original}</p>
+                {item.notes && <p className="text-xs text-gray-400 truncate">{item.notes}</p>}
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <button type="button" onClick={() => startEdit(item)} className="text-gray-400 hover:text-blue-500 text-xs">✎</button>
+                <button type="button" onClick={() => handleDelete(item)} className="text-gray-400 hover:text-red-500 text-xs">✕</button>
               </div>
             </div>
-
-            <div className="space-y-3 xl:hidden">
-              {paginatedData.map((item) => {
-                const listName = lists.find((l) => l.id === item.shopping_list_id)?.name ?? '-';
-                const lastPrice = item.prices?.[0];
-                const isEditing = editingItemId === item.id;
-
-                return (
-                  <div key={item.id} className="rounded-2xl border border-gray-200 bg-gray-50 p-4 shadow-sm">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-gray-800">{item.name_original}</p>
-                        <p className="mt-1 text-xs text-gray-500">{listName}</p>
-                      </div>
-                      <input type="checkbox" checked={item.is_purchased} onChange={() => toggleFatto(item)} disabled={loading} className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                    </div>
-                    <p className="mt-3 text-sm text-gray-600">{item.notes || 'Nessuna nota'}</p>
-                    <p className="mt-2 text-xs font-medium text-gray-500">Ultimo prezzo: {lastPrice ? `${lastPrice.price}${lastPrice.supplier?.name ? ` (${lastPrice.supplier.name})` : ''}` : '-'}</p>
-                    <div className="mt-3 flex gap-2">
-                      <button type="button" onClick={() => startEditItem(item)} className={shoppingIconButtonClass}>Modifica</button>
-                      <button type="button" onClick={() => deleteItem(item)} className={shoppingIconButtonClass}>Elimina</button>
-                    </div>
-
-                    {isEditing && (
-                      <div className="mt-3 grid gap-3 rounded-2xl border border-blue-100 bg-white p-4">
-                        <div>
-                          <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Lista</label>
-                          <select className={shoppingInputClass} value={editItemForm.shopping_list_id} onChange={(e) => setEditItemForm((p) => ({ ...p, shopping_list_id: e.target.value }))}>
-                            {lists.map((l) => (
-                              <option key={l.id} value={l.id}>{l.name}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Nome originale</label>
-                          <input className={shoppingInputClass} value={editItemForm.name_original} onChange={(e) => setEditItemForm((p) => ({ ...p, name_original: e.target.value }))} />
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Quantità</label>
-                          <input type="number" step="any" className={shoppingInputClass} value={editItemForm.quantity} onChange={(e) => setEditItemForm((p) => ({ ...p, quantity: e.target.value }))} />
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Unità ID</label>
-                          <input type="number" className={shoppingInputClass} value={editItemForm.unit_id} onChange={(e) => setEditItemForm((p) => ({ ...p, unit_id: e.target.value }))} />
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Note</label>
-                          <textarea className={`${shoppingInputClass} min-h-[92px] resize-none`} value={editItemForm.notes} onChange={(e) => setEditItemForm((p) => ({ ...p, notes: e.target.value }))} />
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Status ID</label>
-                          <input type="number" className={shoppingInputClass} value={editItemForm.status_id} onChange={(e) => setEditItemForm((p) => ({ ...p, status_id: e.target.value }))} />
-                        </div>
-                        <div className="flex gap-2">
-                          <button type="button" onClick={() => saveEditItem(item.id)} className={shoppingButtonPrimaryClass}>Salva modifiche</button>
-                          <button type="button" onClick={cancelEditItem} className={shoppingButtonSecondaryClass}>Annulla</button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            <nav aria-label="Paginazione shopping" className="mt-5 flex flex-wrap items-center justify-between gap-3">
-              <div className="text-sm text-gray-500">Pagina {safeCurrentPage} di {totalPages}</div>
-              <div className="flex gap-2">
-                <button type="button" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={safeCurrentPage === 1 || loading} className={shoppingButtonSecondaryClass}>Precedente</button>
-                <button type="button" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={safeCurrentPage === totalPages || loading} className={shoppingButtonSecondaryClass}>Successiva</button>
-              </div>
-            </nav>
-          </>
+          ))
         )}
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 shrink-0 text-xs text-gray-500">
+          <button type="button" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="px-2 py-1 rounded-lg border border-gray-200 disabled:opacity-30">‹</button>
+          <span>{currentPage} / {totalPages}</span>
+          <button type="button" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages} className="px-2 py-1 rounded-lg border border-gray-200 disabled:opacity-30">›</button>
+        </div>
+      )}
+
+      {createModal.isOpen && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm p-4">
+          <div className={`${shoppingCardClass} w-full max-w-md p-5`}>
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Nuovo articolo</h2>
+            <form onSubmit={handleCreate} className="space-y-3">
+              <input className={shoppingInputClass} placeholder="Nome articolo" value={itemForm.name_original} onChange={(e) => setItemForm((p) => ({ ...p, name_original: e.target.value }))} required />
+              <div className="grid grid-cols-2 gap-3">
+                <input className={shoppingInputClass} placeholder="Quantità" value={itemForm.quantity} onChange={(e) => setItemForm((p) => ({ ...p, quantity: e.target.value }))} />
+                <input className={shoppingInputClass} placeholder="Unit ID" value={itemForm.unit_id} onChange={(e) => setItemForm((p) => ({ ...p, unit_id: e.target.value }))} />
+              </div>
+              <input className={shoppingInputClass} placeholder="Note" value={itemForm.notes} onChange={(e) => setItemForm((p) => ({ ...p, notes: e.target.value }))} />
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={createModal.close} className={shoppingButtonSecondaryClass}>Annulla</button>
+                <button type="submit" className={shoppingButtonPrimaryClass}>Aggiungi</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {editModal.isOpen && editModal.data && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm p-4">
+          <div className={`${shoppingCardClass} w-full max-w-md p-5`}>
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Modifica articolo</h2>
+            <form onSubmit={handleSaveEdit} className="space-y-3">
+              <input className={shoppingInputClass} placeholder="Nome" value={editForm.name_original} onChange={(e) => setEditForm((p) => ({ ...p, name_original: e.target.value }))} required />
+              <div className="grid grid-cols-2 gap-3">
+                <input className={shoppingInputClass} placeholder="Quantità" value={editForm.quantity} onChange={(e) => setEditForm((p) => ({ ...p, quantity: e.target.value }))} />
+                <input className={shoppingInputClass} placeholder="Unit ID" value={editForm.unit_id} onChange={(e) => setEditForm((p) => ({ ...p, unit_id: e.target.value }))} />
+              </div>
+              <input className={shoppingInputClass} placeholder="Note" value={editForm.notes} onChange={(e) => setEditForm((p) => ({ ...p, notes: e.target.value }))} />
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={editModal.close} className={shoppingButtonSecondaryClass}>Annulla</button>
+                <button type="submit" className={shoppingButtonPrimaryClass}>Salva</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {purchaseModal.isOpen && purchaseModal.data && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm p-4">
+          <div className={`${shoppingCardClass} w-full max-w-2xl p-5`}>
+            <h2 className="text-lg font-bold text-gray-900 mb-2">Registra acquisto</h2>
+            <p className="text-sm text-gray-500 mb-4">Stai completando <span className="font-semibold text-gray-700">{purchaseModal.data.name_original}</span></p>
+            <form onSubmit={handlePurchase} className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <input className={shoppingInputClass} placeholder="Supplier ID" value={purchaseForm.supplier_id} onChange={(e) => setPurchaseForm((p) => ({ ...p, supplier_id: e.target.value }))} />
+                <input type="number" step="0.01" min="0" className={shoppingInputClass} placeholder="Prezzo" value={purchaseForm.price} onChange={(e) => setPurchaseForm((p) => ({ ...p, price: e.target.value }))} required />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <input type="date" className={shoppingInputClass} value={purchaseForm.purchase_date} onChange={(e) => setPurchaseForm((p) => ({ ...p, purchase_date: e.target.value }))} required />
+                <input className={shoppingInputClass} placeholder="Currency ID" value={purchaseForm.currency_id} onChange={(e) => setPurchaseForm((p) => ({ ...p, currency_id: e.target.value }))} />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={purchaseModal.close} className={shoppingButtonSecondaryClass}>Annulla</button>
+                <button type="submit" className={shoppingButtonPrimaryClass}>Conferma acquisto</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

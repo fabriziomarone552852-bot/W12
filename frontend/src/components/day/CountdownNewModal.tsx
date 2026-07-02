@@ -80,7 +80,8 @@ const CountdownNewModal: React.FC<CountdownNewModalProps> = ({ isOpen, onClose, 
       formId="countdown-form"
       confirmText={countdownToEdit ? 'Salva Modifiche' : 'Crea Countdown'}
       isConfirmDisabled={!dateStr || !title.trim()}
-      isLoading={isSaving} 
+      isLoading={isSaving}
+      overflowVisible={true} 
     >
       <form id="countdown-form" onSubmit={handleSubmit} className="space-y-5">
 

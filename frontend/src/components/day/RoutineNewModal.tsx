@@ -113,6 +113,7 @@ const RoutineNewModal: React.FC<RoutineNewModalProps> = ({ isOpen, onClose, rout
       confirmText={routineToEdit ? 'Aggiorna' : 'Crea Routine'}
       isConfirmDisabled={!form.titolo.trim()}
       isLoading={isSaving}
+      overflowVisible={true}
     >
       <form id="routine-form" onSubmit={handleSubmit} className="space-y-5">
           

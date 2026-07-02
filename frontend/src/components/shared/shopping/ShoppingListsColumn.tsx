@@ -1,166 +1,140 @@
-import React from 'react';
-import type { ListFormState, ShoppingList } from '@/types';
-import { shoppingButtonPrimaryClass, shoppingButtonSecondaryClass, shoppingCardClass, shoppingIconButtonClass, shoppingInputClass } from './shoppingUi';
+// src/components/shared/shopping/ShoppingListsColumn.tsx
+import React, { useState } from 'react';
+import { useShoppingMutations } from '../../../hooks/useShoppingMutations';
+import { useModal } from '../../../hooks/useModals';
+import type { ShoppingList, ListFormState } from '../../../types/shopping';
+import { shoppingButtonPrimaryClass, shoppingButtonSecondaryClass, shoppingCardClass, shoppingInputClass } from './shoppingUi';
 
 interface ShoppingListsColumnProps {
   lists: ShoppingList[];
   loadingLists: boolean;
   activeListId: string;
-  editingListId: number | null;
-  editListForm: ListFormState;
   setActiveListId: (id: string) => void;
-  setEditListForm: React.Dispatch<React.SetStateAction<ListFormState>>;
-  startEditList: (list: ShoppingList) => void;
-  saveEditList: (listId: number) => void;
-  cancelEdit: () => void;
-  deleteList: (list: ShoppingList) => void;
+  groups?: any[];
 }
 
-const ShoppingListsColumn: React.FC<ShoppingListsColumnProps> = ({
-  lists,
-  loadingLists,
-  activeListId,
-  editingListId,
-  editListForm,
-  setActiveListId,
-  setEditListForm,
-  startEditList,
-  saveEditList,
-  cancelEdit,
-  deleteList,
-}) => {
+const makeEmptyForm = (): ListFormState => ({ owner_id: '', group_id: '', visibility_id: '1', status_id: '', name: '', description: '' });
+
+const ShoppingListsColumn: React.FC<ShoppingListsColumnProps> = ({ lists, loadingLists, activeListId, setActiveListId, groups = [] }) => {
+  const mutations = useShoppingMutations();
+  const createModal = useModal<null>();
+  const editModal = useModal<ShoppingList>();
+  const [form, setForm] = useState<ListFormState>(makeEmptyForm());
+  const [editForm, setEditForm] = useState<ListFormState>(makeEmptyForm());
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name.trim()) return;
+    await mutations.createList(form);
+    setForm(makeEmptyForm());
+    createModal.close();
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editModal.data) return;
+    await mutations.updateList({ id: editModal.data.id, data: editForm });
+    editModal.close();
+  };
+
+  const handleDelete = async (list: ShoppingList) => {
+    if (!window.confirm(`Eliminare la lista "${list.name}"?`)) return;
+    await mutations.deleteList(list.id);
+    if (String(list.id) === activeListId) setActiveListId('');
+  };
+
+  const startEdit = (list: ShoppingList) => {
+    setEditForm({
+      owner_id: String(list.owner_id),
+      group_id: String(list.group_id ?? ''),
+      visibility_id: String(list.visibility_id),
+      status_id: String(list.status_id),
+      name: list.name,
+      description: list.description ?? '',
+    });
+    editModal.open(list);
+  };
+
   return (
-    <div className={`${shoppingCardClass} flex h-full min-h-[640px] min-w-0 flex-col p-4 lg:p-5`}>
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-bold text-gray-900">Liste spesa</h2>
-          <p className="text-sm text-gray-500">Accesso rapido e gestione liste.</p>
-        </div>
-        <div className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600">
-          {lists.length}
-        </div>
+    <div className="flex flex-col h-full min-h-0 gap-3">
+      <div className="flex items-center justify-between shrink-0">
+        <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Liste Spesa</h2>
+        <button type="button" onClick={() => createModal.open(null)} className={shoppingButtonSecondaryClass + ' text-xs'}>
+          + Nuova
+        </button>
       </div>
 
-      <div className="flex-1 space-y-3 overflow-y-auto pr-1">
+      <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
         {loadingLists ? (
-          <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-sm text-gray-500">
-            Caricamento liste...
-          </div>
+          <p className="text-xs text-gray-400 text-center py-4">Caricamento...</p>
         ) : lists.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-sm text-gray-500">
-            Nessuna lista disponibile.
-          </div>
+          <p className="text-xs text-gray-400 text-center py-4">Nessuna lista. Creane una!</p>
         ) : (
-          lists.map((list) => {
-            const isActive = String(list.id) === activeListId;
-            const isEditing = editingListId === list.id;
-
-            return (
+          <>
+            <div
+              className={`${shoppingCardClass} p-3 cursor-pointer transition hover:border-blue-300 ${activeListId === '' ? 'border-blue-400 ring-1 ring-blue-200' : ''}`}
+              onClick={() => setActiveListId('')}
+            >
+              <p className="text-sm font-semibold text-gray-700">Tutte le liste</p>
+            </div>
+            {lists.map((list) => (
               <div
                 key={list.id}
-                className={`rounded-2xl border px-3 py-3 shadow-sm transition ${
-                  isActive
-                    ? 'border-blue-200 bg-blue-50/70'
-                    : 'border-gray-200 bg-gray-50 hover:border-blue-200 hover:bg-white'
-                }`}
+                className={`${shoppingCardClass} p-3 cursor-pointer transition hover:border-blue-300 ${activeListId === String(list.id) ? 'border-blue-400 ring-1 ring-blue-200' : ''}`}
+                onClick={() => setActiveListId(String(list.id))}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setActiveListId(String(list.id))}
-                    className="min-w-0 flex-1 text-left"
-                  >
-                    <p className="truncate text-sm font-semibold text-gray-800">{list.name}</p>
-                    <p className="mt-1 line-clamp-2 text-xs text-gray-500">
-                      {list.description?.trim() || 'Nessuna descrizione'}
-                    </p>
-                  </button>
-
-                  <div className="flex flex-shrink-0 gap-1.5">
-                    <button type="button" onClick={() => startEditList(list)} className={shoppingIconButtonClass}>
-                      Modifica
-                    </button>
-                    <button type="button" onClick={() => deleteList(list)} className={shoppingIconButtonClass}>
-                      Elimina
-                    </button>
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-gray-800 truncate">{list.name}</p>
+                    {list.description && <p className="text-xs text-gray-500 truncate">{list.description}</p>}
+                    {list.group_id && <span className="text-xs text-blue-500">Gruppo</span>}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0 ml-2">
+                    <button type="button" onClick={(e) => { e.stopPropagation(); startEdit(list); }} className="text-gray-400 hover:text-blue-500 text-xs">✎</button>
+                    <button type="button" onClick={(e) => { e.stopPropagation(); handleDelete(list); }} className="text-gray-400 hover:text-red-500 text-xs">✕</button>
                   </div>
                 </div>
-
-                {isEditing && (
-                  <div className="mt-3 rounded-2xl border border-blue-100 bg-white p-3">
-                    <div className="grid gap-3">
-                      <div>
-                        <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Nome</label>
-                        <input
-                          className={shoppingInputClass}
-                          value={editListForm.name}
-                          onChange={(e) => setEditListForm((p) => ({ ...p, name: e.target.value }))}
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Descrizione</label>
-                        <textarea
-                          className={`${shoppingInputClass} min-h-[88px] resize-none`}
-                          value={editListForm.description}
-                          onChange={(e) => setEditListForm((p) => ({ ...p, description: e.target.value }))}
-                        />
-                      </div>
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <div>
-                          <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Visibility ID</label>
-                          <input
-                            type="number"
-                            className={shoppingInputClass}
-                            value={editListForm.visibility_id}
-                            onChange={(e) => setEditListForm((p) => ({ ...p, visibility_id: e.target.value }))}
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Status ID</label>
-                          <input
-                            type="number"
-                            className={shoppingInputClass}
-                            value={editListForm.status_id}
-                            onChange={(e) => setEditListForm((p) => ({ ...p, status_id: e.target.value }))}
-                          />
-                        </div>
-                      </div>
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <div>
-                          <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Owner ID</label>
-                          <input
-                            type="number"
-                            className={shoppingInputClass}
-                            value={editListForm.owner_id}
-                            onChange={(e) => setEditListForm((p) => ({ ...p, owner_id: e.target.value }))}
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Group ID</label>
-                          <input
-                            type="number"
-                            className={shoppingInputClass}
-                            value={editListForm.group_id}
-                            onChange={(e) => setEditListForm((p) => ({ ...p, group_id: e.target.value }))}
-                          />
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <button type="button" onClick={() => saveEditList(list.id)} className={shoppingButtonPrimaryClass}>
-                          Salva
-                        </button>
-                        <button type="button" onClick={cancelEdit} className={shoppingButtonSecondaryClass}>
-                          Annulla
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
-            );
-          })
+            ))}
+          </>
         )}
       </div>
+
+      {createModal.isOpen && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm p-4">
+          <div className={`${shoppingCardClass} w-full max-w-md p-5`}>
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Nuova lista spesa</h2>
+            <form onSubmit={handleCreate} className="space-y-3">
+              <input className={shoppingInputClass} placeholder="Nome lista" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} required />
+              <input className={shoppingInputClass} placeholder="Descrizione (opzionale)" value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} />
+              <select className={shoppingInputClass} value={form.group_id} onChange={(e) => setForm((p) => ({ ...p, group_id: e.target.value }))}>
+                <option value="">Lista privata</option>
+                {groups.map((g: any) => <option key={g.id} value={String(g.id)}>{g.name}</option>)}
+              </select>
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={createModal.close} className={shoppingButtonSecondaryClass}>Annulla</button>
+                <button type="submit" className={shoppingButtonPrimaryClass}>Crea</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {editModal.isOpen && editModal.data && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm p-4">
+          <div className={`${shoppingCardClass} w-full max-w-md p-5`}>
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Modifica lista</h2>
+            <form onSubmit={handleSaveEdit} className="space-y-3">
+              <input className={shoppingInputClass} placeholder="Nome" value={editForm.name} onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))} required />
+              <input className={shoppingInputClass} placeholder="Descrizione" value={editForm.description} onChange={(e) => setEditForm((p) => ({ ...p, description: e.target.value }))} />
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={editModal.close} className={shoppingButtonSecondaryClass}>Annulla</button>
+                <button type="submit" className={shoppingButtonPrimaryClass}>Salva</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

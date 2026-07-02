@@ -16,6 +16,7 @@ interface DatePickerProps {
 
 const DatePicker: React.FC<DatePickerProps> = ({ value, onChange, isOpen, onClose, onToggle, placeholder = 'Seleziona data', align = 'left' }) => {
   const [pickerMonthDate, setPickerMonthDate] = useState<Date>(new Date());
+  const [openUpwards, setOpenUpwards] = useState(false);
 
   const wrapperRef = useOutsideClick(() => {
     if (isOpen) onClose();
@@ -32,6 +33,15 @@ const DatePicker: React.FC<DatePickerProps> = ({ value, onChange, isOpen, onClos
       }
     }
   }, [isOpen, value]);
+
+  useEffect(() => {
+    if (isOpen && wrapperRef.current) {
+      const rect = wrapperRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      // Se ci sono meno di 320px sotto, il calendario non ci sta: apri verso l'alto!
+      setOpenUpwards(spaceBelow < 320);
+    }
+  }, [isOpen]);
 
   const year = pickerMonthDate.getFullYear();
   const month = pickerMonthDate.getMonth();
@@ -50,8 +60,9 @@ const DatePicker: React.FC<DatePickerProps> = ({ value, onChange, isOpen, onClos
       
       {isOpen && (
         <div 
-          className={`absolute z-20 top-full mt-2 bg-white rounded-xl shadow-xl border border-gray-100 p-4 w-64 animate-fadeIn ${align === 'right' ? 'right-0' : 'left-0'}`}
-          
+          className={`absolute z-[100] bg-white rounded-xl shadow-xl border border-gray-100 p-4 w-64 animate-fadeIn ${
+            align === 'right' ? 'right-0' : 'left-0'
+          } ${openUpwards ? 'bottom-full mb-2' : 'top-full mt-2'}`}
         >
           
           <div className="flex justify-between items-center mb-4 px-2">

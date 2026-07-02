@@ -65,9 +65,10 @@ apiClient.interceptors.response.use(
         return new Promise(function(resolve, reject) {
           failedQueue.push({ resolve, reject });
         }).then(token => {
-          // Quando arriva il nuovo token, riproviamo la chiamata
+          // 🪄 FIX: Usiamo apiClient per riprovare, non axios standard!
+          // Modifichiamo l'header per sicurezza (anche se apiClient lo farebbe da solo)
           originalRequest.headers.Authorization = `Bearer ${token}`;
-          return axios(originalRequest);
+          return apiClient(originalRequest); 
         }).catch(err => {
           return Promise.reject(err);
         });
@@ -77,7 +78,7 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        // Facciamo il vero e unico refresh
+        // Facciamo il vero e unico refresh usando axios BASE (corretto, per evitare loop!)
         const response = await axios.post(apiUrl('/refresh'), {
           refresh_token: refreshToken
         });
@@ -90,25 +91,22 @@ apiClient.interceptors.response.use(
           localStorage.setItem('refreshToken', response.data.refresh_token);
         }
 
-        // 🟢 Operazione finita! Sblocchiamo la sala d'attesa passando a tutti il nuovo token
+        // 🟢 Operazione finita! Sblocchiamo la sala d'attesa
         processQueue(null, access_token);
 
-        // Riprova la chiamata originale (quella che aveva avviato il refresh)
+        // 🪄 FIX: Riprova la chiamata originale usando apiClient!
         originalRequest.headers.Authorization = `Bearer ${access_token}`;
-        return axios(originalRequest);
+        return apiClient(originalRequest);
         
       } catch (refreshError) {
-        // Se il refresh fallisce (es. token scaduto), buttiamo via tutta la coda e facciamo logout
         processQueue(refreshError, null);
         window.dispatchEvent(new Event('force-logout'));
         return Promise.reject(refreshError);
       } finally {
-        // In ogni caso, a fine procedura liberiamo il semaforo per il futuro
         isRefreshing = false;
       }
     }
     
-    // Per tutti gli altri errori (es. 500, 404, ecc.), proseguiamo normale
     return Promise.reject(error);
   }
 );

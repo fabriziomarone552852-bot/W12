@@ -1,6 +1,5 @@
 // src/components/day/CountdownWidget.tsx
 import React, { useState, useEffect } from 'react';
-import { calculateTimeLeft } from '@/utils/dateUtils'; 
 import TickDisplay from '@/components/day/utils/TickDisplay';
 import { PlusIcon } from '@/components/shared/utils/Icons';
 
