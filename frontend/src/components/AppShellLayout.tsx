@@ -1,7 +1,7 @@
 // src/components/AppShellLayout.tsx
 import React, { useState } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { SettingsIcon, SwitchSidebarIcon, CategoryIcon, TaskListIcon, ShoppingIcon, UniversityIcon, FreeTimeIcon, CalendarIcon, CountdownIcon } from './shared/utils/Icons';
 
 interface SidebarItemProps {

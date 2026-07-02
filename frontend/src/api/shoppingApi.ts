@@ -1,4 +1,4 @@
-import { apiUrl } from '../api/client';
+import { apiUrl } from '@/api/client';
 import type {
   ItemFormState,
   ListFormState,
@@ -8,7 +8,7 @@ import type {
   ShoppingPrice,
   ShoppingSupplier,
   SupplierFormState,
-} from '../components/shared/shopping/types';
+} from '@/components/shared/shopping/types';
 
 type ApiOk<T> = { ok: true; data: T; status: number };
 type ApiErr = { ok: false; error: string; status: number };

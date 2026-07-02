@@ -1,12 +1,12 @@
 // src/components/day/RoutineColumn.tsx
 import React, { useRef } from 'react';
-import { Pagination } from '../shared/utils/Pagination';
-import { EmptyState } from '../shared/utils/EmptyState';
-import { AddButton } from '../shared/utils/AddButton';
+import { Pagination } from '@/components/shared/utils/Pagination';
+import { EmptyState } from '@/components/shared/utils/EmptyState';
+import { AddButton } from '@/components/shared/utils/AddButton';
 import { useAutoFitPagination } from '@/hooks/useAutoFitPagination';
-import { CheckIcon } from '../shared/utils/Icons';
+import { CheckIcon } from '@/components/shared/utils/Icons';
 import { DEFAULT_COVER_IMAGE } from '@/utils/constants';
-import { RoutineHitbox } from './RoutineHitbox';
+import { RoutineHitbox } from '@/components/day/RoutineHitbox';
 
 export interface RoutinePeriod {
   id: number;

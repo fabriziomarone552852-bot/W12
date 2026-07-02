@@ -1,7 +1,7 @@
 // src/components/day/NotesSidebar.tsx
 import React, { useState, useEffect } from 'react';
 import type { NoteItem } from '@/types';
-import { CloseIcon, TrashIcon, PlusIcon, NoteIcon } from '../shared/utils/Icons';
+import { CloseIcon, TrashIcon, PlusIcon, NoteIcon } from '@/components/shared/utils/Icons';
 import { useAutoResizeTextArea } from '@/hooks/useAutoResizeTextArea';
 import { useDebounce } from '@/hooks/useDebounce';
 

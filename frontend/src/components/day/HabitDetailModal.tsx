@@ -1,6 +1,6 @@
 // src/components/day/HabitDetailModal.tsx
 import React from 'react';
-import BaseModal from '../shared/dialog/BaseModal';
+import BaseModal from '@/components/shared/dialog/BaseModal';
 import { useHabitLogs } from '@/hooks/useHabitLogs';
 import { useConfirm } from '@/context/ConfirmContext';
 

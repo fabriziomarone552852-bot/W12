@@ -1,13 +1,13 @@
 // src/components/day/RoutineDetailModal.tsx
 import React, { useState, useMemo } from 'react';
-import type { RoutineItem, RoutinePeriod } from './RoutineColumn';
-import BaseModal from '../shared/dialog/BaseModal';
+import type { RoutineItem, RoutinePeriod } from '@/components/day/RoutineColumn';
+import BaseModal from '@/components/shared/dialog/BaseModal';
 import { useHabitLogs } from '@/hooks/useHabitLogs'; 
 import { translateRRule } from '@/utils/rruleUtils';
 import { useConfirm } from '@/context/ConfirmContext';
-import { EditIcon, TrashIcon, PauseIcon, PlayIcon } from '../shared/utils/Icons';
+import { EditIcon, TrashIcon, PauseIcon, PlayIcon } from '@/components/shared/utils/Icons';
 import { formatToItalianShortDate } from '@/utils/dateUtils';
-import { Badge } from '../shared/utils/Badges';
+import { Badge } from '@/components/shared/utils/Badges';
 
 interface RoutineDetailModalProps {
   isOpen: boolean;

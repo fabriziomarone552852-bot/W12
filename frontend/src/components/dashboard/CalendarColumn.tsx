@@ -1,10 +1,10 @@
 // src/components/dashboard/CalendarColumn.tsx
 import React, { useEffect } from 'react';
 import { useCalendarState } from '@/hooks/useCalendarState';
-import CalendarHeader from './calendar/CalendarHeader';
-import MonthGrid from './calendar/MonthGrid';
-import WeekGrid from './calendar/WeekGrid';
-import { PlusIcon } from '../shared/utils/Icons';
+import CalendarHeader from '@/components/dashboard/calendar/CalendarHeader';
+import MonthGrid from '@/components/dashboard/calendar/MonthGrid';
+import WeekGrid from '@/components/dashboard/calendar/WeekGrid';
+import { PlusIcon } from '@/components/shared/utils/Icons';
 import { type Task } from '@/types';
 import { type CalendarEvent } from '@/types';
 

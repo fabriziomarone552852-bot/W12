@@ -1,6 +1,6 @@
 // src/components/CategoryForm.tsx
 import React, { useEffect, useState } from 'react';
-import type { Category } from '../views/CategoriesPage';
+import type { Category } from '@/views/CategoriesPage';
 
 export interface CategoryFormValues {
   name: string;

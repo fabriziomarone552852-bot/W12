@@ -1,10 +1,10 @@
 // src/components/day/CountdownNewModal.tsx
 import React, { useState, useEffect } from 'react';
-import type { CountdownItem } from './CountdownWidget';
-import DatePicker from '../shared/utils/DatePicker';
-import TimeInput from '../shared/utils/TimeInput'; 
+import type { CountdownItem } from '@/components/day/CountdownWidget';
+import DatePicker from '@/components/shared/utils/DatePicker';
+import TimeInput from '@/components/shared/utils/TimeInput'; 
 import { combineDateAndTime, pad } from '@/utils/dateUtils'; 
-import BaseModal from '../shared/dialog/BaseModal';
+import BaseModal from '@/components/shared/dialog/BaseModal';
 
 interface CountdownNewModalProps {
   isOpen: boolean;

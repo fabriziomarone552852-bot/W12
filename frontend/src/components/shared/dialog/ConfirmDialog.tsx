@@ -1,6 +1,6 @@
 // src/components/shared/dialog/ConfirmDialog.tsx
 import React from 'react';
-import { TrashIcon, WarningIcon } from '../utils/Icons';
+import { TrashIcon, WarningIcon } from '@/components/shared/utils/Icons';
 
 interface ConfirmDialogProps {
   isOpen: boolean;

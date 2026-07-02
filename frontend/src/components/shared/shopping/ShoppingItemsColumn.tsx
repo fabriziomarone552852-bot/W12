@@ -1,5 +1,5 @@
 import React from 'react';
-import type { ShoppingList, ShoppingListItem } from './types';
+import type { ShoppingList, ShoppingListItem } from '@/types';
 import { shoppingButtonPrimaryClass, shoppingButtonSecondaryClass, shoppingCardClass, shoppingIconButtonClass, shoppingInputClass } from './shoppingUi';
 
 export type ItemFormState = {

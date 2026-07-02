@@ -1,11 +1,11 @@
 // src/components/day/RoutineNewModal.tsx
 import React, { useState, useEffect } from 'react';
-import type { RoutineItem } from './RoutineColumn';
-import DatePicker from '../shared/utils/DatePicker'; 
+import type { RoutineItem } from '@/components/day/RoutineColumn';
+import DatePicker from '@/components/shared/utils/DatePicker'; 
 import { getLocalDateString } from '@/utils/dateUtils'; 
 import { parseRRule, buildRRule } from '@/utils/rruleUtils'; 
-import BaseModal from '../shared/dialog/BaseModal';
-import { RecurrenceEditor } from '../shared/utils/RecurrenceEditor';
+import BaseModal from '@/components/shared/dialog/BaseModal';
+import { RecurrenceEditor } from '@/components/shared/utils/RecurrenceEditor';
 
 export interface RoutineSavePayload {
   titolo: string;

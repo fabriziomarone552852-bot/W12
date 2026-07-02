@@ -2,10 +2,10 @@
 import React from 'react';
 import type { CalendarEvent } from '@/types';
 import { translateRRule } from '@/utils/rruleUtils';
-import BaseModal from '../shared/dialog/BaseModal';
+import BaseModal from '@/components/shared/dialog/BaseModal';
 import { useConfirm } from '@/context/ConfirmContext';
-import { Badge } from '../shared/utils/Badges';
-import { EditIcon, TrashIcon, ArrowRightLongIcon, LocationIcon } from '../shared/utils/Icons';
+import { Badge } from '@/components/shared/utils/Badges';
+import { EditIcon, TrashIcon, ArrowRightLongIcon, LocationIcon } from '@/components/shared/utils/Icons';
 import { formatToItalianShortDate } from '@/utils/dateUtils';
 
 interface EventDetailModalProps {

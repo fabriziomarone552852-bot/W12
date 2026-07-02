@@ -1,10 +1,10 @@
 // src/components/day/CountdownDetailModal.tsx
 import React, { useState } from 'react';
-import type { CountdownItem } from './CountdownWidget';
+import type { CountdownItem } from '@/components/day/CountdownWidget';
 import { calculateTimeLeft } from '@/utils/dateUtils'; 
-import ConfirmDialog from '../shared/dialog/ConfirmDialog'; 
-import TickDisplay from './utils/TickDisplay';
-import { TrashIcon, EditIcon, CloseIcon } from '../shared/utils/Icons';
+import ConfirmDialog from '@/components/shared/dialog/ConfirmDialog'; 
+import TickDisplay from '@/components/day/utils/TickDisplay';
+import { TrashIcon, EditIcon, CloseIcon } from '@/components/shared/utils/Icons';
 
 interface CountdownDetailModalProps {
   isOpen: boolean;

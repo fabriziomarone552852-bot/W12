@@ -1,5 +1,5 @@
 import React from 'react';
-import type { ListFormState, ShoppingList } from './types';
+import type { ListFormState, ShoppingList } from '@/types';
 import { shoppingButtonPrimaryClass, shoppingButtonSecondaryClass, shoppingCardClass, shoppingIconButtonClass, shoppingInputClass } from './shoppingUi';
 
 interface ShoppingListsColumnProps {

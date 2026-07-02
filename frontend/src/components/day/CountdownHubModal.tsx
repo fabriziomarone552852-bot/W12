@@ -1,8 +1,8 @@
 // src/components/day/CountdownsHubModal.tsx
 import React, { useEffect, useState, useMemo } from 'react'; 
-import type { CountdownItem } from './CountdownWidget';
-import BaseModal from '../shared/dialog/BaseModal';
-import { CountdownIcon, PlusIcon } from '../shared/utils/Icons';
+import type { CountdownItem } from '@/components/day/CountdownWidget';
+import BaseModal from '@/components/shared/dialog/BaseModal';
+import { CountdownIcon, PlusIcon } from '@/components/shared/utils/Icons';
 import { useCurrentTime } from '@/hooks/useCurrentTime';
 
 interface CountdownsHubModalProps {

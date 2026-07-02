@@ -1,6 +1,6 @@
 // src/components/day/HabitsBar.tsx
 import React from 'react';
-import { PlusIcon } from '../shared/utils/Icons';
+import { PlusIcon } from '@/components/shared/utils/Icons';
 
 export interface HabitItem {
   id: number;

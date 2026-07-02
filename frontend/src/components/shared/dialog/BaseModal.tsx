@@ -1,6 +1,6 @@
 // src/components/shared/dialog/BaseModal.tsx
 import React, { type ReactNode } from 'react';
-import { CloseIcon, LoadingIcon } from '../utils/Icons';
+import { CloseIcon, LoadingIcon } from '@/components/shared/utils/Icons';
 
 interface BaseModalProps {
   isOpen: boolean;
