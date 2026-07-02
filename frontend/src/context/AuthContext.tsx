@@ -57,6 +57,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     persistTokens(null, null);
     persistUser(null);
     clearError();
+
+    if (window.location.pathname !== '/login') {
+      window.location.href = '/login';
+    }
   }, []);
 
   useEffect(() => {
