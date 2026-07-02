@@ -1,13 +1,13 @@
 // src/utils/taskUtils.ts
 import type { Task } from '@/types';
-import type { TaskTask } from '@/types';
+import type { TaskSummary } from '@/types';
 import { formatToItalianShortDate } from './dateUtils'; 
 
 // ------------------------------------------------------------------
 // 1. FUNZIONI DI ORDINAMENTO E MAPPING BASE
 // ------------------------------------------------------------------
 
-export const sortTasks = (tasks: TaskTask[], sortMode: 'chrono' | 'priority'): TaskTask[] => {
+export const sortTasks = (tasks: TaskSummary[], sortMode: 'chrono' | 'priority'): TaskSummary[] => {
   const priorityWeights = { Alta: 3, Media: 2, Bassa: 1 };
 
   return [...tasks].sort((a, b) => {
@@ -27,8 +27,8 @@ export const sortTasks = (tasks: TaskTask[], sortMode: 'chrono' | 'priority'): T
 export const mapTaskToTask = (
   t: Task, 
   hasActiveSubtasks: boolean, 
-  extraProps: Partial<TaskTask> = {}
-): TaskTask => {
+  extraProps: Partial<TaskSummary> = {}
+): TaskSummary => {
   const dateVal = t.data_scadenza ? t.data_scadenza.substring(0, 10) : '';
   return {
     id: t.id,
@@ -48,7 +48,7 @@ export const mapTaskToTask = (
 };
 
 // 🪄 IL CAPOLAVORO: Schwartzian Transform dal tuo Secondo Snippet
-export const getUpcomingTasks = (tasks: TaskTask[], days: number = 30, limit: number = 6): TaskTask[] => {
+export const getUpcomingTasks = (tasks: TaskSummary[], days: number = 30, limit: number = 6): TaskSummary[] => {
   const now = Date.now();
   const timeLimit = days * 24 * 60 * 60 * 1000;
   
@@ -109,9 +109,9 @@ export const getAllActiveSubtasksOptimized = (
 // 3. MOTORI DI MAPPING PRINCIPALI (Primo Snippet pulito)
 // ------------------------------------------------------------------
 
-export const mapTasksToTasks = (allTasks: Task[], oggiStr: string): TaskTask[] => {
+export const mapTasksToTasks = (allTasks: Task[], oggiStr: string): TaskSummary[] => {
   if (!allTasks || !Array.isArray(allTasks)) return [];
-  const taskDaMostrare: TaskTask[] = [];
+  const taskDaMostrare: TaskSummary[] = [];
 
   const tasksByParent = new Map<number | null, Task[]>();
   allTasks.forEach(t => {
@@ -172,8 +172,8 @@ export const mapTasksToTasks = (allTasks: Task[], oggiStr: string): TaskTask[] =
   return taskDaMostrare; 
 };
 
-export const mapDayTasksToTasks = (allTasks: Task[], targetDateStr: string): TaskTask[] => {
-  const tasksToShow: TaskTask[] = [];
+export const mapDayTasksToTasks = (allTasks: Task[], targetDateStr: string): TaskSummary[] => {
+  const tasksToShow: TaskSummary[] = [];
 
   const taskById = new Map<number, Task>();
   const tasksByParent = new Map<number | null, Task[]>();

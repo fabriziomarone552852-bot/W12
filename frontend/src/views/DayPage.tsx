@@ -85,6 +85,8 @@ const DayPage: React.FC = () => {
   // --- MAPPATURA DATI (Leggiamo SOLO da dayData) ---
   const mappedTasks = mapDayTasksToTasks(dayData?.tasks || [], targetDateStr);
 
+  const [initialParentId, setInitialParentId] = useState<number | null>(null);
+
   const queryClient = useQueryClient();
 
   const mappedEvents: CalendarEvent[] = (dayData?.events || []).map((e: Event) => ({

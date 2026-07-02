@@ -1,8 +1,7 @@
 // src/context/AuthContext.tsx
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
-// 🪄 Usiamo gli alias eleganti!
-import { apiUrl } from '@/api/client';
+import { apiUrl, apiClient } from '@/api/client';
 import type { TokenResponse, UserResponse } from '@/types/auth';
 
 interface AuthContextValue {
@@ -78,22 +77,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       body.append('username', normalizedUsername);
       body.append('password', password);
 
-      // 1. Chiamata Axios per il login (Prende i Token)
+      // 1. Chiamata Axios BASE per il login (Senza interceptor, prende solo i Token)
       const res = await axios.post<TokenResponse>(apiUrl('/login'), body, {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       });
 
       const tokenData = res.data;
+      
+      // ⚠️ IMPORTANTE: Questo salva i token in localStorage in modo SINCRONO
       persistTokens(tokenData.access_token, tokenData.refresh_token ?? null);
 
-      // 2. Chiamata Axios per ottenere i VERI dati dell'utente
-      const userRes = await axios.get<UserResponse>(apiUrl('/users/me'), {
-        headers: { Authorization: `Bearer ${tokenData.access_token}` }
-      });
+      // 2. Chiamata con IL TUO apiClient per ottenere i dati dell'utente
+      // Non c'è più bisogno di apiUrl() né di passare l'Authorization header a mano!
+      const userRes = await apiClient.get<UserResponse>('/users/me');
       
       persistUser(userRes.data);
 
-    } catch (e: unknown) { // 🪄 TYPE NARROWING PERFETTO
+    } catch (e: unknown) { 
       let msg = 'Errore di login';
       
       if (axios.isAxiosError(e)) {

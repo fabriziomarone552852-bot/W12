@@ -27,8 +27,6 @@ export interface Task {
   data_fatto?: string | null;
   user_id: number;
   parent_id?: number | null;
-  
-  // 🪄 FIX: Rimosso il "?"! Ora è garantito che sia un array (al massimo vuoto)
   subtasks: Task[]; 
 }
 
@@ -125,7 +123,7 @@ export const CategoryGenre = {
 
 export type CategoryGenre = typeof CategoryGenre[keyof typeof CategoryGenre];
 
-export interface TaskTodo {
+export interface TaskSummary {
   id: number;
   title: string;
   deadline: string;

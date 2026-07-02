@@ -7,10 +7,10 @@ import { useCategories } from '@/hooks/useCategories';
 
 import CalendarColumn from '@/components/dashboard/CalendarColumn';
 import TaskColumn from '@/components/shared/TaskColumn';
-import { type TaskTask } from '@/types';
+import { type TaskSummary } from '@/types';
 import EventsColumn from '@/components/shared/EventsColumn';
 
-import NewTaskModal from '@/components/shared/TaskNewModal';
+import TaskNewModal from '@/components/shared/TaskNewModal';
 import TaskDetailModal from '@/components/shared/TaskDetailModal';
 import NewEventModal from '@/components/shared/EventNewModal';
 import EventDetailModal from '@/components/shared/EventDetailModal';
@@ -19,20 +19,24 @@ import EventDetailModal from '@/components/shared/EventDetailModal';
 import { calculateYearProgress } from '@/utils/dateUtils';
 import { mapTasksToTasks } from '@/utils/taskUtils';
 import { useModal } from '@/hooks/useModals';
+import { useTaskModals } from '@/context/TaskModalContext';
 
 import { getUpcomingTasks } from '@/utils/taskUtils';
 import { Badge } from '@/components/shared/utils/Badges';
 import { EmptyState } from '@/components/shared/utils/EmptyState';
 import type { Event as AgendaEvent, CalendarEvent } from '@/types';
 
+interface TaskFormModalState {
+  taskToEdit?: TaskSummary | null;
+  initialParentId?: number | null;
+}
+
 const HomePage: React.FC = () => {
   // 1. Modali di Dettaglio (il dato è l'elemento selezionato)
-const taskDetailModal = useModal<TaskTask>();
+const { openTaskDetail, openTaskForm } = useTaskModals();
 const eventDetailModal = useModal<CalendarEvent>();
 
 // 2. Modali di Form/Creazione
-// Per la task, il dato sarà la Task da modificare (o null se è nuova)
-const taskFormModal = useModal<TaskTask>(); 
 
 // Per l'evento, ci serve sia l'evento da editare che l'eventuale data iniziale cliccata
 const eventFormModal = useModal<{ 
@@ -48,8 +52,6 @@ const eventFormModal = useModal<{
   const navigate = useNavigate();
 
   const yearProgress = useMemo(() => calculateYearProgress(), []);
-
-  
 
   const handleGoToDay = (dateStr: string) => {
   // Passiamo la data direttamente tramite la memoria del Router!
@@ -109,11 +111,11 @@ const eventFormModal = useModal<{
         
         <div className="xl:col-span-3 flex flex-col h-full min-h-0">
           <TaskColumn 
-            tasks={mappedTasks} 
-            onToggleTask={toggleTask} 
-            onSelectTask={task => taskDetailModal.open(task)} 
-            onAddTaskClick={() => taskFormModal.open(null)} 
-          />
+              tasks={mappedTasks} 
+              onToggleTask={toggleTask} 
+              onSelectTask={openTaskDetail} 
+              onAddTaskClick={() => openTaskForm()} 
+            />
         </div>
 
         <div className="xl:col-span-6 flex flex-col h-full min-h-0">
@@ -159,7 +161,7 @@ const eventFormModal = useModal<{
                 </tr>
               ) : (
                 next30DaysTasks.map(task => (
-                  <tr key={task.id} className="hover:bg-gray-50 border-b border-gray-50 transition-colors cursor-pointer" onClick={() => taskDetailModal.open(task)}>
+                  <tr key={task.id} className="hover:bg-gray-50 border-b border-gray-50 transition-colors cursor-pointer" >
                     <td className="py-3 text-sm font-medium text-gray-800">{task.title}</td>
                     <td className="py-3"><Badge variant="category" colorHex={task.categoryColor}>{task.category}</Badge></td>
                     <td className="py-3 text-sm font-bold text-gray-600">{task.deadline}</td>
@@ -171,27 +173,6 @@ const eventFormModal = useModal<{
           </table>
         </div>
       </div>
-
-      {/* --- MODALI TASK --- */}
-        <TaskDetailModal 
-          isOpen={taskDetailModal.isOpen} 
-          onClose={taskDetailModal.close} 
-          selectedTask={taskDetailModal.data} 
-          onToggleTask={(id) => toggleTask(id)} 
-          tasks={mappedTasks} 
-          onSelectTask={taskDetailModal.open} // Permette la navigazione tra subtasks
-          onEditClick={() => { 
-            // Chiudiamo il dettaglio e apriamo il form passando la task corrente
-            taskFormModal.open(taskDetailModal.data!); 
-            taskDetailModal.close(); 
-          }} 
-        />
-
-        <NewTaskModal 
-          isOpen={taskFormModal.isOpen} 
-          onClose={taskFormModal.close} 
-          taskToEdit={taskFormModal.data} 
-        />
 
         {/* --- MODALI EVENTI --- */}
         <EventDetailModal 
