@@ -1,16 +1,25 @@
 // src/hooks/useShoppingData.ts
-// Data fetching con React Query - segue il pattern di useAgendaHome
 import { useQuery } from '@tanstack/react-query';
 import { useShoppingApi } from '../api/shoppingApi';
+import type {
+  CatalogOption,
+  ShoppingGroup,
+  ShoppingGroupMember,
+  ShoppingList,
+  ShoppingListItem,
+  ShoppingSupplier,
+} from '../types/shopping';
 
-export const useShoppingData = (filters?: {
+export interface UseShoppingDataFilters {
   shopping_list_id?: number | null;
   is_purchased?: boolean | null;
-}) => {
+  group_id?: number | null;
+}
+
+export const useShoppingData = (filters?: UseShoppingDataFilters) => {
   const api = useShoppingApi();
 
-  // Groups
-  const { data: groups, isLoading: groupsLoading } = useQuery<unknown[]>({
+  const { data: groups = [], isLoading: groupsLoading } = useQuery<ShoppingGroup[]>({
     queryKey: ['shopping', 'groups'],
     queryFn: async () => {
       const data = await api.fetchGroups();
@@ -18,8 +27,7 @@ export const useShoppingData = (filters?: {
     },
   });
 
-  // Lists
-  const { data: lists, isLoading: listsLoading } = useQuery<unknown[]>({
+  const { data: lists = [], isLoading: listsLoading } = useQuery<ShoppingList[]>({
     queryKey: ['shopping', 'lists'],
     queryFn: async () => {
       const data = await api.fetchLists();
@@ -27,9 +35,13 @@ export const useShoppingData = (filters?: {
     },
   });
 
-  // Items (con filtri)
-  const { data: items, isLoading: itemsLoading } = useQuery<unknown[]>({
-    queryKey: ['shopping', 'items', filters?.shopping_list_id, filters?.is_purchased],
+  const { data: items = [], isLoading: itemsLoading } = useQuery<ShoppingListItem[]>({
+    queryKey: [
+      'shopping',
+      'items',
+      filters?.shopping_list_id ?? null,
+      filters?.is_purchased ?? null,
+    ],
     queryFn: async () => {
       const data = await api.fetchItems({
         shopping_list_id: filters?.shopping_list_id ?? undefined,
@@ -39,8 +51,7 @@ export const useShoppingData = (filters?: {
     },
   });
 
-  // Suppliers
-  const { data: suppliers, isLoading: suppliersLoading } = useQuery<unknown[]>({
+  const { data: suppliers = [], isLoading: suppliersLoading } = useQuery<ShoppingSupplier[]>({
     queryKey: ['shopping', 'suppliers'],
     queryFn: async () => {
       const data = await api.fetchSuppliers();
@@ -48,27 +59,124 @@ export const useShoppingData = (filters?: {
     },
   });
 
-  // Group Members (per gruppo selezionato)
-  const { data: members, isLoading: membersLoading } = useQuery<unknown[]>({
-    queryKey: ['shopping', 'members', filters?.shopping_list_id],
+  const { data: groupRoleOptions = [], isLoading: groupRoleOptionsLoading } = useQuery<CatalogOption[]>({
+    queryKey: ['shopping', 'catalogs', 'group-role'],
     queryFn: async () => {
-      // members si caricano on-demand dal componente, non qui
-      return [];
+      const data = await api.fetchGroupRoleOptions();
+      return Array.isArray(data) ? data : [];
     },
-    enabled: false, // disabled di default, abilitato dal componente
+  });
+
+  const { data: listVisibilityOptions = [], isLoading: listVisibilityOptionsLoading } = useQuery<CatalogOption[]>({
+    queryKey: ['shopping', 'catalogs', 'list-visibility'],
+    queryFn: async () => {
+      const data = await api.fetchListVisibilityOptions();
+      return Array.isArray(data) ? data : [];
+    },
+  });
+
+  const { data: listStatusOptions = [], isLoading: listStatusOptionsLoading } = useQuery<CatalogOption[]>({
+    queryKey: ['shopping', 'catalogs', 'list-status'],
+    queryFn: async () => {
+      const data = await api.fetchListStatusOptions();
+      return Array.isArray(data) ? data : [];
+    },
+  });
+
+  const { data: itemStatusOptions = [], isLoading: itemStatusOptionsLoading } = useQuery<CatalogOption[]>({
+    queryKey: ['shopping', 'catalogs', 'item-status'],
+    queryFn: async () => {
+      const data = await api.fetchItemStatusOptions();
+      return Array.isArray(data) ? data : [];
+    },
+  });
+
+  const { data: unitOptions = [], isLoading: unitOptionsLoading } = useQuery<CatalogOption[]>({
+    queryKey: ['shopping', 'catalogs', 'unit'],
+    queryFn: async () => {
+      const data = await api.fetchUnitOptions();
+      return Array.isArray(data) ? data : [];
+    },
+  });
+
+  const { data: currencyOptions = [], isLoading: currencyOptionsLoading } = useQuery<CatalogOption[]>({
+    queryKey: ['shopping', 'catalogs', 'currency'],
+    queryFn: async () => {
+      const data = await api.fetchCurrencyOptions();
+      return Array.isArray(data) ? data : [];
+    },
+  });
+
+  const { data: offerFlagOptions = [], isLoading: offerFlagOptionsLoading } = useQuery<CatalogOption[]>({
+    queryKey: ['shopping', 'catalogs', 'offer-flag'],
+    queryFn: async () => {
+      const data = await api.fetchOfferFlagOptions();
+      return Array.isArray(data) ? data : [];
+    },
+  });
+
+  const { data: supplierStatusOptions = [], isLoading: supplierStatusOptionsLoading } = useQuery<CatalogOption[]>({
+    queryKey: ['shopping', 'catalogs', 'supplier-status'],
+    queryFn: async () => {
+      const data = await api.fetchSupplierStatusOptions();
+      return Array.isArray(data) ? data : [];
+    },
+  });
+
+  const { data: members = [], isLoading: membersLoading } = useQuery<ShoppingGroupMember[]>({
+    queryKey: ['shopping', 'groups', filters?.group_id ?? null, 'members'],
+    queryFn: async () => {
+      if (filters?.group_id == null) return [];
+      const data = await api.fetchMembers(filters.group_id);
+      return Array.isArray(data) ? data : [];
+    },
+    enabled: filters?.group_id != null,
   });
 
   return {
-    groups: groups || [],
-    lists: lists || [],
-    items: items || [],
-    suppliers: suppliers || [],
-    members: members || [],
-    isLoading: groupsLoading || listsLoading || itemsLoading || suppliersLoading,
+    groups,
+    lists,
+    items,
+    suppliers,
+    members,
+
+    groupRoleOptions,
+    listVisibilityOptions,
+    listStatusOptions,
+    itemStatusOptions,
+    unitOptions,
+    currencyOptions,
+    offerFlagOptions,
+    supplierStatusOptions,
+
+    isLoading:
+      groupsLoading ||
+      listsLoading ||
+      itemsLoading ||
+      suppliersLoading ||
+      groupRoleOptionsLoading ||
+      listVisibilityOptionsLoading ||
+      listStatusOptionsLoading ||
+      itemStatusOptionsLoading ||
+      unitOptionsLoading ||
+      currencyOptionsLoading ||
+      offerFlagOptionsLoading ||
+      supplierStatusOptionsLoading ||
+      (filters?.group_id != null && membersLoading),
+
     groupsLoading,
     listsLoading,
     itemsLoading,
     suppliersLoading,
     membersLoading,
+
+    groupRoleOptionsLoading,
+    listVisibilityOptionsLoading,
+    listStatusOptionsLoading,
+    itemStatusOptionsLoading,
+    unitOptionsLoading,
+    currencyOptionsLoading,
+    offerFlagOptionsLoading,
+    supplierStatusOptionsLoading,
   };
 };

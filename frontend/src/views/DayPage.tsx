@@ -65,6 +65,9 @@ const DayPage: React.FC = () => {
     deleteCountdown, 
     saveHabit, 
     deleteHabit,
+    suspendHabit,
+    resumeHabit,
+    updateHabitPeriod,
     updateHabitCount,
     saveObiettivo,
     savePriorita
@@ -226,16 +229,29 @@ const handleDeleteNote = (id: number, isNew?: boolean) => {
       
       {/* SEZIONE TOP */}
       <div className="flex flex-col xl:flex-row gap-6 shrink-0 items-stretch">
-        <div className="xl:w-1/4 flex flex-col justify-center items-center relative py-2 z-20">
+        <div className="xl:w-1/4 flex flex-col justify-center items-center relative py-2 z-30"> {/* Aumentato z-index a 30 per sicurezza */}
           <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-1">Agenda</h2>
-          <div className="flex items-center justify-center gap-3 w-full relative">
-            <button onClick={handlePrevDay} className="text-blue-600 hover:text-blue-800 transition-transform hover:-translate-x-1 focus:outline-none p-1">
+          
+          {/* NUOVO CONTENITORE: Larghezza fissa (w-[280px] o w-[320px]) e justify-between */}
+          <div className="flex items-center justify-between w-[265px] xl:w-[305px] relative mx-auto z-40">
+            
+            <button 
+              onClick={handlePrevDay} 
+              className="relative z-50 text-blue-600 hover:text-blue-800 transition-transform hover:-translate-x-1 focus:outline-none p-2 shrink-0 bg-transparent"
+            >
               <BackIcon className="w-8 h-8" />
             </button>
-            <div className="relative flex justify-center">
-              <h1 onClick={() => { setPickerMonthDate(targetDate); setIsDatePickerOpen(!isDatePickerOpen); }} className="text-3xl xl:text-4xl font-extrabold text-gray-900 uppercase cursor-pointer hover:text-blue-600 transition-colors select-none text-center min-w-[120px]">
+
+            {/* Testo centrale svincolato dalle frecce */}
+            <div className="flex-1 flex justify-center relative">
+              <h1 
+                onClick={() => { setPickerMonthDate(targetDate); setIsDatePickerOpen(!isDatePickerOpen); }} 
+                className="text-3xl xl:text-4xl font-extrabold text-gray-900 uppercase cursor-pointer hover:text-blue-600 transition-colors select-none text-center"
+              >
                 {displayName}
               </h1>
+              
+              {/* Il DatePicker rimane invariato */}
               {isDatePickerOpen && (
                 <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-white rounded-xl shadow-2xl border border-gray-100 p-4 w-64 animate-fadeIn z-50">
                   <div className="flex justify-between items-center mb-4 px-2">
@@ -261,10 +277,16 @@ const handleDeleteNote = (id: number, isNew?: boolean) => {
                 </div>
               )}
             </div>
-            <button onClick={handleNextDay} className="text-blue-600 hover:text-blue-800 transition-transform hover:translate-x-1 focus:outline-none p-1">
+
+            <button 
+              onClick={handleNextDay} 
+              className="relative z-50 text-blue-600 hover:text-blue-800 transition-transform hover:translate-x-1 focus:outline-none p-2 shrink-0 bg-transparent"
+            >
               <ForwardIcon className="w-8 h-8" />
             </button>
           </div>
+          
+          {/* Il resto rimane invariato */}
           <p className="text-lg xl:text-xl font-medium text-gray-500 mt-1">{formattedDate}</p>
           <div className="h-8 mt-2 flex items-center justify-center w-full">
             {!isToday && (
@@ -350,8 +372,12 @@ const handleDeleteNote = (id: number, isNew?: boolean) => {
             routines={mappedRoutines}
             updateHabitLog={updateHabitLog}
             updateHabitCount={updateHabitCount}
+            updateHabitPeriod={updateHabitPeriod}
             saveHabit={saveHabit}
             deleteHabit={deleteHabit}
+            suspendRoutine={suspendHabit} 
+            resumeRoutine={resumeHabit}
+            targetDateStr={targetDateStr}
           />
         </div>
       </div>

@@ -33,3 +33,31 @@
     }
   }
 }
+
+/* Scrollbar elegante per i modali e le finestrelle interne */
+.modal-scrollbar {
+  /* Per Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent; /* slate-300 */
+}
+
+/* Per Chrome, Edge e Safari */
+.modal-scrollbar::-webkit-scrollbar {
+  width: 6px; /* Molto sottile e non invasiva */
+}
+
+.modal-scrollbar::-webkit-scrollbar-track {
+  background: transparent; /* Sfondo invisibile per fondersi col grigio del div */
+  border-radius: 10px;
+  margin-top: 4px; /* Lascia un po' di respiro in alto */
+  margin-bottom: 4px; /* Lascia un po' di respiro in basso */
+}
+
+.modal-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1; /* Grigio tenue (slate-300) */
+  border-radius: 10px; /* Perfettamente arrotondata */
+}
+
+.modal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8; /* Un po' più scura (slate-400) al passaggio del mouse */
+}

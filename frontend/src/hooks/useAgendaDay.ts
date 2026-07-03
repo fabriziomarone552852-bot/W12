@@ -11,10 +11,12 @@ interface HabitFormData {
   tipo: 'R' | 'H'; // R = Routine, H = Habit
   rrule?: string | null;
   immagine_url?: string | null;
-  data_inizio?: string;
-  data_fine?: string | null;
-  target_completamenti?: number;
   periodId?: number;
+  periods?: Array<{
+    data_inizio: string;
+    data_fine?: string | null;
+    target: number;
+  }>;
 }
 
 interface SaveHabitPayload {
@@ -22,10 +24,10 @@ interface SaveHabitPayload {
   data: HabitFormData; 
 }
 
-interface SaveCountdownPayload {
+export interface SaveCountdownPayload {
   id?: number;
-  title?: string;
-  targetDateStr?: string;
+  title: string;
+  targetDateStr: string;
   imageUrl?: string | null;
 }
 
@@ -127,7 +129,7 @@ export const useAgendaDay = (dateStr: string) => {
       const isUpdate = countdown.id && countdown.id < 1000000000;
       const payload = {
         title: countdown.title || "Nuovo Countdown",
-        target_date: (countdown.targetDateStr || new Date().toISOString()).substring(0, 10),
+        target_date: (countdown.targetDateStr || new Date().toISOString()),
         immagine_url: countdown.imageUrl || null
       };
       return isUpdate 
@@ -154,6 +156,27 @@ export const useAgendaDay = (dateStr: string) => {
 
   const deleteHabitMutation = useMutation({
     mutationFn: (id: number) => api.delete(`/habits/${id}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['daySync', dateStr] })
+  });
+
+  const suspendHabitMutation = useMutation({
+    mutationFn: ({ habitId, periodId, endDate }: { habitId: number; periodId: number; endDate: string }) => {
+      return api.patch(`/habits/${habitId}/periods/${periodId}`, { data_fine: endDate });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['daySync', dateStr] })
+  });
+
+  const resumeHabitMutation = useMutation({
+    mutationFn: ({ habitId, target, startDate }: { habitId: number; target: number; startDate: string }) => {
+      return api.post(`/habits/${habitId}/periods`, { data_inizio: startDate, target });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['daySync', dateStr] })
+  });
+
+  const updateHabitPeriodMutation = useMutation({
+    mutationFn: ({ habitId, periodId, target }: { habitId: number; periodId: number; target: number }) => {
+      return api.patch(`/habits/${habitId}/periods/${periodId}`, { target });
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['daySync', dateStr] })
   });
 
@@ -232,6 +255,9 @@ export const useAgendaDay = (dateStr: string) => {
     deleteCountdown: deleteCountdownMutation.mutateAsync,
     saveHabit: saveHabitMutation.mutateAsync,
     deleteHabit: deleteHabitMutation.mutateAsync,
+    suspendHabit: suspendHabitMutation.mutateAsync,
+    resumeHabit: resumeHabitMutation.mutateAsync,
+    updateHabitPeriod: updateHabitPeriodMutation.mutateAsync,
     updateHabitLog: updateHabitLogMutation.mutateAsync,
     updateHabitCount: updateHabitLogMutation.mutateAsync, 
     saveObiettivo: saveObiettivoMutation.mutateAsync,

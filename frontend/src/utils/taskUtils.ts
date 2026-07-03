@@ -214,3 +214,25 @@ export const mapDayTasksToTasks = (allTasks: Task[], targetDateStr: string): Tas
 
   return tasksToShow;
 };
+
+export const getDeepEarliestDeadline = (
+  taskId: number,
+  taskById: Map<number, Task>,
+  tasksByParent: Map<number | null, Task[]>
+): number => {
+  const task = taskById.get(taskId);
+  // Se non c'è scadenza, impostiamo a Infinito (verrà messa alla fine dell'ordinamento)
+  let earliest = task?.data_scadenza ? new Date(task.data_scadenza.substring(0, 10)).getTime() : Infinity;
+
+  const children = tasksByParent.get(taskId) || [];
+  
+  // Ricorsione sui figli per trovare scadenze più brevi
+  for (const child of children) {
+    const childEarliest = getDeepEarliestDeadline(child.id, taskById, tasksByParent);
+    if (childEarliest < earliest) {
+      earliest = childEarliest;
+    }
+  }
+
+  return earliest;
+};
