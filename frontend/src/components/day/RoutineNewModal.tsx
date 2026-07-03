@@ -108,7 +108,7 @@ const RoutineNewModal: React.FC<RoutineNewModalProps> = ({ isOpen, onClose, rout
       isOpen={isOpen}
       onClose={onClose}
       title={routineToEdit ? 'Modifica Routine' : 'Nuova Routine'}
-      maxWidthClass="max-w-lg" // <--- Importante per le routine!
+      maxWidthClass="max-w-xl" // <--- Importante per le routine!
       formId="routine-form"
       confirmText={routineToEdit ? 'Aggiorna' : 'Crea Routine'}
       isConfirmDisabled={!form.titolo.trim()}
@@ -134,10 +134,21 @@ const RoutineNewModal: React.FC<RoutineNewModalProps> = ({ isOpen, onClose, rout
                 onClose={() => setIsDatePickerOpen(false)}
                 placeholder="Oggi"
               />
-            </div>
+            </div> 
 
             <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Immagine di Sfondo (URL)</label>
+            <input type="url" value={form.immagine_url} onChange={e => setForm({...form, immagine_url: e.target.value})} placeholder="Incolla l'URL di un'immagine..." className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all shadow-sm" />
+            <p className="text-[10px] text-gray-400 font-medium mt-1.5 ml-1">Verrà usata per decorare la card.</p>
+          </div>
+          
+          </div>
+            
+
+
+            <div className="w-full bg-gray-50 p-4 rounded-xl border border-gray-200">
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Ricorrenza</label>
+              
               <RecurrenceEditor 
                 isRecurrent={form.isRecurrent}
                 onRecurrentChange={(val) => setForm({...form, isRecurrent: val})}
@@ -148,7 +159,7 @@ const RoutineNewModal: React.FC<RoutineNewModalProps> = ({ isOpen, onClose, rout
                 untilDate={form.rruleUntil}
                 onUntilDateChange={(val) => setForm({...form, rruleUntil: val})}
               />
-            </div>
+            
           </div>
 
           <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm">
@@ -177,11 +188,7 @@ const RoutineNewModal: React.FC<RoutineNewModalProps> = ({ isOpen, onClose, rout
             )}
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Immagine di Sfondo (URL)</label>
-            <input type="url" value={form.immagine_url} onChange={e => setForm({...form, immagine_url: e.target.value})} placeholder="Incolla l'URL di un'immagine..." className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all shadow-sm" />
-            <p className="text-[10px] text-gray-400 font-medium mt-1.5 ml-1">Verrà usata per decorare la card.</p>
-          </div>
+          
 
         </form>
     </BaseModal>

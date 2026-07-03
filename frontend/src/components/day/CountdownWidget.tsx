@@ -1,7 +1,9 @@
 // src/components/day/CountdownWidget.tsx
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import TickDisplay from '@/components/day/utils/TickDisplay';
 import { PlusIcon } from '@/components/shared/utils/Icons';
+import { useCountdownWidget } from '@/hooks/useCountdownWidget';
+import starsGif from '@/assets/stars.gif';
 
 export interface CountdownItem {
   id: number;
@@ -16,13 +18,7 @@ interface CountdownWidgetProps {
 }
 
 const CountdownWidget: React.FC<CountdownWidgetProps> = ({ countdowns, onClick }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  useEffect(() => {
-    if (countdowns.length <= 1) return;
-    const rotateInterval = setInterval(() => setCurrentIndex(prev => (prev + 1) % countdowns.length), 10000);
-    return () => clearInterval(rotateInterval);
-  }, [countdowns.length]);
+  const { currentIndex, setCurrentIndex } = useCountdownWidget(countdowns);
 
   if (!countdowns || countdowns.length === 0) {
     return (
@@ -37,22 +33,54 @@ const CountdownWidget: React.FC<CountdownWidgetProps> = ({ countdowns, onClick }
     <div onClick={onClick} className="relative h-32 w-full rounded-2xl overflow-hidden cursor-pointer shadow-sm hover:shadow-md group transform transition-all hover:-translate-y-0.5 bg-black">
       {countdowns.map((item, idx) => {
         const isActive = idx === currentIndex;
-        
+
+        const targetDate = new Date(item.targetDateStr);
+        const now = new Date();
+        const hasExpired = targetDate.getTime() <= now.getTime(); // <-- Vero solo se è scoccata l'ora!
 
         return (
           <div key={item.id} className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out ${isActive ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}>
             <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style={{ backgroundImage: `url(${item.imageUrl})` }} />
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/20" />
-            <div className="absolute inset-0 p-4 flex flex-col justify-end">
-              <h3 className="text-white/90 font-bold text-xs uppercase tracking-widest truncate mb-2 drop-shadow-md">{item.title}</h3>
-              {isActive && <TickDisplay targetDateStr={item.targetDateStr} variant="widget" isActive={isActive} />}
+            
+            {/* OVERLAY STELLE */}
+            {hasExpired && (
+              <div 
+                className="absolute inset-0 bg-cover bg-center opacity-70 z-0 mix-blend-screen" 
+                style={{ backgroundImage: `url(${starsGif})` }} 
+              />
+            )}
+
+            <div className="absolute inset-0 p-4 flex flex-col justify-end z-10">
+              {!hasExpired ? (
+                <>
+                  <h3 className="text-white/90 font-bold text-xs uppercase tracking-widest truncate mb-2 drop-shadow-md">
+                    {item.title}
+                  </h3>
+                  <TickDisplay targetDateStr={item.targetDateStr} variant="widget" isActive={isActive} />
+                </>
+              ) : (
+                <span className="text-lg font-bold text-white/90 drop-shadow-lg animate-pulse uppercase tracking-widest">
+                  {item.title}!!!
+                </span>
+              )}
             </div>
           </div>
         );
       })}
+      {/* PALLINI DI PAGINAZIONE (ora cliccabili!) */}
       {countdowns.length > 1 && (
         <div className="absolute top-3 right-4 flex gap-1.5 z-20">
-          {countdowns.map((_, idx) => <div key={idx} className={`h-1.5 rounded-full transition-all duration-500 ${idx === currentIndex ? 'w-4 bg-white shadow-sm' : 'w-1.5 bg-white/40'}`} /> )}
+          {countdowns.map((_, idx) => (
+            <div 
+              key={idx} 
+              onClick={(e) => {
+                e.stopPropagation(); // Evita di aprire la modale
+                setCurrentIndex(idx); // Forza la visualizzazione di questa card per 10 sec
+              }}
+              className={`h-1.5 rounded-full transition-all duration-500 cursor-pointer hover:bg-white/80 ${idx === currentIndex ? 'w-4 bg-white shadow-sm' : 'w-1.5 bg-white/40'}`} 
+            /> 
+          ))}
         </div>
       )}
     </div>

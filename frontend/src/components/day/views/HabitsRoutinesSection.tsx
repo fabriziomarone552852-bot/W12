@@ -1,4 +1,4 @@
-// src/components/day/HabitsRoutinesSection.tsx
+// src/components/day/views/HabitsRoutinesSection.tsx
 import React from 'react';
 import HabitsBar, { type HabitItem } from '@/components/day/HabitsBar';
 import HabitNewModal from '@/components/day/HabitNewModal';
@@ -6,6 +6,7 @@ import RoutineColumn, { type RoutineItem } from '@/components/day/RoutineColumn'
 import RoutineNewModal from '@/components/day/RoutineNewModal';
 import RoutineDetailModal from '@/components/day/RoutineDetailModal';
 import { useModal } from '@/hooks/useModals';
+import { useRoutineManager } from '@/hooks/useRoutineManager';
 
 interface HabitsRoutinesSectionProps {
   habits: HabitItem[];
@@ -14,20 +15,28 @@ interface HabitsRoutinesSectionProps {
   updateHabitCount: (params: { habitId: number; delta: number }) => void;
   saveHabit: (payload: any) => void;
   deleteHabit: (id: number) => void;
+  suspendRoutine: (params: { habitId: number; periodId: number; endDate: string }) => void;
+  resumeRoutine: (params: { habitId: number; target: number; startDate: string }) => void;
+  updateHabitPeriod: (params: { habitId: number; periodId: number; target: number }) => void;
+  targetDateStr: string;
 }
 
 export const HabitsRoutinesSection: React.FC<HabitsRoutinesSectionProps> = ({
-  habits,
-  routines,
-  updateHabitLog,
-  updateHabitCount,
-  saveHabit,
-  deleteHabit
+  habits, routines, updateHabitLog, updateHabitCount, saveHabit, deleteHabit,
+  suspendRoutine, resumeRoutine, updateHabitPeriod, targetDateStr
 }) => {
-  // Tutti gli ultimi modali rimasti traslocano qui, in isolamento!
+  // 1. Gestori UI (Modali)
   const routineDetailModal = useModal<RoutineItem>();
   const routineFormModal = useModal<RoutineItem>();
   const habitFormModal = useModal();
+
+  // 2. Il nostro "Cervello" manager
+  const manager = useRoutineManager({
+    targetDateStr, suspendRoutine, resumeRoutine, updateHabitPeriod, saveHabit
+  });
+
+  const selectedRoutine = routineDetailModal.data;
+  const { isAttiva } = manager.getRoutineStatus(selectedRoutine);
 
   return (
     <>
@@ -47,38 +56,49 @@ export const HabitsRoutinesSection: React.FC<HabitsRoutinesSectionProps> = ({
         />
       </div>
 
-      {/* Modali Nascosti (Routine) */}
+      {/* Modali Routine */}
       <RoutineDetailModal 
         isOpen={routineDetailModal.isOpen} 
         onClose={routineDetailModal.close} 
-        selectedRoutine={routineDetailModal.data} 
+        selectedRoutine={selectedRoutine} 
         onEditClick={() => { 
-          routineFormModal.open(routineDetailModal.data); 
+          routineFormModal.open(selectedRoutine); 
           routineDetailModal.close(); 
         }} 
         onDeleteClick={(id) => { 
           deleteHabit(id); 
           routineDetailModal.close(); 
+        }}
+        isAttiva={isAttiva}
+        onSuspendClick={() => {
+          if (selectedRoutine) manager.handleSuspend(selectedRoutine);
+          routineDetailModal.close();
+        }}
+        onResumeClick={() => {
+          manager.setIsResuming(true);
+          routineDetailModal.close();
+          routineFormModal.open(selectedRoutine);
         }} 
       />
       
       <RoutineNewModal 
         isOpen={routineFormModal.isOpen} 
-        onClose={routineFormModal.close} 
+        onClose={() => {
+          manager.setIsResuming(false);
+          routineFormModal.close();
+        }} 
         routineToEdit={routineFormModal.data} 
-        onSave={(payload) => { 
-          saveHabit({ 
-            existingId: routineFormModal.data?.id, 
-            data: {
-              ...payload,
-              periodId: routineFormModal.data?.periodId 
-            }
-          });
+        onSave={async (payload) => { 
+          await manager.handleSaveRoutine(
+            routineFormModal.data?.id, 
+            payload, 
+            routineFormModal.data?.periodId
+          );
           routineFormModal.close(); 
         }} 
       />
 
-      {/* Modali Nascosti (Abitudini) */}
+      {/* Modali Abitudini Veloci */}
       <HabitNewModal 
         isOpen={habitFormModal.isOpen} 
         onClose={habitFormModal.close} 
@@ -89,8 +109,10 @@ export const HabitsRoutinesSection: React.FC<HabitsRoutinesSectionProps> = ({
               tipo: 'H', 
               immagine_url: newHabit.immagine_url, 
               rrule: 'FREQ=DAILY;INTERVAL=1', 
-              data_inizio: new Date().toISOString().substring(0, 10), 
-              target_completamenti: 1 
+              periods: [{
+                data_inizio: new Date().toISOString().substring(0, 10),
+                target: 1
+              }]
             }
           });
           habitFormModal.close(); 

@@ -9,6 +9,8 @@ import { formatToItalianShortDate } from '@/utils/dateUtils';
 import { useAgendaMutations } from '@/hooks/useAgendaMutations';
 import { useQuery } from '@tanstack/react-query';
 import { useApi } from '@/hooks/useApi';
+import { useAuth } from '@/context/AuthContext';
+import { TaskTreeNode } from './utils/TaskTreeNode';
 
 interface TaskDetailModalProps {
   isOpen: boolean;
@@ -27,6 +29,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   const { updateTask, deleteTask } = useAgendaMutations();
   const api = useApi();
   const { confirm } = useConfirm();
+  const { user } = useAuth();
+
+  const maxSubtaskDepth = user?.max_subtask_depth_user ?? 3;
 
   const { data: tasks = [] } = useQuery({ 
     queryKey: ['tasks'], 
@@ -36,14 +41,17 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     }
   });
 
-  const tasksByParent = useMemo(() => {
-    const map = new Map<number | null, Task[]>();
+  const { tasksByParent, tasksById } = useMemo(() => {
+    const parentMap = new Map<number | null, Task[]>();
+    const idMap = new Map<number, Task>();
+    
     tasks.forEach((t: Task) => {
+      idMap.set(t.id, t);
       const pId = t.parent_id ?? null;
-      if (!map.has(pId)) map.set(pId, []);
-      map.get(pId)!.push(t);
+      if (!parentMap.has(pId)) parentMap.set(pId, []);
+      parentMap.get(pId)!.push(t);
     });
-    return map;
+    return { tasksByParent: parentMap, tasksById: idMap };
   }, [tasks]);
 
   if (!isOpen || !selectedTask) return null;
@@ -109,90 +117,6 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     });
   };
 
-  // 1. IL RENDER DELL'ALBERO AGGIORNATO (Data a destra sullo stesso rigo)
-  const renderTaskTree = (nodeId: number, depth: number = 0): React.ReactNode => {
-    const node = tasks.find((t: Task) => t.id === nodeId);
-    if (!node) return null;
-
-    const children = tasksByParent.get(nodeId) || [];
-    const isSelected = selectedTask?.id === nodeId;
-
-    return (
-      <div key={node.id} className="w-full">
-        <div 
-          className={`py-2 pr-4 text-sm flex items-start border-t border-gray-50 transition-colors ${
-            isSelected ? 'bg-blue-50 border-l-4 border-l-blue-500' : 'hover:bg-gray-50'
-          }`}
-          style={{ paddingLeft: `${12 + (depth * 16)}px` }}
-        >
-          {depth > 0 && <span className="text-gray-300 mr-2 font-mono mt-0.5 shrink-0">└</span>}
-          
-          <input 
-            type="checkbox" 
-            checked={node.fatto}
-            onChange={() => handleTaskToggle(node.id, node.fatto)}
-            className="w-4 h-4 mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0 mr-2"
-          />
-
-          {/* Contenitore principale modificato con flex, items-center e justify-between */}
-          <div 
-            className="flex-1 flex items-center justify-between gap-2 cursor-pointer" 
-            onClick={() => {
-              const formattedTask: TaskSummary = {
-                id: node.id,
-                title: node.titolo,
-                deadline: node.data_scadenza ? formatToItalianShortDate(node.data_scadenza) : 'Nessuna',
-                dateStr: node.data_scadenza || node.data_start || '',
-                done: node.fatto,
-                priority: node.priorita,
-                category: node.category?.name || node.category_name || 'Generico',
-                categoryColor: node.category?.colore || '#9CA3AF',
-                description: node.descrizione || '',
-                location: node.luogo || '',
-                parent_id: node.parent_id
-              };
-              onSelectTask(formattedTask);
-            }}
-          >
-            {/* Titolo della Task (flex-1 e min-w-0 servono a gestire i testi lunghi senza rompere il flex) */}
-            <span className={`break-words flex-1 min-w-0 ${
-              node.fatto ? "line-through text-gray-400" : isSelected ? "font-extrabold text-gray-900" : "text-gray-700"
-            }`}>
-              {node.titolo}
-            </span>
-            
-            {/* Solo la Data di scadenza all'estremità destra senza prefissi */}
-            {node.data_scadenza && (
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 whitespace-nowrap ${
-                node.fatto ? 'bg-gray-100 text-gray-400' : 'text-red-500'
-              }`}>
-                {formatToItalianShortDate(node.data_scadenza)}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* PULSANTE "+" */}
-        <div 
-          className="py-1 flex items-center gap-1.5 text-xs font-bold text-gray-400 hover:text-blue-600 cursor-pointer transition-colors"
-          style={{ paddingLeft: `${12 + ((depth + 1) * 16)}px` }}
-          onClick={(e) => {
-            e.stopPropagation(); 
-            if (onAddSubtask) {
-              onAddSubtask(node.id);
-            }
-          }}
-        >
-          <span className="text-lg leading-none mt-[-2px]">+</span> Aggiungi sottotask
-        </div>
-
-        {/*  RENDER DEI FIGLI */}
-        {children.map((child: Task) => renderTaskTree(child.id, depth + 1))}
-
-      </div>
-    );
-  };
-
   // 2. I COMPONENTI DA INIETTARE IN BASEMODAL
   const SidePanel = rootTask ? (
     <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col h-full">
@@ -200,7 +124,17 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
         <h4 className="text-sm font-extrabold text-gray-800 uppercase tracking-wider">Albero Task</h4>
       </div>
       <div className="max-h-[60vh] overflow-y-auto overflow-x-hidden py-2 custom-scrollbar">
-        {renderTaskTree(rootTask.id)}
+        <TaskTreeNode 
+          nodeId={rootTask.id}
+          depth={0}
+          tasksById={tasksById}
+          tasksByParent={tasksByParent}
+          selectedTaskId={selectedTask.id}
+          maxSubtaskDepth={maxSubtaskDepth}
+          onToggleTask={handleTaskToggle}
+          onSelectTask={onSelectTask}
+          onAddSubtask={onAddSubtask}
+        />
       </div>
     </div>
   ) : undefined;

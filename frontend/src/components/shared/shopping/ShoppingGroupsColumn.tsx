@@ -1,50 +1,77 @@
 // src/components/shared/shopping/ShoppingGroupsColumn.tsx
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { useShoppingApi } from '../../../api/shoppingApi';
+import React, { useMemo, useState } from 'react';
 import { useShoppingMutations } from '../../../hooks/useShoppingMutations';
 import { useModal } from '../../../hooks/useModals';
-import type { ShoppingGroup, InviteFormState } from '../../../types/shopping';
-import { shoppingButtonPrimaryClass, shoppingButtonSecondaryClass, shoppingCardClass, shoppingInputClass } from './shoppingUi';
+import type {
+  CatalogOption,
+  InviteFormState,
+  ShoppingGroup,
+  ShoppingGroupMember,
+} from '../../../types/shopping';
+import {
+  shoppingButtonPrimaryClass,
+  shoppingButtonSecondaryClass,
+  shoppingCardClass,
+  shoppingInputClass,
+} from './shoppingUi';
 
 interface ShoppingGroupsColumnProps {
+  groups: ShoppingGroup[];
+  members: ShoppingGroupMember[];
+  loading?: boolean;
+  membersLoading?: boolean;
   onSelectGroup?: (groupId: number | null) => void;
   selectedGroupId?: number | null;
+  groupRoleOptions?: CatalogOption[];
 }
 
-const ShoppingGroupsColumn: React.FC<ShoppingGroupsColumnProps> = ({ onSelectGroup, selectedGroupId }) => {
-  const api = useShoppingApi();
+const ShoppingGroupsColumn: React.FC<ShoppingGroupsColumnProps> = ({
+  groups,
+  members,
+  loading = false,
+  membersLoading = false,
+  onSelectGroup,
+  selectedGroupId,
+  groupRoleOptions = [],
+}) => {
   const mutations = useShoppingMutations();
-  const [selectedGroup, setSelectedGroup] = useState<ShoppingGroup | null>(null);
-  const inviteModal = useModal<number>(); // groupId
+  const inviteModal = useModal<number>();
   const createModal = useModal<null>();
 
-  const { data: groups = [] } = useQuery<ShoppingGroup[]>({
-    queryKey: ['shopping', 'groups'],
-    queryFn: async () => {
-      const data = await api.fetchGroups();
-      return Array.isArray(data) ? data : [];
-    },
-  });
+  const isShoppingRole = (value: string): value is InviteFormState['role_code'] =>
+    ['reader', 'editor', 'admin', 'owner'].includes(value);
 
-  const { data: members = [] } = useQuery({
-    queryKey: ['shopping', 'members', selectedGroup?.id],
-    queryFn: async () => {
-      if (!selectedGroup) return [];
-      const data = await api.fetchMembers(selectedGroup.id);
-      return Array.isArray(data) ? data : [];
-    },
-    enabled: !!selectedGroup,
-  });
+  const getDefaultRoleCode = (): InviteFormState['role_code'] => {
+    const firstCode = groupRoleOptions[0]?.code_value;
+    return firstCode && isShoppingRole(firstCode) ? firstCode : 'reader';
+  };
 
   const [groupName, setGroupName] = useState('');
   const [groupDesc, setGroupDesc] = useState('');
-  const [inviteForm, setInviteForm] = useState<InviteFormState>({ username: '', email: '', role_code: 'reader' });
+  const [inviteForm, setInviteForm] = useState<InviteFormState>({
+    username: '',
+    email: '',
+    role_code: getDefaultRoleCode(),
+  });
+
+  const selectedGroup = useMemo(
+    () => groups.find((group) => group.id === selectedGroupId) ?? null,
+    [groups, selectedGroupId],
+  );
+
+  const roleNameById = useMemo(() => {
+    return new Map(groupRoleOptions.map((option) => [option.id, option.code_name]));
+  }, [groupRoleOptions]);
 
   const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!groupName.trim()) return;
-    await mutations.createGroup({ name: groupName, description: groupDesc || undefined });
+
+    await mutations.createGroup({
+      name: groupName.trim(),
+      description: groupDesc.trim() || undefined,
+    });
+
     setGroupName('');
     setGroupDesc('');
     createModal.close();
@@ -53,82 +80,181 @@ const ShoppingGroupsColumn: React.FC<ShoppingGroupsColumnProps> = ({ onSelectGro
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inviteModal.data) return;
-    await mutations.inviteMember({ groupId: inviteModal.data, form: inviteForm });
-    setInviteForm({ username: '', email: '', role_code: 'reader' });
+
+    await mutations.inviteMember({
+      groupId: inviteModal.data,
+      form: {
+        username: inviteForm.username.trim() || undefined,
+        email: inviteForm.email.trim() || undefined,
+        role_code: inviteForm.role_code,
+      },
+    });
+
+    setInviteForm({
+      username: '',
+      email: '',
+      role_code: getDefaultRoleCode(),
+    });
     inviteModal.close();
   };
 
   const handleRemoveMember = async (userId: number) => {
     if (!selectedGroup) return;
     if (!window.confirm('Rimuovere questo membro dal gruppo?')) return;
-    await mutations.removeMember({ groupId: selectedGroup.id, userId });
+
+    await mutations.removeMember({
+      groupId: selectedGroup.id,
+      userId,
+    });
+  };
+
+  const openInviteModal = (groupId: number) => {
+    setInviteForm({
+      username: '',
+      email: '',
+      role_code: getDefaultRoleCode(),
+    });
+    inviteModal.open(groupId);
   };
 
   return (
-    <div className="flex flex-col h-full min-h-0 gap-3">
-      <div className="flex items-center justify-between shrink-0">
-        <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Gruppi Spesa</h2>
-        <button type="button" onClick={() => createModal.open(null)} className={shoppingButtonSecondaryClass + ' text-xs'}>
+    <div className="flex h-full min-h-0 flex-col gap-3">
+      <div className="shrink-0 flex items-center justify-between">
+        <h2 className="text-sm font-bold uppercase tracking-wider text-gray-700">
+          Gruppi Spesa
+        </h2>
+        <button
+          type="button"
+          onClick={() => createModal.open(null)}
+          className={`${shoppingButtonSecondaryClass} text-xs`}
+        >
           + Nuovo
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
-        {groups.length === 0 ? (
-          <p className="text-xs text-gray-400 text-center py-4">Nessun gruppo. Creane uno!</p>
+      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto">
+        {loading ? (
+          <p className="py-4 text-center text-xs text-gray-400">Caricamento gruppi...</p>
+        ) : groups.length === 0 ? (
+          <p className="py-4 text-center text-xs text-gray-400">
+            Nessun gruppo. Creane uno!
+          </p>
         ) : (
-          groups.map((g) => (
-            <div
-              key={g.id}
-              className={`${shoppingCardClass} p-3 cursor-pointer transition hover:border-blue-300 ${selectedGroup?.id === g.id ? 'border-blue-400 ring-1 ring-blue-200' : ''}`}
-              onClick={() => { setSelectedGroup(g); onSelectGroup?.(g.id); }}
-            >
-              <div className="flex items-center justify-between">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-gray-800 truncate">{g.name}</p>
-                  {g.description && <p className="text-xs text-gray-500 truncate">{g.description}</p>}
+          groups.map((group) => {
+            const isSelected = selectedGroupId === group.id;
+
+            return (
+              <button
+                key={group.id}
+                type="button"
+                className={`${shoppingCardClass} w-full cursor-pointer p-3 text-left transition hover:border-blue-300 ${
+                  isSelected ? 'border-blue-400 ring-1 ring-blue-200' : ''
+                }`}
+                onClick={() => onSelectGroup?.(isSelected ? null : group.id)}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-gray-800">
+                      {group.name}
+                    </p>
+                    {group.description && (
+                      <p className="truncate text-xs text-gray-500">
+                        {group.description}
+                      </p>
+                    )}
+                  </div>
+                  <span className="ml-2 shrink-0 text-xs text-gray-400">
+                    #{group.id}
+                  </span>
                 </div>
-                <span className="text-xs text-gray-400 shrink-0 ml-2">{g.owner_id === 0 ? 'Owner' : 'Membro'}</span>
-              </div>
-            </div>
-          ))
+              </button>
+            );
+          })
         )}
       </div>
 
       {selectedGroup && (
         <div className="shrink-0 border-t border-gray-100 pt-3">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-bold text-gray-600 uppercase">Membri ({members.length})</h3>
-            <button type="button" onClick={() => inviteModal.open(selectedGroup.id)} className={shoppingButtonSecondaryClass + ' text-xs'}>
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="text-xs font-bold uppercase text-gray-600">
+              Membri ({members.length})
+            </h3>
+            <button
+              type="button"
+              onClick={() => openInviteModal(selectedGroup.id)}
+              className={`${shoppingButtonSecondaryClass} text-xs`}
+            >
               + Invita
             </button>
           </div>
-          <div className="space-y-1 max-h-32 overflow-y-auto">
-            {members.map((m: any) => (
-              <div key={m.id} className="flex items-center justify-between text-xs py-1 px-2 rounded-lg hover:bg-gray-50">
-                <span className="text-gray-700">User #{m.user_id}</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-400">Role #{m.role_id}</span>
-                  {selectedGroup.owner_id !== m.user_id && (
-                    <button type="button" onClick={() => handleRemoveMember(m.user_id)} className="text-red-400 hover:text-red-600">✕</button>
-                  )}
+
+          <div className="max-h-32 space-y-1 overflow-y-auto">
+            {membersLoading ? (
+              <p className="px-2 py-2 text-xs text-gray-400">Caricamento membri...</p>
+            ) : members.length === 0 ? (
+              <p className="px-2 py-2 text-xs text-gray-400">Nessun membro nel gruppo.</p>
+            ) : (
+              members.map((member) => (
+                <div
+                  key={member.id}
+                  className="flex items-center justify-between rounded-lg px-2 py-1 text-xs hover:bg-gray-50"
+                >
+                  <span className="text-gray-700">User #{member.user_id}</span>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-400">
+                      {roleNameById.get(member.role_id) ?? `Role #${member.role_id}`}
+                    </span>
+                    {selectedGroup.owner_id !== member.user_id && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveMember(member.user_id)}
+                        className="text-red-400 hover:text-red-600"
+                        aria-label={`Rimuovi utente ${member.user_id} dal gruppo`}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       )}
 
       {createModal.isOpen && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/30 p-4 backdrop-blur-sm">
           <div className={`${shoppingCardClass} w-full max-w-md p-5`}>
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Nuovo gruppo spesa</h2>
+            <h2 className="mb-4 text-lg font-bold text-gray-900">Nuovo gruppo spesa</h2>
+
             <form onSubmit={handleCreateGroup} className="space-y-3">
-              <input className={shoppingInputClass} placeholder="Nome gruppo" value={groupName} onChange={(e) => setGroupName(e.target.value)} required />
-              <input className={shoppingInputClass} placeholder="Descrizione (opzionale)" value={groupDesc} onChange={(e) => setGroupDesc(e.target.value)} />
+              <input
+                className={shoppingInputClass}
+                placeholder="Nome gruppo"
+                value={groupName}
+                onChange={(e) => setGroupName(e.target.value)}
+                required
+              />
+
+              <input
+                className={shoppingInputClass}
+                placeholder="Descrizione (opzionale)"
+                value={groupDesc}
+                onChange={(e) => setGroupDesc(e.target.value)}
+              />
+
               <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={createModal.close} className={shoppingButtonSecondaryClass}>Annulla</button>
-                <button type="submit" className={shoppingButtonPrimaryClass}>Crea</button>
+                <button
+                  type="button"
+                  onClick={createModal.close}
+                  className={shoppingButtonSecondaryClass}
+                >
+                  Annulla
+                </button>
+                <button type="submit" className={shoppingButtonPrimaryClass}>
+                  Crea
+                </button>
               </div>
             </form>
           </div>
@@ -136,20 +262,66 @@ const ShoppingGroupsColumn: React.FC<ShoppingGroupsColumnProps> = ({ onSelectGro
       )}
 
       {inviteModal.isOpen && inviteModal.data && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/30 p-4 backdrop-blur-sm">
           <div className={`${shoppingCardClass} w-full max-w-md p-5`}>
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Invita membro</h2>
+            <h2 className="mb-4 text-lg font-bold text-gray-900">Invita membro</h2>
+
             <form onSubmit={handleInvite} className="space-y-3">
-              <input className={shoppingInputClass} placeholder="Username" value={inviteForm.username} onChange={(e) => setInviteForm((p) => ({ ...p, username: e.target.value }))} />
-              <input className={shoppingInputClass} placeholder="oppure Email" value={inviteForm.email} onChange={(e) => setInviteForm((p) => ({ ...p, email: e.target.value }))} />
-              <select className={shoppingInputClass} value={inviteForm.role_code} onChange={(e) => setInviteForm((p) => ({ ...p, role_code: e.target.value }))}>
-                <option value="reader">Reader</option>
-                <option value="editor">Editor</option>
-                <option value="admin">Admin</option>
+              <input
+                className={shoppingInputClass}
+                placeholder="Username"
+                value={inviteForm.username}
+                onChange={(e) =>
+                  setInviteForm((prev) => ({ ...prev, username: e.target.value }))
+                }
+              />
+
+              <input
+                className={shoppingInputClass}
+                placeholder="oppure Email"
+                value={inviteForm.email}
+                onChange={(e) =>
+                  setInviteForm((prev) => ({ ...prev, email: e.target.value }))
+                }
+              />
+
+              <select
+                className={shoppingInputClass}
+                value={inviteForm.role_code}
+                onChange={(e) =>
+                  setInviteForm((prev) => ({
+                    ...prev,
+                    role_code: e.target.value as InviteFormState['role_code'],
+                  }))
+                }
+              >
+                {groupRoleOptions.length > 0 ? (
+                  groupRoleOptions.map((option) => (
+                    <option key={option.id} value={option.code_value}>
+                      {option.code_name}
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="reader">Reader</option>
+                    <option value="editor">Editor</option>
+                    <option value="admin">Admin</option>
+                    <option value="owner">Owner</option>
+                  </>
+                )}
               </select>
+
               <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={inviteModal.close} className={shoppingButtonSecondaryClass}>Annulla</button>
-                <button type="submit" className={shoppingButtonPrimaryClass}>Invita</button>
+                <button
+                  type="button"
+                  onClick={inviteModal.close}
+                  className={shoppingButtonSecondaryClass}
+                >
+                  Annulla
+                </button>
+                <button type="submit" className={shoppingButtonPrimaryClass}>
+                  Invita
+                </button>
               </div>
             </form>
           </div>

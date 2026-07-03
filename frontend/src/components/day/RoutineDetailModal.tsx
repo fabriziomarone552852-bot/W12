@@ -29,7 +29,17 @@ const RoutineDetailModal: React.FC<RoutineDetailModalProps> = ({
 
   const periodsList = useMemo(() => {
     if (!selectedRoutine?.periods) return [];
-    return selectedRoutine.periods.map((p: RoutinePeriod) => ({
+    
+    const sortedPeriods = [...selectedRoutine.periods].sort((a, b) => {
+      // 1. Priorità assoluta al periodo "Attuale" (quello senza data_fine)
+      if (!a.data_fine && b.data_fine) return -1; // 'a' va sopra
+      if (a.data_fine && !b.data_fine) return 1;  // 'b' va sopra
+      
+      // 2. Per tutti gli altri periodi conclusi, ordina dalla data_inizio più recente a quella più vecchia
+      return new Date(b.data_inizio).getTime() - new Date(a.data_inizio).getTime();
+    });
+
+    return sortedPeriods.map((p: RoutinePeriod) => ({
       id: p.id,
       start: formatToItalianShortDate(p.data_inizio),
       end: p.data_fine ? formatToItalianShortDate(p.data_fine) : 'Presente',
@@ -139,7 +149,7 @@ const RoutineDetailModal: React.FC<RoutineDetailModalProps> = ({
       footer={ModalFooter}
       maxWidthClass="max-w-md"
       >
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* L'immagine è ora un elemento pulito del body, invece che un overlay assoluto */}
           <div className="w-full h-40 rounded-xl bg-cover bg-center shadow-sm" style={{ backgroundImage: `url(${selectedRoutine.imageUrl || 'https://images.unsplash.com/photo-1506744626753-143283d115a0?q=80&w=800'})` }}></div>
           
@@ -147,7 +157,7 @@ const RoutineDetailModal: React.FC<RoutineDetailModalProps> = ({
             <h2 className="text-2xl font-extrabold text-gray-800">{selectedRoutine.title}</h2>
           </div>
 
-          <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 flex items-center justify-between">
+          <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100 flex items-center justify-between">
             <div>
               <h4 className="text-xs font-bold text-blue-800 uppercase tracking-wider mb-1">Target Attuale</h4>
               <p className="text-sm text-blue-600 font-medium">Numero di completamenti richiesti al giorno</p>
@@ -158,17 +168,22 @@ const RoutineDetailModal: React.FC<RoutineDetailModalProps> = ({
           </div>
 
           {periodsList.length > 0 && (
-            <div>
-              <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Cronologia Obiettivi</h4>
+          <div className="flex flex-col">
+            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Cronologia Obiettivi</h4>
+            
+            {/* 3. FINESTRELLA CALIBRATA A max-h-40 PER EVITARE L'ALLUNGAMENTO DEL MODALE */}
+            <div className="max-h-44 overflow-y-auto modal-scrollbar bg-gray-50/50 border border-gray-100 rounded-xl p-3 pr-2 shadow-inner">
               <div className="space-y-2 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-300 before:to-transparent">
                 {periodsList.map((p, idx) => (
                   <div key={p.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-slate-200 text-slate-500 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2">
+                    <div className="relative z-10 flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-slate-200 text-slate-500 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2">
                       <span className="text-xs font-black">{p.target}x</span>
                     </div>
-                    <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-3 rounded-lg border border-slate-200 bg-white shadow-sm flex flex-col">
+                    <div className="relative z-10 w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-3 rounded-lg border border-slate-200 bg-white shadow-sm flex flex-col">
                       <div className="flex items-center justify-between">
-                        <span className={`text-[10px] font-bold uppercase tracking-wider ${idx === 0 ? 'text-blue-500' : 'text-slate-500'}`}>{idx === 0 ? 'Attuale' : 'Storico'}</span>
+                        <span className={`text-[10px] font-bold uppercase tracking-wider ${idx === 0 ? 'text-blue-500' : 'text-slate-500'}`}>
+                          {idx === 0 ? 'Attuale' : 'Storico'}
+                        </span>
                       </div>
                       <div className="text-xs font-medium text-slate-600 mt-1">
                         Dal {p.start} <br/>al {p.end}
@@ -177,6 +192,8 @@ const RoutineDetailModal: React.FC<RoutineDetailModalProps> = ({
                   </div>
                 ))}
               </div>
+            </div>
+              
             </div>
           )}
         </div>

@@ -1,10 +1,11 @@
 // src/components/day/CountdownDetailModal.tsx
+import { startOfDay, isBefore } from 'date-fns';
 import React, { useState } from 'react';
 import type { CountdownItem } from '@/components/day/CountdownWidget';
-import { calculateTimeLeft } from '@/utils/dateUtils'; 
 import ConfirmDialog from '@/components/shared/dialog/ConfirmDialog'; 
 import TickDisplay from '@/components/day/utils/TickDisplay';
-import { TrashIcon, EditIcon, CloseIcon } from '@/components/shared/utils/Icons';
+import { TrashIcon, EditIcon, CloseIcon, UndoIcon } from '@/components/shared/utils/Icons';
+import starsGif from '@/assets/stars.gif';
 
 interface CountdownDetailModalProps {
   isOpen: boolean;
@@ -12,15 +13,29 @@ interface CountdownDetailModalProps {
   countdown: CountdownItem | null;
   onEditClick: () => void;
   onDeleteClick: (id: number) => void;
+  onRenewClick: (rinnovato: CountdownItem) => void;
 }
 
-const CountdownDetailModal: React.FC<CountdownDetailModalProps> = ({ isOpen, onClose, countdown, onEditClick, onDeleteClick }) => {
+const CountdownDetailModal: React.FC<CountdownDetailModalProps> = ({ isOpen, onClose, countdown, onEditClick, onDeleteClick, onRenewClick }) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   if (!isOpen || !countdown) return null;
 
-  const timeLeft = calculateTimeLeft(countdown.targetDateStr);
   const targetDate = new Date(countdown.targetDateStr);
+  const hasExpired = targetDate.getTime() <= Date.now();
+
+  // Funzione per rinnovare di 1 anno
+  const handleRenew = () => {
+    const newDate = new Date(countdown.targetDateStr);
+    newDate.setFullYear(newDate.getFullYear() + 1);
+    
+    const renewedCountdown: CountdownItem = {
+      ...countdown,
+      targetDateStr: newDate.toISOString()
+    };
+    
+    onRenewClick(renewedCountdown);
+  };
 
   return (
     <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -42,6 +57,14 @@ const CountdownDetailModal: React.FC<CountdownDetailModalProps> = ({ isOpen, onC
         onClick={e => e.stopPropagation()}
       >
         <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${countdown.imageUrl})` }} />
+        
+        {hasExpired && (
+          <div 
+            className="absolute inset-0 bg-cover bg-center opacity-70 z-0 mix-blend-screen" 
+            style={{ backgroundImage: `url(${starsGif})` }} 
+          />
+        )}
+
         <div className="absolute inset-0 bg-black/60" />
 
         <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-center z-10">
@@ -49,6 +72,15 @@ const CountdownDetailModal: React.FC<CountdownDetailModalProps> = ({ isOpen, onC
             <CloseIcon className="w-5 h-5" />
           </button>
           <div className="flex gap-2">
+            {isBefore(targetDate, new Date()) || startOfDay(targetDate).getTime() === startOfDay(new Date()).getTime() ? (
+              <button 
+                onClick={handleRenew}
+                className="p-2 bg-black/30 hover:bg-blue-500/80 backdrop-blur-md rounded-full text-white transition-colors"
+                title="Rinnova per l'anno prossimo"
+              >
+                <UndoIcon className="w-4 h-4" />
+              </button>
+            ) : null}
             <button onClick={onEditClick} className="p-2 bg-black/30 hover:bg-amber-500/80 backdrop-blur-md rounded-full text-white transition-colors">
                <EditIcon className="w-4 h-4" />
             </button>

@@ -6,11 +6,13 @@ import TimeInput from '@/components/shared/utils/TimeInput';
 import { combineDateAndTime, pad } from '@/utils/dateUtils'; 
 import BaseModal from '@/components/shared/dialog/BaseModal';
 
+export type CountdownSavePayload = Omit<CountdownItem, 'id'> & { id?: number };
+
 interface CountdownNewModalProps {
   isOpen: boolean;
   onClose: () => void;
   countdownToEdit?: CountdownItem | null;
-  onSave: (cd: Partial<CountdownItem>) => Promise<void> | void;
+  onSave: (cd: CountdownSavePayload) => Promise<void> | void;
 }
 
 const CountdownNewModal: React.FC<CountdownNewModalProps> = ({ isOpen, onClose, countdownToEdit, onSave }) => {
@@ -51,7 +53,13 @@ const CountdownNewModal: React.FC<CountdownNewModalProps> = ({ isOpen, onClose, 
     setIsSaving(true); // 🟢 Accendiamo lo spinner!
 
     try {
-      const finalIso = combineDateAndTime(dateStr, timeStr);
+        // 1. Uniamo data e ora SENZA specificare il fuso. 
+        // Il browser capirà in automatico che si tratta dell'ora locale italiana!
+        const timeToUse = timeStr || '00:00';
+        const localDate = new Date(`${dateStr}T${timeToUse}:00`);
+
+        // 2. Ora possiamo convertirla in modo sicuro per il database
+        const finalIso = localDate.toISOString();
 
       // Aspettiamo che il backend finisca di salvare
       await onSave({
