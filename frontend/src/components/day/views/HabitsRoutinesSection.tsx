@@ -7,13 +7,24 @@ import RoutineNewModal from '@/components/day/RoutineNewModal';
 import RoutineDetailModal from '@/components/day/RoutineDetailModal';
 import { useModal } from '@/hooks/useModals';
 import { useRoutineManager } from '@/hooks/useRoutineManager';
+import type { SaveHabitPayload } from '@/types';
+
+export interface SaveHabitData {
+  titolo?: string;
+  tipo?: 'H' | 'R';
+  immagine_url?: string | null;
+  rrule?: string | null;
+  data_inizio?: string;
+  target_completamenti?: number;
+  periodId?: number;
+}
 
 interface HabitsRoutinesSectionProps {
   habits: HabitItem[];
   routines: RoutineItem[];
   updateHabitLog: (params: { habitId: number; delta: number }) => void;
   updateHabitCount: (params: { habitId: number; delta: number }) => void;
-  saveHabit: (payload: any) => void;
+  saveHabit: (payload: SaveHabitPayload) => void;
   deleteHabit: (id: number) => void;
   suspendRoutine: (params: { habitId: number; periodId: number; endDate: string }) => void;
   resumeRoutine: (params: { habitId: number; target: number; startDate: string }) => void;
@@ -109,10 +120,8 @@ export const HabitsRoutinesSection: React.FC<HabitsRoutinesSectionProps> = ({
               tipo: 'H', 
               immagine_url: newHabit.immagine_url, 
               rrule: 'FREQ=DAILY;INTERVAL=1', 
-              periods: [{
-                data_inizio: new Date().toISOString().substring(0, 10),
-                target: 1
-              }]
+              data_inizio: new Date().toISOString().substring(0, 10), 
+              target_completamenti: 1 
             }
           });
           habitFormModal.close(); 

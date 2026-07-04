@@ -12,6 +12,9 @@ const getObiettivoFontSize = (text: string) => {
 interface SmartObiettivoTextareaProps {
   initialText: string;
   onSave: (newText: string) => void;
+  date?: string;       
+  type?: string;        
+  placeholder?: string;
 }
 
 export const SmartObiettivoTextarea: React.FC<SmartObiettivoTextareaProps> = ({ 

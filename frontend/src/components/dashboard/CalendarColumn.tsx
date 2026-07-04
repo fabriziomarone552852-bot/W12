@@ -15,6 +15,9 @@ interface CalendarColumnProps {
   onAddEventClick?: (dateStr?: string) => void; 
   onDayClick?: (dateStr: string) => void;
   onMonthChange?: (newDate: Date) => void;
+  startDate?: Date;
+  endDate?: Date;
+  viewMode?: 'month' | 'week' | 'day' | string;
 }
 
 const CalendarColumn: React.FC<CalendarColumnProps> = ({ events, tasks, onSelectEvent, onAddEventClick, onDayClick, onMonthChange }) => {

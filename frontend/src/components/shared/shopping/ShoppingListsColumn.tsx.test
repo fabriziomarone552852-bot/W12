@@ -167,75 +167,73 @@ const ShoppingListsColumn: React.FC<ShoppingListsColumnProps> = ({
               <p className="text-sm font-semibold text-gray-700">Tutte le liste</p>
             </button>
 
-            {lists.map((list) => {
-              const isActive = activeListId === String(list.id);
+			{lists.map((list) => {
+				const isActive = activeListId === String(list.id);
 
-              return (
-                <div
-                  key={list.id}
-                  role="button"
-                  tabIndex={0}
-                  className={`${shoppingCardClass} w-full cursor-pointer p-3 text-left transition hover:border-blue-300 ${
-                    isActive ? 'border-blue-400 ring-1 ring-blue-200' : ''
-                  }`}
-                  onClick={() => setActiveListId(String(list.id))}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setActiveListId(String(list.id));
-                    }
-                  }}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-gray-800">
-                        {list.name}
-                      </p>
+				return (
+					<div
+						key={list.id}
+						role="button"
+						tabIndex={0}
+						className={`${shoppingCardClass} w-full cursor-pointer p-3 text-left transition hover:border-blue-300 ${
+							isActive ? 'border-blue-400 ring-1 ring-blue-200' : ''
+						}`}
+						onClick={() => setActiveListId(String(list.id))}
+						onKeyDown={(e) => {
+							if (e.key === 'Enter' || e.key === ' ') {
+								e.preventDefault();
+								setActiveListId(String(list.id));
+							}
+						}}
+						aria-pressed={isActive}
+					>
+						<div className="flex items-center justify-between">
+							<div className="min-w-0 flex-1">
+								<p className="truncate text-sm font-semibold text-gray-800">
+									{list.name}
+								</p>
 
-                      {list.description && (
-                        <p className="truncate text-xs text-gray-500">
-                          {list.description}
-                        </p>
-                      )}
+								{list.description && (
+									<p className="truncate text-xs text-gray-500">
+										{list.description}
+									</p>
+								)}
 
-                      {list.group_id && (
-                        <span className="text-xs text-blue-500">Gruppo</span>
-                      )}
-                    </div>
+								{list.group_id && (
+									<span className="text-xs text-blue-500">Gruppo</span>
+								)}
+							</div>
 
-                    <div className="ml-2 flex shrink-0 items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          startEdit(list);
-                        }}
-                        className="text-xs text-gray-400 hover:text-blue-500"
-                        aria-label={`Modifica lista ${list.name}`}
-                      >
-                        ✎
-                      </button>
+							<div className="ml-2 flex shrink-0 items-center gap-1">
+								<button
+									type="button"
+									onClick={(e) => {
+										e.stopPropagation();
+										startEdit(list);
+									}}
+									className="text-xs text-gray-400 hover:text-blue-500"
+									aria-label={`Modifica lista ${list.name}`}
+								>
+									✎
+								</button>
 
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(list);
-                        }}
-                        className="text-xs text-gray-400 hover:text-red-500"
-                        aria-label={`Elimina lista ${list.name}`}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </>
-        )}
-      </div>
-
+								<button
+									type="button"
+									onClick={(e) => {
+										e.stopPropagation();
+										handleDelete(list);
+									}}
+									className="text-xs text-gray-400 hover:text-red-500"
+									aria-label={`Elimina lista ${list.name}`}
+								>
+									✕
+								</button>
+							</div>
+						</div>
+					</div>
+				);
+			})}
+			
       {createModal.isOpen && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/30 p-4 backdrop-blur-sm">
           <div className={`${shoppingCardClass} w-full max-w-md p-5`}>
