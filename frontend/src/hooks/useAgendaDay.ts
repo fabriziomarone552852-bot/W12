@@ -3,26 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApi } from './useApi';
 
 // 🪄 1. Importiamo TUTTI i tipi che compongono una giornata
-import type { Task, Habit, HabitLog, Event, Countdown, DailyEntry, DaySyncResponse } from '@/types';
+import type { Task, Habit, HabitLog, DaySyncResponse, SaveHabitPayload } from '@/types';
 
 // 🪄 3. Creiamo l'interfaccia esatta per i dati che inviamo quando creiamo un'abitudine
-interface HabitFormData {
-  titolo: string;
-  tipo: 'R' | 'H'; // R = Routine, H = Habit
-  rrule?: string | null;
-  immagine_url?: string | null;
-  periodId?: number;
-  periods?: Array<{
-    data_inizio: string;
-    data_fine?: string | null;
-    target: number;
-  }>;
-}
-
-interface SaveHabitPayload {
-  existingId?: number;
-  data: HabitFormData; 
-}
 
 export interface SaveCountdownPayload {
   id?: number;
@@ -221,7 +204,7 @@ export const useAgendaDay = (dateStr: string) => {
   // --- MUTAZIONI OBIETTIVO E PRIORITÀ ---
   const saveObiettivoMutation = useMutation({
     mutationFn: (data: { id?: number; text: string }) => {
-      const payload = { data_riferimento: dateStr, tipo: 'Obiettivo', testo: data.text };
+      const payload = { data_riferimento: dateStr, tipo: 'OD', testo: data.text };
       if (!data.text.trim() && data.id) return api.delete(`/daily-entries/${data.id}`);
       if (!data.text.trim()) return Promise.resolve(); 
       return data.id 

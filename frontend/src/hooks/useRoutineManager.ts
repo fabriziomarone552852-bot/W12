@@ -2,13 +2,14 @@
 import { useState } from 'react';
 import type { RoutineItem } from '@/components/day/RoutineColumn';
 import type { RoutineSavePayload } from '@/components/day/RoutineNewModal';
+import type { SaveHabitPayload } from '@/types';
 
 interface UseRoutineManagerProps {
   targetDateStr: string;
   suspendRoutine: (params: { habitId: number; periodId: number; endDate: string }) => void;
   resumeRoutine: (params: { habitId: number; target: number; startDate: string }) => void;
   updateHabitPeriod: (params: { habitId: number; periodId: number; target: number }) => void;
-  saveHabit: (payload: any) => void;
+  saveHabit: (payload: SaveHabitPayload) => void;
 }
 
 export const useRoutineManager = ({ 

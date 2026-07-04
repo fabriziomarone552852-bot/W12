@@ -6,6 +6,8 @@ import { useAuth } from '@/context/AuthContext';
 // Pagine
 import HomePage from '@/views/HomePage';
 import DayPage from '@/views/DayPage';
+// 1. IMPORTIAMO LA NUOVA PAGINA DELLA SETTIMANA
+import WeekPage from '@/views/WeekPage'; 
 import TasksPage from '@/views/TasksPage';
 import EventsPage from '@/views/EventsPage';
 import CategoriesPage from '@/views/CategoriesPage';
@@ -30,10 +32,11 @@ const AppRouter: React.FC = () => {
             {/* Cliccando su "Agenda" si va qui (Home generale) */}
             <Route path="/" element={<HomePage />} />
 
-            {/* 2. SOSTITUIAMO IL SEGNAPOSTO CON IL COMPONENTE REALE */}
             <Route path="/giorno" element={<DayPage />} />
             
-            <Route path="/settimana" element={<div className="p-6 text-xl font-bold">Pagina Settimana in costruzione...</div>} />
+            {/* 2. INSERIAMO IL COMPONENTE AL POSTO DEL SEGNAPOSTO */}
+            <Route path="/settimana" element={<WeekPage />} />
+            
             <Route path="/mese" element={<div className="p-6 text-xl font-bold">Pagina Mese in costruzione...</div>} />
 
             <Route path="/tasks" element={<TasksPage />} />
