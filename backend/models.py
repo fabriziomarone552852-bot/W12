@@ -3,7 +3,7 @@ DEPRECATED: Central models module - use domain-specific models instead.
 
 This file exists for backward compatibility only.
 All models have been moved to their respective domain modules:
-- backend.domains.config.models
+- backend.domains.config.models sostituito da backend.domains.catalogs.models
 - backend.domains.users.models
 - backend.domains.categories.models
 - backend.domains.tasks.models
@@ -26,7 +26,7 @@ from backend.core.database import Base  # noqa: F401
 # Re-export all domain models for backward compatibility
 from backend.domains.audit.models import SharedActivityLog  # noqa: F401
 from backend.domains.categories.models import Category  # noqa: F401
-from backend.domains.config.models import Config, ConfigCode  # noqa: F401
+from backend.domains.catalogs.models import Config, ConfigCode  # noqa: F401
 from backend.domains.countdowns.models import Countdown  # noqa: F401
 from backend.domains.events.models import Event  # noqa: F401
 from backend.domains.habits.models import Habit, HabitLog, HabitPeriod  # noqa: F401

@@ -3,7 +3,7 @@ DEPRECATED: Central schemas module - use domain-specific schemas instead.
 
 This file exists for backward compatibility only.
 All schemas have been moved to their respective domain modules:
-- backend.domains.config.schemas
+- backend.domains.config.schemas sostiutito da backend.domains.catalogs.schemas
 - backend.domains.users.schemas
 - backend.domains.categories.schemas
 - backend.domains.tasks.schemas
@@ -33,7 +33,7 @@ from backend.domains.categories.schemas import (  # noqa: F401
     CategoryResponse,
     CategoryUpdate,
 )
-from backend.domains.config.schemas import (  # noqa: F401
+from backend.domains.catalogs.schemas import (  # noqa: F401
     ConfigCodeCreate,
     ConfigCodeResponse,
     ConfigCodeUpdate,

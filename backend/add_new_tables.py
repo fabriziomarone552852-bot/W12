@@ -14,7 +14,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.engine import Engine
-from database import engine
+from backend.database import engine
 
 metadata = MetaData()
 metadata.reflect(bind=engine, only=["users"])
@@ -26,11 +26,11 @@ daily_entries = Table(
     Column("id", Integer, primary_key=True),
     Column("user_id", Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
     Column("data_riferimento", Date, nullable=False),
-    Column("tipo", String(20), nullable=False),
+    Column("tipo", String(2), nullable=False),
     Column("testo", Text, nullable=False),
     Column("immagine_url", String(1024), nullable=True),
     CheckConstraint(
-        "tipo IN ('Obiettivo', 'Priorità', 'Countdown', 'Nota')",
+        "tipo IN ('OD', 'PD', 'N1', 'N2', 'N3', 'N4', 'OW', 'PW', 'OM', 'PM', 'EP', 'EN')",
         name="ck_daily_entries_tipo_valid",
     ),
 )

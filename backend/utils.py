@@ -2,8 +2,8 @@
 from datetime import datetime, time, date, timedelta
 from typing import List
 from dateutil.rrule import rrulestr
-import schemas
-import models
+from backend import schemas
+from backend import models
 
 def _ensure_naive(dt: datetime) -> datetime:
     """Rimuove il fuso orario per evitare crash di comparazione in Python (Naive vs Aware)"""
