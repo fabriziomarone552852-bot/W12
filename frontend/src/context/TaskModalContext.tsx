@@ -1,7 +1,7 @@
 import React, { createContext, useContext, type ReactNode } from 'react';
 import { useModal } from '@/hooks/useModals';
-import TaskDetailModal from '@/components/shared/TaskDetailModal';
-import NewTaskModal from '@/components/shared/TaskNewModal';
+import TaskDetailModal from '@/components/shared/tasks/TaskDetailModal';
+import NewTaskModal from '@/components/shared/tasks/TaskNewModal';
 import type { TaskSummary } from '@/types';
 import { useAgendaMutations } from '@/hooks/useAgendaMutations';
 

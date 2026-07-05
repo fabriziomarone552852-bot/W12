@@ -7,6 +7,7 @@ import { type CountdownItem } from '@/components/day/CountdownWidget';
 import { type RoutineItem } from '@/components/day/RoutineColumn';
 import { type HabitItem } from '@/components/day/HabitsBar';
 import NotesSidebar from '@/components/day/NotesSidebar';
+import { SharedAgendaHeader } from '@/components/shared/SharedAgendaHeader'; // <-- IMPORT DEL NUOVO HEADER
 
 // --- IMPORT ARCHITETTURA NUOVA ---
 import { useDay } from '@/context/DayContext';
@@ -14,9 +15,7 @@ import { useAgendaDay } from '@/hooks/useAgendaDay';
 import { formatDateString } from '@/utils/dateUtils';
 import { mapDayTasksToTasks } from '@/utils/taskUtils';
 import { isHabitScheduledForDay } from '@/utils/habitUtils';
-import { BackIcon, ForwardIcon, UndoIcon } from '@/components/shared/utils/Icons';
 import { SmartObiettivoTextarea } from '@/components/day/utils/SmartObiettivoTextarea';
-import DatePicker from '@/components/shared/utils/DatePicker';
 
 import type { CalendarEvent } from '@/types';
 import type { Task, Event, Habit, RawCountdown, DailyEntry, DaySyncResponse } from '@/types';
@@ -49,7 +48,6 @@ const DayPage: React.FC = () => {
   
   // Creiamo la stringa sicura YYYY-MM-DD per React Query
   const targetDateStr = formatDateString(targetDate);
-  
 
   // 2. IL "CERVELLO" REACT QUERY
   const { 
@@ -72,8 +70,7 @@ const DayPage: React.FC = () => {
     savePriorita
   } = useAgendaDay(targetDateStr);
 
-  // 3. STATI UI
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  // 3. STATI UI (Rimosso isDatePickerOpen, se ne occupa l'Header!)
   const [isNotesOpen, setIsNotesOpen] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
 
@@ -153,7 +150,7 @@ const DayPage: React.FC = () => {
     }));
   }, [dayData?.note]);
 
-  // --- HANDLER NAVIGAZIONE (Semplificati) ---
+  // --- HANDLER NAVIGAZIONE (Molto più snelli ora) ---
   const handlePrevDay = () => { 
     const d = new Date(targetDate); 
     d.setDate(d.getDate() - 1); 
@@ -168,11 +165,6 @@ const DayPage: React.FC = () => {
 
   const handleResetToday = () => { 
     setTargetDate(new Date()); 
-  };
-  
-  const handleChangeDate = (d: Date) => { 
-    setTargetDate(d); 
-    setIsDatePickerOpen(false); 
   };
 
   // --- HANDLER AZIONI ---
@@ -190,7 +182,7 @@ const DayPage: React.FC = () => {
       return {
         ...oldData,
         note: [
-          { id: newId, testo: "", data_riferimento: targetDateStr, isNew: true },
+          { id: newId, testo: "", data_riferimento: targetDateStr, tipo: 'N1', user_id: 0, isNew: true },
           ...(oldData.note || [])
         ]
       };
@@ -233,67 +225,18 @@ const DayPage: React.FC = () => {
       {/* SEZIONE TOP */}
       <div className="flex flex-col xl:flex-row gap-6 shrink-0 items-stretch">
         
-        {/* COLONNA DATA (Perfettamente allineata al centro) */}
-        <div className="xl:w-1/4 flex flex-col justify-center items-center relative py-2 z-30"> 
-          
-          {/* Contenitore relativo per fare da riferimento alle frecce assolute */}
-          <div className="relative flex items-center justify-center w-full max-w-[300px] xl:max-w-[340px]">
-            
-            {/* FRECCIA SINISTRA (Assoluta: non sposta il testo!) */}
-            <button 
-              onClick={handlePrevDay} 
-              className="absolute left-0 z-50 text-blue-600 hover:text-blue-800 transition-transform hover:-translate-x-1 focus:outline-none p-2 bg-transparent"
-            >
-              <BackIcon className="w-8 h-8" />
-            </button>
-
-            {/* COLONNA CENTRALE (Tutti i testi condividono la stessa linea immaginaria) */}
-            <div className="flex flex-col items-center justify-center relative z-40">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-0.5">
-                Agenda
-              </h2>
-              
-              <DatePicker
-                value={targetDateStr}
-                onChange={(newDateStr: string) => {
-                  const [yyyy, mm, dd] = newDateStr.split('-').map(Number);
-                  handleChangeDate(new Date(yyyy, mm - 1, dd));
-                }}
-                isOpen={isDatePickerOpen}
-                onClose={() => setIsDatePickerOpen(false)}
-                onToggle={() => setIsDatePickerOpen(!isDatePickerOpen)}
-                align="center"
-                selectionMode="day"
-                customTrigger={
-                  <h1 className="text-3xl xl:text-4xl font-extrabold text-gray-900 uppercase cursor-pointer hover:text-blue-600 transition-colors select-none text-center px-2">
-                    {displayName}
-                  </h1>
-                }
-              />
-              
-              <p className="text-lg xl:text-xl font-medium text-gray-500 mt-0.5">
-                {formattedDate}
-              </p>
-            </div>
-
-            {/* FRECCIA DESTRA (Assoluta: non sposta il testo!) */}
-            <button 
-              onClick={handleNextDay} 
-              className="absolute right-0 z-50 text-blue-600 hover:text-blue-800 transition-transform hover:translate-x-1 focus:outline-none p-2 bg-transparent"
-            >
-              <ForwardIcon className="w-8 h-8" />
-            </button>
-          </div>
-          
-          {/* Pulsante per ritornare ad "Oggi" */}
-          <div className="h-8 mt-2 flex items-center justify-center w-full">
-            {!isToday && (
-              <button onClick={handleResetToday} className="p-1.5 text-black hover:bg-gray-200 hover:text-black rounded-full transition-all animate-fadeIn focus:outline-none" title="Ritorna ad Oggi">
-                <UndoIcon className="w-5 h-5" />
-              </button>
-            )}
-          </div>
-        </div>
+        {/* HEADER ASTRATTO (Sostituisce il vecchio blocco frecce+datepicker) */}
+        <SharedAgendaHeader 
+          title={displayName} 
+          subtitle={formattedDate} 
+          currentDate={targetDate} 
+          isToday={isToday} 
+          onPrev={handlePrevDay} 
+          onNext={handleNextDay} 
+          onResetToday={handleResetToday} 
+          onChangeDate={setTargetDate} // Passiamo direttamente il setter del Context!
+          viewMode="day"
+        />
 
         <div className={`bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col flex-1 xl:flex-row gap-6 py-5 z-10`}>
           <div className="flex-1 xl:border-r border-gray-200 xl:pr-8 flex flex-col justify-center relative h-full">

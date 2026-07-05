@@ -5,26 +5,25 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 
 // --- IMPORT COMPONENTI ---
-import { BackIcon, ForwardIcon, UndoIcon, PlusIcon, CalendarIcon } from '@/components/shared/utils/Icons';
+import { PlusIcon } from '@/components/shared/utils/Icons';
 import { SmartObiettivoTextarea } from '@/components/day/utils/SmartObiettivoTextarea';
 import CalendarColumn from '@/components/dashboard/CalendarColumn';
 import NotesSidebar from '@/components/day/NotesSidebar';
-import DatePicker from '@/components/shared/utils/DatePicker';
+import { SharedAgendaHeader } from '@/components/shared/SharedAgendaHeader'; // <-- NUOVO IMPORT
 
 // --- IMPORT MODALI ---
-import EventDetailModal from '@/components/shared/EventDetailModal';
-import EventNewModal from '@/components/shared/EventNewModal';
-import TaskDetailModal from '@/components/shared/TaskDetailModal';
-import TaskNewModal from '@/components/shared/TaskNewModal';
+import EventDetailModal from '@/components/shared/events/EventDetailModal';
+import EventNewModal from '@/components/shared/events/EventNewModal';
+import TaskDetailModal from '@/components/shared/tasks/TaskDetailModal';
+import TaskNewModal from '@/components/shared/tasks/TaskNewModal';
 
 import type { Task, CalendarEvent, DailyEntry, TaskSummary, SyncWeekResponse } from '@/types';
 import { useAgendaWeek } from '@/hooks/useAgendaWeek'; 
 import { useAgendaMutations } from '@/hooks/useAgendaMutations';
 
 const WeekPage: React.FC = () => {
-  // 1. STATO DELLA DATA E DEL DATEPICKER
+  // 1. STATO DELLA DATA (La gestione del DatePicker ora è delegata all'Header!)
   const [targetDate, setTargetDate] = useState<Date>(new Date());
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState<boolean>(false);
   
   const monday = getMonday(targetDate);
   const sunday = getSunday(targetDate);
@@ -35,6 +34,7 @@ const WeekPage: React.FC = () => {
   const sundayStr = formatDateString(sunday);
 
   const queryClient = useQueryClient();
+
   // 2. STATI DEI PANNELLI E DEI MODALI
   const [isNotesOpen, setIsNotesOpen] = useState<boolean>(false);
   const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
@@ -58,11 +58,6 @@ const WeekPage: React.FC = () => {
 
   const handleGoToDay = (dateStr: string) => {
     navigate('/giorno', { state: { selectedDate: dateStr } }); 
-  };
-
-  const handleDatePickerChange = (newDateStr: string) => {
-    const [yyyy, mm, dd] = newDateStr.split('-');
-    setTargetDate(new Date(Number(yyyy), Number(mm) - 1, Number(dd)));
   };
 
   // --- HANDLERS TASKS DALLA GRIGLIA ---
@@ -94,18 +89,21 @@ const WeekPage: React.FC = () => {
     const newId = Date.now();
     queryClient.setQueryData<SyncWeekResponse>(['weekSync', mondayStr], (oldData) => {
       if (!oldData) return oldData;
-      // CORREZIONE: Aggiunto user_id: 0 per soddisfare in modo sicuro l'interfaccia TypeScript
-      if (tipo === 'EP') {
-        return {
-          ...oldData,
-          eventi_positivi: [...(oldData.eventi_positivi || []), { id: newId, user_id: 0, testo: "", data_riferimento: mondayStr, tipo, isNew: true }]
-        };
-      } else {
-        return {
-          ...oldData,
-          eventi_negativi: [...(oldData.eventi_negativi || []), { id: newId, user_id: 0, testo: "", data_riferimento: mondayStr, tipo, isNew: true }]
-        };
-      }
+      
+      const newEvent = { 
+        id: newId, 
+        user_id: 0, 
+        testo: "", 
+        data_riferimento: mondayStr, 
+        tipo: tipo as "EP" | "EN" | "OD" | "PD" | "N1" | "OW" | "PW", // Cast sicuro per rispettare DailyEntry
+        isNew: true 
+      };
+
+      return {
+        ...oldData,
+        eventi_positivi: tipo === 'EP' ? [...(oldData.eventi_positivi || []), newEvent] : oldData.eventi_positivi,
+        eventi_negativi: tipo === 'EN' ? [...(oldData.eventi_negativi || []), newEvent] : oldData.eventi_negativi,
+      };
     });
   };
 
@@ -115,17 +113,11 @@ const WeekPage: React.FC = () => {
     if (!text.trim() && ev.isNew) {
       queryClient.setQueryData<SyncWeekResponse>(['weekSync', mondayStr], (oldData) => {
         if (!oldData) return oldData;
-        if (tipo === 'EP') {
-          return {
-            ...oldData,
-            eventi_positivi: (oldData.eventi_positivi || []).filter((x) => x.id !== ev.id)
-          };
-        } else {
-          return {
-            ...oldData,
-            eventi_negativi: (oldData.eventi_negativi || []).filter((x) => x.id !== ev.id)
-          };
-        }
+        return {
+          ...oldData,
+          eventi_positivi: tipo === 'EP' ? (oldData.eventi_positivi || []).filter((x) => x.id !== ev.id) : oldData.eventi_positivi,
+          eventi_negativi: tipo === 'EN' ? (oldData.eventi_negativi || []).filter((x) => x.id !== ev.id) : oldData.eventi_negativi
+        };
       });
       return;
     }
@@ -133,7 +125,7 @@ const WeekPage: React.FC = () => {
     saveWeeklyEntry({ id: ev.isNew ? undefined : ev.id, text, tipo, dateStr: mondayStr });
   };
 
-  // --- ADAPTERS ---
+  // --- ADAPTERS (invariati, ma controllati) ---
   const filteredTasks = useMemo(() => {
     if (!weekData?.tasks) return [];
     return weekData.tasks.filter((t: Task) => {
@@ -193,8 +185,10 @@ const WeekPage: React.FC = () => {
     setEditingNoteId(newId);
     queryClient.setQueryData<SyncWeekResponse>(['weekSync', mondayStr], (oldData) => {
       if (!oldData) return oldData;
-      // CORREZIONE: Aggiunto user_id: 0
-      return { ...oldData, note: [{ id: newId, user_id: 0, testo: "", data_riferimento: mondayStr, tipo: 'N1', isNew: true }, ...(oldData.note || [])] };
+      return { 
+        ...oldData, 
+        note: [{ id: newId, user_id: 0, testo: "", data_riferimento: mondayStr, tipo: 'N1', isNew: true }, ...(oldData.note || [])] 
+      };
     });
   };
 
@@ -203,6 +197,7 @@ const WeekPage: React.FC = () => {
       if (!oldData) return oldData;
       return { ...oldData, note: (oldData.note || []).map((n) => n.id === id ? { ...n, testo: text, isNew: false } : n) };
     });
+    // Fallback sul tipo corretto "Nota" invece del placeholder
     saveWeeklyEntry({ id: isNew ? undefined : id, text: text, tipo: 'N1', dateStr: mondayStr });
   };
 
@@ -219,54 +214,20 @@ const WeekPage: React.FC = () => {
   return (
     <div className={`flex flex-col gap-4 max-w-[1600px] mx-auto min-h-full xl:h-full xl:overflow-hidden relative pt-2`}>
       
-      {/* 1. SEZIONE TOP */}
+      {/* 1. SEZIONE TOP - ORA UTILIZZA L'HEADER CONDIVISO */}
       <div className="flex flex-col xl:flex-row gap-6 shrink-0 items-stretch">
         
-        {/* CORREZIONE: Layout di allineamento centrale rigoroso usando flex gap, che sostituisce il "justify-between" sbilanciato */}
-        <div className="xl:w-1/4 flex flex-col justify-center items-center relative py-2 z-30">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-1 text-center">Settimanale</h2>
-          
-          <div className="flex items-center justify-center gap-3 xl:gap-5 w-full relative z-40">
-            <button onClick={handlePrevWeek} className="relative z-50 text-blue-600 hover:text-blue-800 transition-transform hover:-translate-x-1 focus:outline-none p-2 shrink-0 bg-transparent">
-              <BackIcon className="w-8 h-8" />
-            </button>
-            
-            <div className="flex justify-center relative">
-              <DatePicker
-                value={formatDateString(targetDate)} 
-                onChange={handleDatePickerChange}
-                isOpen={isDatePickerOpen}
-                onClose={() => setIsDatePickerOpen(false)}
-                onToggle={() => setIsDatePickerOpen((prev) => !prev)}
-                align="center" 
-                selectionMode="week"
-                customTrigger={
-                  <div className="text-center flex items-center justify-center py-1 px-3">
-                    <h1 className="text-3xl xl:text-4xl font-extrabold text-gray-900 hover:text-blue-600 transition-colors uppercase whitespace-nowrap">
-                      SET. {weekNumber}
-                    </h1>
-                  </div>
-                }
-              />
-            </div>
-
-            <button onClick={handleNextWeek} className="relative z-50 text-blue-600 hover:text-blue-800 transition-transform hover:translate-x-1 focus:outline-none p-2 shrink-0 bg-transparent">
-              <ForwardIcon className="w-8 h-8" />
-            </button>
-          </div>
-          
-          <p className="text-lg xl:text-xl font-medium text-gray-500 mt-1 text-center">
-            {monday.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit'})} - {sunday.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit'})}
-          </p>
-
-          <div className="h-8 mt-2 flex items-center justify-center w-full">
-            {!isCurrentWeek && (
-              <button onClick={handleResetCurrentWeek} className="p-1.5 text-black hover:bg-gray-200 hover:text-black rounded-full transition-all animate-fadeIn focus:outline-none" title="Torna alla Settimana Corrente">
-                <UndoIcon className="w-5 h-5" />
-              </button>
-            )}
-          </div>
-        </div>
+        <SharedAgendaHeader 
+            title={`SETT. ${weekNumber}`} 
+            subtitle={`${monday.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit'})} - ${sunday.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit'})}`} 
+            currentDate={targetDate} 
+            isToday={isCurrentWeek}
+            onPrev={handlePrevWeek} 
+            onNext={handleNextWeek} 
+            onResetToday={handleResetCurrentWeek} 
+            onChangeDate={(d: Date) => setTargetDate(d)} 
+            viewMode="week"
+            />
 
         <div className={`bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col flex-1 xl:flex-row gap-6 py-5 z-10`}>
           <div className="flex-1 xl:border-r border-gray-200 xl:pr-8 flex flex-col justify-center relative h-full">
@@ -323,8 +284,6 @@ const WeekPage: React.FC = () => {
            />
         </div>
       </div>
-
-      {/* 3. EVENTI POSITIVI / NEGATIVI - DUE BOLLE */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 shrink-0 h-44 pb-2">
 
         {/* --- EVENTI POSITIVI --- */}

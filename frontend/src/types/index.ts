@@ -88,6 +88,8 @@ export interface DailyEntry {
   immagine_url?: string | null;
 }
 
+export type DailyEntryType = 'OD' | 'PD' | 'N1' | 'OW' | 'PW' | 'EP' | 'EN';
+
 export interface Countdown {
   id: number;
   user_id: number;
@@ -194,8 +196,6 @@ export interface SyncWeekResponse {
   events: Event[]; 
   tasks: Task[];   
 }
-
-export type DailyEntryType = 'OD' | 'PD' | 'N1' | 'OS' | 'PS' | 'EP' | 'EN';
 
 export const CategoryGenre = {
   TASKS: 1,

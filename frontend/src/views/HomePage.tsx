@@ -6,14 +6,14 @@ import { useNavigate } from 'react-router-dom';
 import { useCategories } from '@/hooks/useCategories';
 
 import CalendarColumn from '@/components/dashboard/CalendarColumn';
-import TaskColumn from '@/components/shared/TaskColumn';
+import TaskColumn from '@/components/shared/tasks/TaskColumn';
 import { type TaskSummary } from '@/types';
-import EventsColumn from '@/components/shared/EventsColumn';
+import EventsColumn from '@/components/shared/events/EventsColumn';
 
-import TaskNewModal from '@/components/shared/TaskNewModal';
-import TaskDetailModal from '@/components/shared/TaskDetailModal';
-import NewEventModal from '@/components/shared/EventNewModal';
-import EventDetailModal from '@/components/shared/EventDetailModal';
+import TaskNewModal from '@/components/shared/tasks/TaskNewModal';
+import TaskDetailModal from '@/components/shared/tasks/TaskDetailModal';
+import NewEventModal from '@/components/shared/events/EventNewModal';
+import EventDetailModal from '@/components/shared/events/EventDetailModal';
 
 // Le nostre super-utility
 import { calculateYearProgress } from '@/utils/dateUtils';
