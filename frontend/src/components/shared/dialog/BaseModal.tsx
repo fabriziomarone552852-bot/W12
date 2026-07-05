@@ -91,7 +91,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
               {headerActions}
               {headerActions && <div className="w-px h-5 bg-gray-300 mx-1"></div>}
               {!hideDefaultClose && (
-                <button type="button" disabled={isConfirmDisabled || isLoading} onClick={onClose} className={`p-1.5 rounded-lg transition-colors ${isLoading ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:bg-gray-200 hover:text-red-500'}`}>
+                <button type="button" disabled={isLoading} onClick={onClose} className={`p-1.5 rounded-lg transition-colors ${isLoading ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:bg-gray-200 hover:text-red-500'}`}>
                   <CloseIcon className="h-5 w-5" />
                 </button>
               )}
