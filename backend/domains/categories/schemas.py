@@ -17,13 +17,14 @@ class CategoryGenre(IntEnum):
     TASKS = 1
     EVENTS = 2
     COMMON = 3
+    MOOD = 4
 
 
 class CategoryBase(StrictBaseModel):
     """Base schema for categories."""
     name: str = Field(..., min_length=1, max_length=50)
     colore: Optional[str] = Field(None, max_length=7, description="Codice colore HEX, es: #FF5733")
-    genre: CategoryGenre = Field(CategoryGenre.COMMON, description="1=solo tasks, 2=solo events, 3=comune")
+    genre: CategoryGenre = Field(CategoryGenre.COMMON, description="1=solo tasks, 2=solo events, 3=comune, 4=mood")
 
     @field_validator("name")
     @classmethod
@@ -55,7 +56,7 @@ class CategoryUpdate(StrictBaseModel):
     """Request model for updating categories."""
     name: Optional[str] = Field(None, min_length=1, max_length=50)
     colore: Optional[str] = Field(None, max_length=7, description="Codice colore HEX, es: #FF5733")
-    genre: Optional[CategoryGenre] = Field(None, description="1=solo tasks, 2=solo events, 3=comune")
+    genre: Optional[CategoryGenre] = Field(None, description="1=solo tasks, 2=solo events, 3=comune, 4=mood")
 
     @field_validator("name")
     @classmethod

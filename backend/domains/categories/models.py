@@ -21,6 +21,7 @@ class CategoryGenre(IntEnum):
     TASKS = 1
     EVENTS = 2
     COMMON = 3
+    MOOD = 4
 
 
 class Category(Base):
