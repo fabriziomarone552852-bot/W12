@@ -13,7 +13,7 @@ from __future__ import annotations
 # This enables string references in relationships
 from backend.domains.audit.models import SharedActivityLog  # noqa
 from backend.domains.categories.models import Category  # noqa
-from backend.domains.config.models import Config, ConfigCode  # noqa
+from backend.domains.catalogs.models import Config, ConfigCode  # noqa
 from backend.domains.countdowns.models import Countdown  # noqa
 from backend.domains.events.models import Event  # noqa
 from backend.domains.habits.models import Habit, HabitLog, HabitPeriod  # noqa

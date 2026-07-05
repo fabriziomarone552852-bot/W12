@@ -4,9 +4,12 @@ Contains shared database configuration and the SQLAlchemy Base class.
 """
 from __future__ import annotations
 
-import os
+# IMPORTANTE: la config tipizzata carica il file .env corretto (in base ad APP_ENV)
+# e valida le variabili obbligatorie (es. DATABASE_URL) all'avvio.
+from backend.core.settings import get_settings
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker, DeclarativeBase
+from sqlalchemy.orm import sessionmaker, DeclarativeBase
 
 
 class Base(DeclarativeBase):
@@ -14,10 +17,10 @@ class Base(DeclarativeBase):
     pass
 
 
-# Database configuration (kept for backward compatibility)
-DATABASE_URL = os.environ.get("DATABASE_URL")
-if not DATABASE_URL:
-    raise ValueError("Variabile d'ambiente DATABASE_URL non trovata. Controlla il file .env.")
+_settings = get_settings()
+
+# DATABASE_URL validato dalla config tipizzata (manca -> errore chiaro all'avvio).
+DATABASE_URL = _settings.database_url
 
 engine_kwargs = {
     "pool_pre_ping": True,
@@ -29,10 +32,10 @@ if DATABASE_URL.startswith("sqlite"):
 else:
     engine_kwargs.update(
         {
-            "pool_size": int(os.environ.get("DB_POOL_SIZE", 10)),
-            "max_overflow": int(os.environ.get("DB_MAX_OVERFLOW", 20)),
-            "pool_recycle": int(os.environ.get("DB_POOL_RECYCLE", 1800)),
-            "pool_timeout": int(os.environ.get("DB_POOL_TIMEOUT", 30)),
+            "pool_size": _settings.db_pool_size,
+            "max_overflow": _settings.db_max_overflow,
+            "pool_recycle": _settings.db_pool_recycle,
+            "pool_timeout": _settings.db_pool_timeout,
         }
     )
 
