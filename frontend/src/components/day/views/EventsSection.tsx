@@ -1,8 +1,8 @@
 // src/components/day/EventsSection.tsx
 import React from 'react';
-import EventsColumn from '@/components/shared/EventsColumn';
-import EventDetailModal from '@/components/shared/EventDetailModal';
-import NewEventModal from '@/components/shared/EventNewModal';
+import EventsColumn from '@/components/shared/events/EventsColumn';
+import EventDetailModal from '@/components/shared/events/EventDetailModal';
+import NewEventModal from '@/components/shared/events/EventNewModal';
 import { useModal } from '@/hooks/useModals';
 import type { CalendarEvent } from '@/types';
 

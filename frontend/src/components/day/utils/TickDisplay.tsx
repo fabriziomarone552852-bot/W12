@@ -1,5 +1,5 @@
 // src/components/day/utils/TickDisplay.tsx
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { calculateTimeLeft, pad } from '@/utils/dateUtils';
 import { useCurrentTime } from '@/hooks/useCurrentTime';
 

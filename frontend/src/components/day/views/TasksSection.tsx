@@ -1,7 +1,6 @@
 // src/components/day/views/TasksSection.tsx
 import React from 'react';
-import TaskColumn from '@/components/shared/TaskColumn';
-import { useModal } from '@/hooks/useModals';
+import TaskColumn from '@/components/shared/tasks/TaskColumn';
 import type { TaskSummary } from '@/types';
 import { useTaskModals } from '@/context/TaskModalContext';
 
