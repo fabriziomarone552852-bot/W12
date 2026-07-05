@@ -11,11 +11,12 @@ import NotesSidebar from '@/components/day/NotesSidebar';
 // --- IMPORT ARCHITETTURA NUOVA ---
 import { useDay } from '@/context/DayContext';
 import { useAgendaDay } from '@/hooks/useAgendaDay';
-import { nomiMesiLungo, getDaysInMonth, getFirstDayIndex, formatDateString } from '@/utils/dateUtils';
+import { formatDateString } from '@/utils/dateUtils';
 import { mapDayTasksToTasks } from '@/utils/taskUtils';
 import { isHabitScheduledForDay } from '@/utils/habitUtils';
 import { BackIcon, ForwardIcon, UndoIcon } from '@/components/shared/utils/Icons';
 import { SmartObiettivoTextarea } from '@/components/day/utils/SmartObiettivoTextarea';
+import DatePicker from '@/components/shared/utils/DatePicker';
 
 import type { CalendarEvent } from '@/types';
 import type { Task, Event, Habit, RawCountdown, DailyEntry, DaySyncResponse } from '@/types';
@@ -27,26 +28,24 @@ import { CountdownsSection } from '@/components/day/views/CountdownsSection';
 import { HabitsRoutinesSection } from '@/components/day/views/HabitsRoutinesSection';
 
 const DayPage: React.FC = () => {
-  // 1. STATO DELLA DATA (La Nuova Single Source of Truth per la UI)
+  // 1. STATO DELLA DATA
   const navigate = useNavigate();
   const location = useLocation();
 
   // 1. STATO DELLA DATA (La VERA Source of Truth presa dal Context globale!)
-  // Sostituiamo completamente lo useState con i valori del context
   const { dataRiferimento: targetDate, changeDate: setTargetDate } = useDay();
 
   // 2. INTERCETTIAMO LA NAVIGAZIONE DALLA HOMEPAGE
-  // Se arriviamo dal calendario mensile, forziamo il Context ad aggiornarsi
   useEffect(() => {
     if (location.state?.selectedDate) {
       setTargetDate(new Date(location.state.selectedDate));
       // Puliamo lo state della location per evitare re-trigger strani se si ricarica la pagina
       navigate(location.pathname, { 
         replace: true, 
-        state: {} // o null, a seconda di cosa volevi pulire
-        }); 
+        state: {} 
+      }); 
     }
-  }, [location.state?.selectedDate, setTargetDate]);
+  }, [location.state?.selectedDate, setTargetDate, navigate, location.pathname]);
   
   // Creiamo la stringa sicura YYYY-MM-DD per React Query
   const targetDateStr = formatDateString(targetDate);
@@ -75,7 +74,6 @@ const DayPage: React.FC = () => {
 
   // 3. STATI UI
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-  const [pickerMonthDate, setPickerMonthDate] = useState<Date>(targetDate);
   const [isNotesOpen, setIsNotesOpen] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
 
@@ -87,8 +85,6 @@ const DayPage: React.FC = () => {
 
   // --- MAPPATURA DATI (Leggiamo SOLO da dayData) ---
   const mappedTasks = mapDayTasksToTasks(dayData?.tasks || [], targetDateStr);
-
-  const [initialParentId, setInitialParentId] = useState<number | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -147,81 +143,88 @@ const DayPage: React.FC = () => {
     });
 
   const mappedNotes = useMemo(() => {
-  if (!dayData?.note) return [];
-  return dayData.note.map((n: DailyEntry & { isNew?: boolean }) => ({ 
-    id: n.id, 
-    text: n.testo, 
-    color: "bg-yellow-200 text-yellow-900", 
-    dateStr: n.data_riferimento,
-    isNew: n.isNew 
-  }));
-}, [dayData?.note]);
+    if (!dayData?.note) return [];
+    return dayData.note.map((n: DailyEntry & { isNew?: boolean }) => ({ 
+      id: n.id, 
+      text: n.testo, 
+      color: "bg-yellow-200 text-yellow-900", 
+      dateStr: n.data_riferimento,
+      isNew: n.isNew 
+    }));
+  }, [dayData?.note]);
 
-  // --- HANDLER NAVIGAZIONE ---
-  const handlePrevDay = () => { const d = new Date(targetDate); d.setDate(d.getDate() - 1); setTargetDate(d); setPickerMonthDate(d); };
+  // --- HANDLER NAVIGAZIONE (Semplificati) ---
+  const handlePrevDay = () => { 
+    const d = new Date(targetDate); 
+    d.setDate(d.getDate() - 1); 
+    setTargetDate(d); 
+  };
 
-  const handleNextDay = () => { const d = new Date(targetDate); d.setDate(d.getDate() + 1); setTargetDate(d); setPickerMonthDate(d); };
+  const handleNextDay = () => { 
+    const d = new Date(targetDate); 
+    d.setDate(d.getDate() + 1); 
+    setTargetDate(d); 
+  };
 
-  const handleResetToday = () => { const d = new Date(); setTargetDate(d); setPickerMonthDate(d); };
+  const handleResetToday = () => { 
+    setTargetDate(new Date()); 
+  };
   
-  const handleChangeDate = (d: Date) => { setTargetDate(d); setIsDatePickerOpen(false); };
+  const handleChangeDate = (d: Date) => { 
+    setTargetDate(d); 
+    setIsDatePickerOpen(false); 
+  };
 
-  // --- HANDLER AZIONI (Ora sono leggerissimi grazie all'Hook!) ---
+  // --- HANDLER AZIONI ---
   const handleToggleTask = (id: number) => {
     const isDone = dayData?.tasks.find((t: Task) => t.id === id)?.fatto || false;
     toggleTask({ id, isDone }); 
   };
 
   const handleAddNote = () => {
-  const newId = Date.now();
-  setEditingNoteId(newId); // Focus automatico
+    const newId = Date.now();
+    setEditingNoteId(newId);
 
-  // 🪄 Usiamo 'daySync' e la tipizzazione corretta!
-  queryClient.setQueryData(['daySync', targetDateStr], (oldData: DaySyncResponse | undefined) => {
-    if (!oldData) return oldData;
-    return {
-      ...oldData,
-      note: [
-        { id: newId, testo: "", data_riferimento: targetDateStr, isNew: true },
-        ...(oldData.note || [])
-      ]
-    };
-  });
-};
+    queryClient.setQueryData(['daySync', targetDateStr], (oldData: DaySyncResponse | undefined) => {
+      if (!oldData) return oldData;
+      return {
+        ...oldData,
+        note: [
+          { id: newId, testo: "", data_riferimento: targetDateStr, isNew: true },
+          ...(oldData.note || [])
+        ]
+      };
+    });
+  };
 
-const handleAutoSaveNote = (id: number, text: string, isNew?: boolean) => {
-  // 1. Aggiornamento istantaneo nella UI
-  queryClient.setQueryData(['daySync', targetDateStr], (oldData: DaySyncResponse | undefined) => {
-    if (!oldData) return oldData;
-    return {
-      ...oldData,
-      note: (oldData.note || []).map((n: DailyEntry & { isNew?: boolean }) => 
-        n.id === id ? { ...n, testo: text, isNew: false } : n
-      )
-    };
-  });
+  const handleAutoSaveNote = (id: number, text: string, isNew?: boolean) => {
+    queryClient.setQueryData(['daySync', targetDateStr], (oldData: DaySyncResponse | undefined) => {
+      if (!oldData) return oldData;
+      return {
+        ...oldData,
+        note: (oldData.note || []).map((n: DailyEntry & { isNew?: boolean }) => 
+          n.id === id ? { ...n, testo: text, isNew: false } : n
+        )
+      };
+    });
 
-  // 2. Salviamo fisicamente! (Chiama la saveNote del tuo hook)
-  saveNote({ id: isNew ? undefined : id, text: text, dateStr: targetDateStr });
-};
+    saveNote({ id: isNew ? undefined : id, text: text, dateStr: targetDateStr });
+  };
 
-const handleDeleteNote = (id: number, isNew?: boolean) => {
-  // 1. Rimuovi istantaneamente dalla UI
-  queryClient.setQueryData(['daySync', targetDateStr], (oldData: DaySyncResponse | undefined) => {
-    if (!oldData) return oldData;
-    return {
-      ...oldData,
-      note: (oldData.note || []).filter((n: DailyEntry & { isNew?: boolean }) => n.id !== id)
-    };
-  });
+  const handleDeleteNote = (id: number, isNew?: boolean) => {
+    queryClient.setQueryData(['daySync', targetDateStr], (oldData: DaySyncResponse | undefined) => {
+      if (!oldData) return oldData;
+      return {
+        ...oldData,
+        note: (oldData.note || []).filter((n: DailyEntry & { isNew?: boolean }) => n.id !== id)
+      };
+    });
 
-  // 2. Chiamata al server solo se non era un post-it appena creato
-  if (!isNew) {
-    deleteNote(id); 
-  }
-};
+    if (!isNew) {
+      deleteNote(id); 
+    }
+  };
 
-  // Se i dati stanno caricando la prima volta
   if (isLoading && !dayData) return <div className="flex h-full items-center justify-center font-bold text-gray-500 animate-pulse">Caricamento agenda...</div>;
   
   return (
@@ -229,65 +232,60 @@ const handleDeleteNote = (id: number, isNew?: boolean) => {
       
       {/* SEZIONE TOP */}
       <div className="flex flex-col xl:flex-row gap-6 shrink-0 items-stretch">
-        <div className="xl:w-1/4 flex flex-col justify-center items-center relative py-2 z-30"> {/* Aumentato z-index a 30 per sicurezza */}
-          <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-1">Agenda</h2>
+        
+        {/* COLONNA DATA (Perfettamente allineata al centro) */}
+        <div className="xl:w-1/4 flex flex-col justify-center items-center relative py-2 z-30"> 
           
-          {/* NUOVO CONTENITORE: Larghezza fissa (w-[280px] o w-[320px]) e justify-between */}
-          <div className="flex items-center justify-between w-[265px] xl:w-[305px] relative mx-auto z-40">
+          {/* Contenitore relativo per fare da riferimento alle frecce assolute */}
+          <div className="relative flex items-center justify-center w-full max-w-[300px] xl:max-w-[340px]">
             
+            {/* FRECCIA SINISTRA (Assoluta: non sposta il testo!) */}
             <button 
               onClick={handlePrevDay} 
-              className="relative z-50 text-blue-600 hover:text-blue-800 transition-transform hover:-translate-x-1 focus:outline-none p-2 shrink-0 bg-transparent"
+              className="absolute left-0 z-50 text-blue-600 hover:text-blue-800 transition-transform hover:-translate-x-1 focus:outline-none p-2 bg-transparent"
             >
               <BackIcon className="w-8 h-8" />
             </button>
 
-            {/* Testo centrale svincolato dalle frecce */}
-            <div className="flex-1 flex justify-center relative">
-              <h1 
-                onClick={() => { setPickerMonthDate(targetDate); setIsDatePickerOpen(!isDatePickerOpen); }} 
-                className="text-3xl xl:text-4xl font-extrabold text-gray-900 uppercase cursor-pointer hover:text-blue-600 transition-colors select-none text-center"
-              >
-                {displayName}
-              </h1>
+            {/* COLONNA CENTRALE (Tutti i testi condividono la stessa linea immaginaria) */}
+            <div className="flex flex-col items-center justify-center relative z-40">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-0.5">
+                Agenda
+              </h2>
               
-              {/* Il DatePicker rimane invariato */}
-              {isDatePickerOpen && (
-                <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-white rounded-xl shadow-2xl border border-gray-100 p-4 w-64 animate-fadeIn z-50">
-                  <div className="flex justify-between items-center mb-4 px-2">
-                    <button type="button" onClick={() => setPickerMonthDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))} className="text-gray-400 hover:text-gray-800 transition-colors">
-                      <BackIcon className="w-4 h-4" />
-                    </button>
-                    <span className="font-bold text-gray-800 text-sm uppercase">{nomiMesiLungo[pickerMonthDate.getMonth()]} {pickerMonthDate.getFullYear()}</span>
-                    <button type="button" onClick={() => setPickerMonthDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))} className="text-gray-400 hover:text-gray-800 transition-colors">
-                      <ForwardIcon className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-7 gap-1 text-center mb-2">{['L', 'M', 'M', 'G', 'V', 'S', 'D'].map((day, i) => <div key={i} className="text-[10px] font-bold text-gray-400">{day}</div>)}</div>
-                  <div className="grid grid-cols-7 gap-1">
-                    {Array.from({ length: getFirstDayIndex(pickerMonthDate.getFullYear(), pickerMonthDate.getMonth()) }).map((_, i) => <div key={`empty-${i}`} className="p-1"></div>)}
-                    {Array.from({ length: getDaysInMonth(pickerMonthDate.getFullYear(), pickerMonthDate.getMonth()) }).map((_, i) => {
-                      const dayNum = i + 1;
-                      const isSelected = targetDate.getDate() === dayNum && targetDate.getMonth() === pickerMonthDate.getMonth() && targetDate.getFullYear() === pickerMonthDate.getFullYear();
-                      return (
-                        <button key={dayNum} onClick={() => { handleChangeDate(new Date(pickerMonthDate.getFullYear(), pickerMonthDate.getMonth(), dayNum)); setIsDatePickerOpen(false); }} className={`w-7 h-7 flex mx-auto items-center justify-center rounded-full text-xs font-medium transition-colors ${isSelected ? 'bg-blue-100 text-blue-700 font-bold shadow-sm' : 'text-gray-700 hover:bg-gray-100'}`}>{dayNum}</button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+              <DatePicker
+                value={targetDateStr}
+                onChange={(newDateStr: string) => {
+                  const [yyyy, mm, dd] = newDateStr.split('-').map(Number);
+                  handleChangeDate(new Date(yyyy, mm - 1, dd));
+                }}
+                isOpen={isDatePickerOpen}
+                onClose={() => setIsDatePickerOpen(false)}
+                onToggle={() => setIsDatePickerOpen(!isDatePickerOpen)}
+                align="center"
+                selectionMode="day"
+                customTrigger={
+                  <h1 className="text-3xl xl:text-4xl font-extrabold text-gray-900 uppercase cursor-pointer hover:text-blue-600 transition-colors select-none text-center px-2">
+                    {displayName}
+                  </h1>
+                }
+              />
+              
+              <p className="text-lg xl:text-xl font-medium text-gray-500 mt-0.5">
+                {formattedDate}
+              </p>
             </div>
 
+            {/* FRECCIA DESTRA (Assoluta: non sposta il testo!) */}
             <button 
               onClick={handleNextDay} 
-              className="relative z-50 text-blue-600 hover:text-blue-800 transition-transform hover:translate-x-1 focus:outline-none p-2 shrink-0 bg-transparent"
+              className="absolute right-0 z-50 text-blue-600 hover:text-blue-800 transition-transform hover:translate-x-1 focus:outline-none p-2 bg-transparent"
             >
               <ForwardIcon className="w-8 h-8" />
             </button>
           </div>
           
-          {/* Il resto rimane invariato */}
-          <p className="text-lg xl:text-xl font-medium text-gray-500 mt-1">{formattedDate}</p>
+          {/* Pulsante per ritornare ad "Oggi" */}
           <div className="h-8 mt-2 flex items-center justify-center w-full">
             {!isToday && (
               <button onClick={handleResetToday} className="p-1.5 text-black hover:bg-gray-200 hover:text-black rounded-full transition-all animate-fadeIn focus:outline-none" title="Ritorna ad Oggi">
@@ -295,7 +293,6 @@ const handleDeleteNote = (id: number, isNew?: boolean) => {
               </button>
             )}
           </div>
-          {isDatePickerOpen && <div className="fixed inset-0 z-40" onClick={() => setIsDatePickerOpen(false)}></div>}
         </div>
 
         <div className={`bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col flex-1 xl:flex-row gap-6 py-5 z-10`}>
@@ -318,7 +315,6 @@ const handleDeleteNote = (id: number, isNew?: boolean) => {
             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">Top 3 Priorities</h3>
             <ul className="space-y-2.5">
               {[0, 1, 2].map(index => {
-                // 🪄 ESTRAIAMO L'OGGETTO E POI IL TESTO IN MODO SICURO
                 const prioritaObj = dayData?.priorita?.[index];
                 const prioritaTesto = prioritaObj?.testo || ""; 
                 
@@ -390,8 +386,6 @@ const handleDeleteNote = (id: number, isNew?: boolean) => {
         onOpen={() => setIsNotesOpen(true)} 
         onClose={() => setIsNotesOpen(false)}
         onAddNote={handleAddNote} 
-        
-        // Le nuove prop pulite!
         onAutoSaveNote={handleAutoSaveNote}
         onDeleteNote={handleDeleteNote}
         clearEditingNoteId={() => setEditingNoteId(null)}

@@ -14,23 +14,37 @@ export const useApi = () => {
   // Funzione per formattare gli errori esattamente come facevi prima
   // 🪄 3. (error: unknown) è la best-practice. Non diamo nulla per scontato!
   const handleAxiosError = (error: unknown) => {
-    // Verifichiamo se è un errore generato da Axios
     if (axios.isAxiosError(error)) {
-      const axiosError = error as AxiosError<ApiErrorData>;
+      const axiosError = error as AxiosError<any>; // Usiamo any per catturare il formato FastAPI
+      
       if (axiosError.response) {
-        throw new Error(
-          axiosError.response.data?.detail || 
-          axiosError.response.data?.message || 
-          `Errore API: ${axiosError.response.status}`
-        );
+        const errorData = axiosError.response.data;
+        let errorMessage = `Errore API: ${axiosError.response.status}`;
+
+        // 1. Se FastAPI ci manda un Array di errori (Errore 422 classico)
+        if (Array.isArray(errorData?.detail)) {
+          errorMessage = errorData.detail
+            .map((err: any) => `${err.loc.join(' -> ')}: ${err.msg}`)
+            .join(' | ');
+        } 
+        // 2. Se è una stringa semplice
+        else if (typeof errorData?.detail === 'string') {
+          errorMessage = errorData.detail;
+        } 
+        // 3. Fallback sul message
+        else if (errorData?.message) {
+          errorMessage = errorData.message;
+        }
+
+        throw new Error(errorMessage);
       }
     }
     
-    // Se è un errore generico (es. internet staccato)
+    // Errore generico (Rete assente, server down)
     const genericError = error as Error;
     throw new Error(genericError.message || "Errore di rete o server non raggiungibile");
   };
-
+  
   const get = useCallback(async (endpoint: string, options?: AxiosRequestConfig) => {
     try {
       const response = await apiClient.get(endpoint, options);

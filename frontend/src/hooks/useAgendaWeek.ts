@@ -8,7 +8,7 @@ import type { Task, SyncWeekResponse } from '@/types';
 // Interfaccia rigorosa per il payload di salvataggio
 export interface SaveWeeklyEntryPayload {
   id?: number;
-  tipo: 'OS' | 'PS' | 'EP' | 'EN' | 'N1' | 'N2' | 'N3' | 'N4';
+  tipo: 'OW' | 'PW' | 'EP' | 'EN' | 'N1' | 'N2' | 'N3' | 'N4';
   text: string;
   dateStr: string; // Sarà SEMPRE la data del lunedì formattata YYYY-MM-DD
 }
@@ -56,6 +56,44 @@ export const useAgendaWeek = (mondayStr: string, sundayStr: string) => {
       // Invalida la cache per forzare un ricaricamento automatico
       queryClient.invalidateQueries({ queryKey: ['weekSync', mondayStr] });
     }
+  });
+
+  // --- OBIETTIVO SETTIMANALE ---
+  const saveWeeklyObiettivoMutation = useMutation({
+    mutationFn: (data: { id?: number; text: string; weekStartDate: string }) => {
+      const payload: SaveWeeklyEntryPayload = { 
+        dateStr: data.weekStartDate, 
+        tipo: 'OW', // 🪄 QUI: 'OW' per Obiettivo Weekly
+        text: data.text.trim() 
+      };
+
+      if (!payload.text && data.id) return api.delete(`/daily-entries/${data.id}`);
+      if (!payload.text) return Promise.resolve();
+
+      return data.id 
+        ? api.patch(`/daily-entries/${data.id}`, payload)
+        : api.post('/daily-entries', payload);
+    },
+    // onSuccess: ...
+  });
+
+  // --- PRIORITÀ SETTIMANALE ---
+  const saveWeeklyPrioritaMutation = useMutation({
+    mutationFn: (data: { id?: number; text: string; weekStartDate: string }) => {
+      const payload: SaveWeeklyEntryPayload = { 
+        dateStr: data.weekStartDate, 
+        tipo: 'PW', // 🪄 QUI: 'PW' per Priorità Weekly
+        text: data.text.trim() 
+      };
+
+      if (!payload.text && data.id) return api.delete(`/daily-entries/${data.id}`);
+      if (!payload.text) return Promise.resolve();
+
+      return data.id 
+        ? api.patch(`/daily-entries/${data.id}`, payload)
+        : api.post('/daily-entries', payload);
+    },
+    // onSuccess: ...
   });
 
   // 3. MUTAZIONE PER IL TOGGLE DEI TASK (Riciclata in modo intelligente)

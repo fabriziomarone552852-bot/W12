@@ -118,8 +118,10 @@ const eventFormModal = useModal<{
             />
         </div>
 
-        <div className="xl:col-span-6 flex flex-col h-full min-h-0">
+        {/* 🪄 FIX: Aggiunte le classi bg-white, rounded-xl, shadow-sm, border, p-5... */}
+        <div className="xl:col-span-6 flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 p-5 h-full min-h-0 overflow-hidden relative">
           <CalendarColumn 
+            hideHeader={false}
             events={calendarEvents} 
             tasks={tasks}
             onMonthChange={setCurrentMonth}

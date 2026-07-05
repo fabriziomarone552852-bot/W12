@@ -1,12 +1,12 @@
 // src/hooks/useCalendarState.ts
-import { useState } from 'react';
+import { useState, type Dispatch, type SetStateAction } from 'react';
 import { pad, getDaysInMonth, getFirstDayIndex, getMondayOfCurrentWeek } from '@/utils/dateUtils';
 
 export function useCalendarState() {
   const [view, setView] = useState<'Mese' | 'Settimana'>('Mese');
   const [hoveredDay, setHoveredDay] = useState<string | null>(null);
-  const [popupRect, setPopupRect] = useState<{ left: number, width: number } | null>(null);
-  
+  const [popupRect, setPopupRect] = useState<DOMRect | null>(null);
+
   const today = new Date();
   const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
 
@@ -14,8 +14,8 @@ export function useCalendarState() {
   const [currentWeekDate, setCurrentWeekDate] = useState<Date>(today);
 
   const [isSelectingDate, setIsSelectingDate] = useState(false);
-  const [pickerYear, setPickerYear] = useState<number>(today.getFullYear()); 
-  const [pickerMonthDate, setPickerMonthDate] = useState<Date>(new Date(today.getFullYear(), today.getMonth(), 1));
+  
+  // RIMOSSI: pickerYear e pickerMonthDate (ora li gestisce DatePicker)
 
   const monthYear = currentMonthDate.getFullYear();
   const monthIndex = currentMonthDate.getMonth();
@@ -50,8 +50,7 @@ export function useCalendarState() {
   return {
     view, setView, hoveredDay, setHoveredDay, popupRect, setPopupRect,
     todayStr, currentMonthDate, setCurrentMonthDate, currentWeekDate, setCurrentWeekDate,
-    isSelectingDate, setIsSelectingDate, pickerYear, setPickerYear,
-    pickerMonthDate, setPickerMonthDate, monthYear, monthIndex, mainDaysInMonth, 
+    isSelectingDate, setIsSelectingDate, monthYear, monthIndex, mainDaysInMonth, 
     mainFirstDayIndex, mondayOfWeek, daysOfWeekData, hours24, handlePrev, handleNext
   };
 }

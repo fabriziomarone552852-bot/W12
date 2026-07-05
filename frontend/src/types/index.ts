@@ -83,7 +83,7 @@ export interface DailyEntry {
   id: number;
   user_id: number;
   data_riferimento: string; 
-  tipo: 'OD' | 'PD' | 'N1' | 'OW' | 'PW';
+  tipo: DailyEntryType;
   testo: string;
   immagine_url?: string | null;
 }

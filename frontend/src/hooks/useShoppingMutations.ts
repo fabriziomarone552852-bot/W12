@@ -38,37 +38,45 @@ export const useShoppingMutations = () => {
   });
 
   // ── Members ──
-  const addMember = useMutation({
-    mutationFn: ({ groupId, userId, roleId }: { groupId: number; userId: number; roleId: number }) =>
-      api.addMember(groupId, userId, roleId),
-    onSuccess: (_data, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['shopping', 'members', vars.groupId] });
-    },
-  });
+	const addMember = useMutation({
+		mutationFn: ({ groupId, userId, roleId }: { groupId: number; userId: number; roleId: number }) =>
+			api.addMember(groupId, userId, roleId),
+		onSuccess: async (_data, vars) => {
+			await queryClient.invalidateQueries({
+				queryKey: ['shopping', 'groups', vars.groupId, 'members'],
+			});
+		},
+	});
 
-  const inviteMember = useMutation({
-    mutationFn: ({ groupId, form }: { groupId: number; form: InviteFormState }) =>
-      api.inviteMember(groupId, form),
-    onSuccess: (_data, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['shopping', 'members', vars.groupId] });
-    },
-  });
+	const inviteMember = useMutation({
+		mutationFn: ({ groupId, form }: { groupId: number; form: InviteFormState }) =>
+			api.inviteMember(groupId, form),
+		onSuccess: async (_data, vars) => {
+			await queryClient.invalidateQueries({
+				queryKey: ['shopping', 'groups', vars.groupId, 'members'],
+			});
+		},
+	});
 
-  const updateMemberRole = useMutation({
-    mutationFn: ({ groupId, userId, roleCode }: { groupId: number; userId: number; roleCode: string }) =>
-      api.updateMemberRole(groupId, userId, roleCode),
-    onSuccess: (_data, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['shopping', 'members', vars.groupId] });
-    },
-  });
+	const updateMemberRole = useMutation({
+		mutationFn: ({ groupId, userId, roleCode }: { groupId: number; userId: number; roleCode: string }) =>
+			api.updateMemberRole(groupId, userId, roleCode),
+		onSuccess: async (_data, vars) => {
+			await queryClient.invalidateQueries({
+				queryKey: ['shopping', 'groups', vars.groupId, 'members'],
+			});
+		},
+	});
 
-  const removeMember = useMutation({
-    mutationFn: ({ groupId, userId }: { groupId: number; userId: number }) =>
-      api.removeMember(groupId, userId),
-    onSuccess: (_data, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['shopping', 'members', vars.groupId] });
-    },
-  });
+	const removeMember = useMutation({
+		mutationFn: ({ groupId, userId }: { groupId: number; userId: number }) =>
+			api.removeMember(groupId, userId),
+		onSuccess: async (_data, vars) => {
+			await queryClient.invalidateQueries({
+				queryKey: ['shopping', 'groups', vars.groupId, 'members'],
+			});
+		},
+	});
 
   // ── Lists ──
   const createList = useMutation({

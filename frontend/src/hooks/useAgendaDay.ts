@@ -93,7 +93,7 @@ export const useAgendaDay = (dateStr: string) => {
   // --- NOTE ---
   const saveNoteMutation = useMutation({
     mutationFn: (note: { id?: number; dateStr: string; text: string }) => {
-      const payload = { data_riferimento: note.dateStr, tipo: 'Nota', testo: note.text };
+      const payload = { data_riferimento: note.dateStr, tipo: 'N1', testo: note.text };
       return note.id 
         ? api.patch(`/daily-entries/${note.id}`, payload)
         : api.post('/daily-entries', payload);
@@ -216,7 +216,7 @@ export const useAgendaDay = (dateStr: string) => {
 
   const savePrioritaMutation = useMutation({
     mutationFn: (data: { id?: number; text: string }) => {
-      const payload = { data_riferimento: dateStr, tipo: 'Priorità', testo: data.text };
+      const payload = { data_riferimento: dateStr, tipo: 'PD', testo: data.text };
       if (!data.text.trim() && data.id) return api.delete(`/daily-entries/${data.id}`);
       if (!data.text.trim()) return Promise.resolve();
       return data.id 
