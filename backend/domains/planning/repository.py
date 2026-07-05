@@ -42,7 +42,7 @@ def entry_exists_by_type(
     query = db.query(DailyEntry).filter(
         DailyEntry.user_id == user_id,
         DailyEntry.data_riferimento == data_riferimento,
-        DailyEntry.tipo == tipo  # Ora cerca il tipo che gli passiamo noi (OD o OS)
+        DailyEntry.tipo == tipo 
     )
     if exclude_id is not None:
         query = query.filter(DailyEntry.id != exclude_id)

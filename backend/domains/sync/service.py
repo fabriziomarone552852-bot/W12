@@ -5,10 +5,10 @@ per la risposta giornaliera sincronizzata (/sync/day).
 Importa gli helper di tasks ed events direttamente dai rispettivi
 domini, senza dipendere da backend/api/.
 """
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import and_, or_
-from sqlalchemy.orm import Query, Session, selectinload, with_loader_criteria
+from sqlalchemy.orm import Session, selectinload, with_loader_criteria
 
 from backend import models
 from backend.core.settings import get_settings
@@ -73,19 +73,21 @@ def get_day_sync(db: Session, current_user, data_riferimento: date) -> SyncDayRe
             models.DailyEntry.user_id == current_user.id,
             models.DailyEntry.data_riferimento == data_riferimento,
         )
-        .order_by(models.DailyEntry.id.desc())
+        .order_by(models.DailyEntry.id.asc())
         .all()
     )
 
-    obiettivo = None
+    # 🪄 FIX: Array rinominato in obiettivi (plurale)
+    obiettivi = []
     priorita = []
     note = []
+    
     for entry in entries_db:
-        if entry.tipo == "OD":
-            obiettivo = entry
-        elif entry.tipo == "PD":
+        if entry.tipo in ["OD", "Obiettivo"]:
+            obiettivi.append(entry)
+        elif entry.tipo in ["PD", "Priorità"]:
             priorita.append(entry)
-        elif entry.tipo == "N1":
+        elif entry.tipo in ["N1", "Nota"]:
             note.append(entry)
 
     # ── Countdowns ──
@@ -149,7 +151,7 @@ def get_day_sync(db: Session, current_user, data_riferimento: date) -> SyncDayRe
     # ── Risposta aggregata (validazione Pydantic V2 manuale) ──
     return SyncDayResponse(
         data_riferimento=data_riferimento,
-        obiettivo=DailyEntryResponse.model_validate(obiettivo) if obiettivo else None,
+        obiettivi=[DailyEntryResponse.model_validate(o) for o in obiettivi],
         priorita=[DailyEntryResponse.model_validate(p) for p in priorita],
         note=[DailyEntryResponse.model_validate(n) for n in note],
         tasks=[TaskResponse.model_validate(t) for t in tasks_db],
@@ -170,7 +172,8 @@ def get_week_sync(db: Session, current_user: models.User, start_date: date, end_
         .filter(
             models.DailyEntry.user_id == current_user.id,
             models.DailyEntry.data_riferimento == start_date,
-            models.DailyEntry.tipo.in_(["OS", "PS", "EP", "EN"]) # Codici brevi!
+            # 🪄 FIX: Sostituiti OS/PS con OW/PW (Objective Week / Priority Week) come stabilito!
+            models.DailyEntry.tipo.in_(["OW", "PW", "EP", "EN"])
         )
         .order_by(models.DailyEntry.id.asc())
         .all()
@@ -182,9 +185,9 @@ def get_week_sync(db: Session, current_user: models.User, start_date: date, end_
     eventi_negativi = []
 
     for entry in weekly_entries_db:
-        if entry.tipo == "OS":
+        if entry.tipo == "OW": # 🪄 FIX: OW
             obiettivo_settimanale = entry
-        elif entry.tipo == "PS":
+        elif entry.tipo == "PW": # 🪄 FIX: PW
             priorita_settimanali.append(entry)
         elif entry.tipo == "EP":
             eventi_positivi.append(entry)
@@ -196,7 +199,7 @@ def get_week_sync(db: Session, current_user: models.User, start_date: date, end_
         db.query(models.DailyEntry)
         .filter(
             models.DailyEntry.user_id == current_user.id,
-            models.DailyEntry.tipo == "N1", # Assumendo che N1 sia il codice delle Note
+            models.DailyEntry.tipo == "N1", 
             models.DailyEntry.data_riferimento >= start_date,
             models.DailyEntry.data_riferimento <= end_date
         )
@@ -211,7 +214,6 @@ def get_week_sync(db: Session, current_user: models.User, start_date: date, end_
         .options(selectinload(models.Event.category))
         .all()
     )
-    # Usa le funzioni con l'underscore che hai importato in cima al file
     _populate_event_category_name(eventi_db)
     eventi_espansi = expand_events_for_range(eventi_db, start_date, end_date)
     eventi_espansi.sort(key=lambda event: _to_utc_naive(event.data_inizio))
@@ -232,7 +234,7 @@ def get_week_sync(db: Session, current_user: models.User, start_date: date, end_
     )
     _populate_task_category_name(tasks_db)
 
-    # 5. Ritorna i dati formattati tramite Schema (che definirai in sync/schemas.py)
+    # 5. Ritorna i dati formattati
     return SyncWeekResponse(
         start_date=start_date,
         end_date=end_date,
@@ -241,6 +243,6 @@ def get_week_sync(db: Session, current_user: models.User, start_date: date, end_
         eventi_positivi=[DailyEntryResponse.model_validate(p) for p in eventi_positivi],
         eventi_negativi=[DailyEntryResponse.model_validate(n) for n in eventi_negativi],
         note=[DailyEntryResponse.model_validate(n) for n in note_settimanali_db],
-        events=eventi_espansi, # Assicurati che lo schema accetti la lista di eventi
+        events=eventi_espansi,
         tasks=[TaskResponse.model_validate(t) for t in tasks_db]
     )

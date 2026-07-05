@@ -25,7 +25,7 @@ class SyncDayResponse(BaseModel):
     """
 
     data_riferimento: date
-    obiettivo: Optional[DailyEntryResponse] = None
+    obiettivi: List[DailyEntryResponse] = []
     priorita: List[DailyEntryResponse] = []
     note: List[DailyEntryResponse] = []
     tasks: List[TaskResponse] = []
