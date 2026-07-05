@@ -23,7 +23,7 @@ class DailyEntry(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "tipo IN ('Obiettivo', 'Priorità', 'Nota')",
+            "tipo IN ('OD', 'PD', 'N1', 'N2', 'N3', 'N4', 'OW', 'PW', 'OM', 'PM', 'EP', 'EN')",
             name="ck_daily_entries_tipo_valid",
         ),
         Index("ix_daily_entries_user_data", "user_id", "data_riferimento"),
@@ -33,7 +33,21 @@ class DailyEntry(Base):
             "user_id",
             "data_riferimento",
             unique=True,
-            postgresql_where=text("tipo = 'Obiettivo'"),
+            postgresql_where=text("tipo = 'OD'"),
+        ),
+        Index(
+            "ux_daily_entries_one_weekly_goal",
+            "user_id",
+            "data_riferimento",
+            unique=True,
+            postgresql_where=text("tipo = 'OW'"),
+        ),
+        Index(
+            "ux_daily_entries_one_monthly_goal",
+            "user_id",
+            "data_riferimento",
+            unique=True,
+            postgresql_where=text("tipo = 'OM'"),
         ),
     )
 

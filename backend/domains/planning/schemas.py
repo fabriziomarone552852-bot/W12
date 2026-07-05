@@ -5,20 +5,20 @@ Pydantic models for daily planning entries.
 from __future__ import annotations
 
 from datetime import date
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import Field, field_validator
 
 from backend.core.schemas import ORMBaseModel, StrictBaseModel
 
-VALID_DAILY_ENTRY_TYPES = {"Obiettivo", "Priorità", "Nota"}
+VALID_DAILY_ENTRY_TYPES = {"OD", "PD", "N1", "N2", "N3", "N4", "OW", "PW", "OM", "PM", "EP", "EN"}
 
 
 class DailyEntryBase(StrictBaseModel):
     """Base schema for daily entries."""
 
     data_riferimento: date
-    tipo: str = Field(..., min_length=4, max_length=20)
+    tipo: str = Field(..., min_length=2, max_length=2)
     testo: str = Field(..., min_length=1, max_length=5000)
     immagine_url: Optional[str] = Field(None, max_length=1024)
 
@@ -46,7 +46,7 @@ class DailyEntryUpdate(StrictBaseModel):
     """Request model for updating daily entries."""
 
     data_riferimento: Optional[date] = None
-    tipo: Optional[str] = Field(None, min_length=4, max_length=20)
+    tipo: Optional[str] = Field(None, min_length=2, max_length=2)
     testo: Optional[str] = Field(None, min_length=1, max_length=5000)
     immagine_url: Optional[str] = Field(None, max_length=1024)
 
@@ -79,3 +79,4 @@ class DailyEntryResponse(ORMBaseModel):
     tipo: str
     testo: str
     immagine_url: Optional[str] = None
+

@@ -18,7 +18,7 @@ Each domain is an independent module with its own models and schemas:
 Domain imports:
     from backend.domains.users import User, UserResponse
     from backend.domains.tasks import Task, TaskCreate
-    from backend.domains.config import Config, ConfigCode
+    from backend.domains.catalogs import Config, ConfigCode
     
 For backward compatibility, all models and schemas are also available at:
     from backend import models
