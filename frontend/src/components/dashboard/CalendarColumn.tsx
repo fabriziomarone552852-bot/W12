@@ -28,14 +28,18 @@ const CalendarColumn: React.FC<CalendarColumnProps> = ({
   onToggleTask
 }) => {
   const baseState = useCalendarState();
+  const { setCurrentWeekDate, setCurrentMonthDate } = baseState;
 
-  // Se passiamo una data o una vista forzata, "inganniamo" il calendario
-  // facendogli usare i nostri dati invece di quelli globali.
+  useEffect(() => {
+    if (targetDate) {
+      setCurrentWeekDate(targetDate);
+      setCurrentMonthDate(targetDate);
+    }
+  }, [targetDate, setCurrentWeekDate, setCurrentMonthDate]);
+
   const state = {
     ...baseState,
     view: forceView || baseState.view,
-    // Se il tuo state base usa "selectedDate" o "date", lo sovrascriviamo qui
-    ...(targetDate && { selectedDate: targetDate, date: targetDate })
   };
 
   useEffect(() => {
