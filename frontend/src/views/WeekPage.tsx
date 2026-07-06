@@ -1,15 +1,15 @@
 // frontend/src/views/WeekPage.tsx
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { getMonday, getSunday, getISOWeekNumber, formatDateString } from '@/utils/dateUtils';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 
 // --- IMPORT COMPONENTI ---
-import { PlusIcon } from '@/components/shared/utils/Icons';
 import { SmartObiettivoTextarea } from '@/components/day/utils/SmartObiettivoTextarea';
 import CalendarColumn from '@/components/dashboard/CalendarColumn';
 import NotesSidebar from '@/components/day/NotesSidebar';
-import { SharedAgendaHeader } from '@/components/shared/SharedAgendaHeader'; // <-- NUOVO IMPORT
+import { SharedAgendaHeader } from '@/components/shared/SharedAgendaHeader';
+import MoodEventsBoard, { type MoodEvent, type MoodEventType } from '@/components/weekmonth/MoodEventsBoard';
 
 // --- IMPORT MODALI ---
 import EventDetailModal from '@/components/shared/events/EventDetailModal';
@@ -20,6 +20,14 @@ import TaskNewModal from '@/components/shared/tasks/TaskNewModal';
 import type { Task, CalendarEvent, DailyEntry, TaskSummary, SyncWeekResponse } from '@/types';
 import { useAgendaWeek } from '@/hooks/useAgendaWeek'; 
 import { useAgendaMutations } from '@/hooks/useAgendaMutations';
+import { useApi } from '@/hooks/useApi.ts';
+
+interface BackendDailyEntry {
+  id: number;
+  testo: string;
+  tipo: string;
+  data_riferimento: string;
+}
 
 const WeekPage: React.FC = () => {
   // 1. STATO DELLA DATA (La gestione del DatePicker ora è delegata all'Header!)
@@ -47,13 +55,28 @@ const WeekPage: React.FC = () => {
 
   const navigate = useNavigate();
 
+  const [positiveEvents, setPositiveEvents] = useState<MoodEvent[]>([]);
+  const [negativeEvents, setNegativeEvents] = useState<MoodEvent[]>([]);
+
+  const api = useApi();
+
   // 3. IL "CERVELLO" REACT QUERY
   const { weekData, isLoading, saveWeeklyEntry } = useAgendaWeek(mondayStr, sundayStr);
   const { updateTask } = useAgendaMutations();
 
   // --- HANDLERS NAVIGAZIONE ---
-  const handlePrevWeek = () => setTargetDate(new Date(targetDate.setDate(targetDate.getDate() - 7)));
-  const handleNextWeek = () => setTargetDate(new Date(targetDate.setDate(targetDate.getDate() + 7)));
+  const handlePrevWeek = () => setTargetDate(prev => {
+    const d = new Date(prev.getTime()); // Cloniamo la data esatta
+    d.setDate(d.getDate() - 7);         // Sottraiamo 7 giorni
+    return d;                           // Restituiamo il nuovo oggetto
+  });
+  
+  const handleNextWeek = () => setTargetDate(prev => {
+    const d = new Date(prev.getTime());
+    d.setDate(d.getDate() + 7);
+    return d;
+  });
+  
   const handleResetCurrentWeek = () => setTargetDate(new Date());
 
   const handleGoToDay = (dateStr: string) => {
@@ -80,10 +103,6 @@ const WeekPage: React.FC = () => {
       setSelectedTask(summary);
     }
   };
-
-  // --- HANDLERS EVENTI POSITIVI/NEGATIVI ---
-  const posEvents = (weekData?.eventi_positivi || []) as Array<DailyEntry & { isNew?: boolean }>;
-  const negEvents = (weekData?.eventi_negativi || []) as Array<DailyEntry & { isNew?: boolean }>;
 
   const handleAddWeeklyEvent = (tipo: 'EP' | 'EN') => {
     const newId = Date.now();
@@ -209,6 +228,101 @@ const WeekPage: React.FC = () => {
     if (!isNew) saveWeeklyEntry({ id, text: "", tipo: 'N1', dateStr: mondayStr }); 
   };
 
+  useEffect(() => {
+    const fetchMoodEvents = async () => {
+      try {
+        const data = (await api.get(`/daily-entries?start_date=${mondayStr}&end_date=${sundayStr}`)) as BackendDailyEntry[];
+
+        // FILTRO DI SICUREZZA FRONTEND BLINDATO:
+        const weekEntries = data.filter(entry => {
+          // Estraiamo solo "YYYY-MM-DD" per evitare problemi di fuso orario o orari nel DB
+          const dateOnly = entry.data_riferimento.substring(0, 10);
+          return dateOnly >= mondayStr && dateOnly <= sundayStr;
+        });
+
+        const positivi = weekEntries
+          .filter(e => e.tipo === 'EP')
+          .map(e => ({ id: e.id, title: e.testo, type: 'EP' as MoodEventType, date: e.data_riferimento.substring(0, 10) }));
+        
+        const negativi = weekEntries
+          .filter(e => e.tipo === 'EN')
+          .map(e => ({ id: e.id, title: e.testo, type: 'EN' as MoodEventType, date: e.data_riferimento.substring(0, 10) }));
+
+        setPositiveEvents(positivi);
+        setNegativeEvents(negativi);
+
+      } catch (error) {
+        console.error("Errore durante il caricamento degli eventi:", error);
+      }
+    };
+
+    fetchMoodEvents();
+  }, [mondayStr, sundayStr, api]);
+
+  const handleAddMoodEvent = async (type: MoodEventType, testoInserito: string) => {
+    try {
+      const data = (await api.post('/daily-entries', {
+        tipo: type,
+        testo: testoInserito,
+        // CORREZIONE: usiamo mondayStr invece di todayStr!
+        // Così se aggiungi un evento mentre guardi il 2025, si salverà nel 2025.
+        data_riferimento: mondayStr 
+      })) as BackendDailyEntry;
+
+      const newEvent: MoodEvent = {
+        id: data.id,
+        title: data.testo, 
+        type: data.tipo as MoodEventType,
+        date: data.data_riferimento
+      };
+
+      if (type === 'EP') {
+        setPositiveEvents(prev => [...prev, newEvent]);
+      } else {
+        setNegativeEvents(prev => [...prev, newEvent]);
+      }
+    } catch (error) {
+      console.error("Errore nel salvataggio dell'evento:", error);
+    }
+  };
+
+  // 3. MODIFICA (Uso di PATCH)
+  const handleUpdateMoodEvent = async (id: number, newTitle: string) => {
+    try {
+      // Uso PATCH come richiesto dalle regole di progetto
+      await api.patch(`/daily-entries/${id}`, {
+        testo: newTitle
+      });
+
+      // Aggiornamento ottimistico dello stato (Frontend)
+      const updateState = (prev: MoodEvent[]) => 
+        prev.map(ev => ev.id === id ? { ...ev, title: newTitle } : ev);
+
+      setPositiveEvents(updateState);
+      setNegativeEvents(updateState);
+
+    } catch (error) {
+      console.error("Errore durante l'aggiornamento:", error);
+    }
+  };
+
+  // 4. ELIMINAZIONE
+  const handleDeleteMoodEvent = async (id: number) => {
+    try {
+      await api.delete(`/daily-entries/${id}`);
+
+      // Aggiornamento ottimistico dello stato (Frontend)
+      const filterState = (prev: MoodEvent[]) => prev.filter(ev => ev.id !== id);
+      
+      setPositiveEvents(filterState);
+      setNegativeEvents(filterState);
+
+    } catch (error) {
+      console.error("Errore durante l'eliminazione:", error);
+    }
+  };
+
+
   if (isLoading && !weekData) return <div className="flex h-full items-center justify-center font-bold text-gray-500 animate-pulse">Caricamento settimana...</div>;
 
   return (
@@ -284,99 +398,17 @@ const WeekPage: React.FC = () => {
            />
         </div>
       </div>
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 shrink-0 h-44 pb-2">
+      
 
-        {/* --- EVENTI POSITIVI --- */}
-        <div className="bg-white rounded-xl shadow-sm border border-green-200 overflow-hidden relative group grid grid-cols-3">
-          <div className="col-span-1 bg-white flex flex-col items-center justify-center text-center p-2">
-            <span className="text-sm xl:text-lg font-black text-green-600 uppercase tracking-widest leading-relaxed">
-              EVENTI<br/>POSITIVI
-            </span>
-          </div>
-          
-          <div className="col-span-2 p-3 overflow-y-auto custom-scrollbar relative flex flex-col bg-white">
-            {posEvents.length > 0 && (
-              <button
-                onClick={() => handleAddWeeklyEvent('EP')}
-                className="absolute top-2 right-3 w-8 h-8 flex items-center justify-center bg-white border border-gray-200 rounded-lg shadow-sm text-gray-400 hover:text-green-600 hover:border-green-400 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
-                title="Aggiungi Evento Positivo"
-              >
-                <PlusIcon className="w-5 h-5" />
-              </button>
-            )}
+        <MoodEventsBoard 
+        positiveEvents={positiveEvents}
+        negativeEvents={negativeEvents}
+        onAddMoodEvent={handleAddMoodEvent}
+        onUpdateMoodEvent={handleUpdateMoodEvent}
+        onDeleteMoodEvent={handleDeleteMoodEvent}
+      />
 
-            {posEvents.length === 0 ? (
-               <div className="flex-1 flex items-center justify-center w-full h-full">
-                  <button 
-                    onClick={() => handleAddWeeklyEvent('EP')} 
-                    className="w-16 h-16 border-2 border-dashed border-gray-300 rounded-2xl text-gray-400 hover:border-green-500 hover:text-green-500 hover:bg-green-50 hover:scale-110 active:scale-95 transition-all flex justify-center items-center focus:outline-none"
-                  >
-                    <PlusIcon className="w-8 h-8" />
-                  </button>
-               </div>
-            ) : (
-               <div className={`grid gap-3 w-full h-full ${posEvents.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                 {posEvents.map((ev) => (
-                    <textarea
-                       key={`pos-${ev.id}-${mondayStr}`}
-                       defaultValue={ev.testo || ""}
-                       onBlur={(e) => handleBlurWeeklyEvent(e, ev, 'EP')}
-                       placeholder="Cosa è andato bene?"
-                       autoFocus={ev.isNew}
-                       className="w-full h-full bg-green-50 border border-transparent rounded-lg p-3 text-sm text-green-900 resize-none focus:ring-2 focus:ring-green-300 focus:bg-white focus:border-green-300 transition-colors min-h-[80px]"
-                    />
-                 ))}
-               </div>
-            )}
-          </div>
-        </div>
-
-        {/* --- EVENTI NEGATIVI --- */}
-        <div className="bg-white rounded-xl shadow-sm border border-red-200 overflow-hidden relative group grid grid-cols-3">
-          <div className="col-span-1 bg-white flex flex-col items-center justify-center text-center p-2">
-            <span className="text-sm xl:text-lg font-black text-red-600 uppercase tracking-widest leading-relaxed">
-              EVENTI<br/>NEGATIVI
-            </span>
-          </div>
-          
-          <div className="col-span-2 p-3 overflow-y-auto custom-scrollbar relative flex flex-col bg-white">
-            {negEvents.length > 0 && (
-              <button
-                onClick={() => handleAddWeeklyEvent('EN')}
-                className="absolute top-2 right-3 w-8 h-8 flex items-center justify-center bg-white border border-gray-200 rounded-lg shadow-sm text-gray-400 hover:text-red-600 hover:border-red-400 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
-                title="Aggiungi Evento Negativo"
-              >
-                <PlusIcon className="w-5 h-5" />
-              </button>
-            )}
-
-            {negEvents.length === 0 ? (
-               <div className="flex-1 flex items-center justify-center w-full h-full">
-                  <button 
-                    onClick={() => handleAddWeeklyEvent('EN')} 
-                    className="w-16 h-16 border-2 border-dashed border-gray-300 rounded-2xl text-gray-400 hover:border-red-500 hover:text-red-500 hover:bg-red-50 hover:scale-110 active:scale-95 transition-all flex justify-center items-center focus:outline-none"
-                  >
-                    <PlusIcon className="w-8 h-8" />
-                  </button>
-               </div>
-            ) : (
-               <div className={`grid gap-3 w-full h-full ${negEvents.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                 {negEvents.map((ev) => (
-                    <textarea
-                       key={`neg-${ev.id}-${mondayStr}`}
-                       defaultValue={ev.testo || ""}
-                       onBlur={(e) => handleBlurWeeklyEvent(e, ev, 'EN')}
-                       placeholder="Cosa posso migliorare?"
-                       autoFocus={ev.isNew}
-                       className="w-full h-full bg-red-50 border border-transparent rounded-lg p-3 text-sm text-red-900 resize-none focus:ring-2 focus:ring-red-300 focus:bg-white focus:border-red-300 transition-colors min-h-[80px]"
-                    />
-                 ))}
-               </div>
-            )}
-          </div>
-        </div>
-
-      </div>
+      
 
       {/* CASSETTO NOTE NASCOSTO */}
       <NotesSidebar 
