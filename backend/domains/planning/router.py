@@ -17,12 +17,20 @@ DailyEntryType = Literal["OD", "PD", "N1", "N2", "N3", "N4", "OW", "PW", "OM", "
 @router.get("", response_model=List[schemas.DailyEntryResponse])
 def list_daily_entries(
     data_riferimento: Optional[date] = Query(default=None),
+    start_date: Optional[date] = Query(default=None),
+    end_date: Optional[date] = Query(default=None),
     tipo: Optional[DailyEntryType] = Query(default=None),
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_user),
+    user: User = Depends(deps.get_current_user),
 ):
-    return service.list_entries(db, current_user, data_riferimento, tipo)
-
+    return service.list_entries(
+        db=db,
+        user=user,
+        data_riferimento=data_riferimento,
+        start_date=start_date,
+        end_date=end_date,
+        tipo=tipo
+    )
 
 @router.get("/{entry_id}", response_model=schemas.DailyEntryResponse)
 def get_daily_entry(

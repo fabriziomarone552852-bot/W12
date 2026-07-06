@@ -5,6 +5,8 @@ from typing import List, Optional
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from . import repository
+
 from backend.domains.planning import repository as repo
 from backend.domains.planning import schemas
 from backend.domains.planning.models import DailyEntry
@@ -18,12 +20,20 @@ _WEEKLY_GOAL_DUP = "Esiste già un obiettivo settimanale per questa settimana."
 
 def list_entries(
     db: Session,
-    current_user: User,
+    user: User,
     data_riferimento: Optional[date] = None,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
     tipo: Optional[str] = None,
 ) -> List[DailyEntry]:
-    return repo.list_for_user(db, current_user.id, data_riferimento, tipo)
-
+    return repository.list_for_user(
+        db=db, 
+        user_id=user.id, 
+        data_riferimento=data_riferimento,
+        start_date=start_date,
+        end_date=end_date,
+        tipo=tipo
+    )
 
 def get_entry(db: Session, current_user: User, entry_id: int) -> DailyEntry:
     entry = repo.get_owned(db, entry_id, current_user.id)
