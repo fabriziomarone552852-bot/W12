@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApi } from './useApi';
 
 // 🪄 1. Importiamo TUTTI i tipi che compongono una giornata
-import type { Task, Habit, HabitLog, DaySyncResponse, SaveHabitPayload } from '@/types';
+import type { Task, Habit, HabitLog, DaySyncResponse, SaveHabitPayload, NoteVariant } from '@/types';
 
 // 🪄 3. Creiamo l'interfaccia esatta per i dati che inviamo quando creiamo un'abitudine
 
@@ -92,8 +92,8 @@ export const useAgendaDay = (dateStr: string) => {
 
   // --- NOTE ---
   const saveNoteMutation = useMutation({
-    mutationFn: (note: { id?: number; dateStr: string; text: string }) => {
-      const payload = { data_riferimento: note.dateStr, tipo: 'N1', testo: note.text };
+    mutationFn: (note: { id?: number; dateStr: string; text: string; variant: NoteVariant }) => {
+      const payload = { data_riferimento: note.dateStr, tipo: note.variant, testo: note.text };
       return note.id 
         ? api.patch(`/daily-entries/${note.id}`, payload)
         : api.post('/daily-entries', payload);

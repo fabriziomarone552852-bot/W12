@@ -17,10 +17,12 @@ import EventNewModal from '@/components/shared/events/EventNewModal';
 import TaskDetailModal from '@/components/shared/tasks/TaskDetailModal';
 import TaskNewModal from '@/components/shared/tasks/TaskNewModal';
 
-import type { Task, CalendarEvent, DailyEntry, TaskSummary, SyncWeekResponse } from '@/types';
+import type { Task, CalendarEvent, DailyEntry, TaskSummary, SyncWeekResponse, NoteVariant } from '@/types'; 
+import { isNoteVariant } from '@/types';
 import { useAgendaWeek } from '@/hooks/useAgendaWeek'; 
 import { useAgendaMutations } from '@/hooks/useAgendaMutations';
 import { useApi } from '@/hooks/useApi.ts';
+
 
 interface BackendDailyEntry {
   id: number;
@@ -193,31 +195,57 @@ const WeekPage: React.FC = () => {
 
   const mappedNotes = useMemo(() => {
     if (!weekData?.note) return [];
-    return weekData.note.map((n: DailyEntry & { isNew?: boolean }) => ({ 
-      id: n.id, text: n.testo, color: "bg-yellow-200 text-yellow-900", dateStr: n.data_riferimento, isNew: n.isNew 
-    }));
+    return weekData.note
+      // 1. FILTRO DI SICUREZZA
+      .filter((n: DailyEntry & { isNew?: boolean }) => isNoteVariant(n.tipo))
+      // 2. MAPPATURA ALLA NUOVA INTERFACCIA
+      .map((n: DailyEntry & { isNew?: boolean }) => ({ 
+        id: n.id, 
+        text: n.testo, 
+        variant: n.tipo as NoteVariant, // 🪄 Sostituito il colore hardcoded!
+        dateStr: n.data_riferimento, 
+        isNew: n.isNew 
+      }));
   }, [weekData?.note]);
 
   // --- HANDLERS NOTE ---
-  const handleAddNote = () => {
+  
+  // 🪄 1. Accettiamo la variante dalla Sidebar
+  const handleAddNote = (variant: NoteVariant) => {
     const newId = Date.now();
     setEditingNoteId(newId);
+    
     queryClient.setQueryData<SyncWeekResponse>(['weekSync', mondayStr], (oldData) => {
       if (!oldData) return oldData;
       return { 
         ...oldData, 
-        note: [{ id: newId, user_id: 0, testo: "", data_riferimento: mondayStr, tipo: 'N1', isNew: true }, ...(oldData.note || [])] 
+        // 🪄 Inseriamo 'tipo: variant' invece del vecchio 'tipo: N1' hardcoded
+        note: [{ id: newId, user_id: 0, testo: "", data_riferimento: mondayStr, tipo: variant, isNew: true }, ...(oldData.note || [])] 
       };
     });
   };
 
-  const handleAutoSaveNote = (id: number, text: string, isNew?: boolean) => {
+  // 🪄 2. Aggiungiamo la 'variant' alla firma del salvataggio automatico
+  const handleAutoSaveNote = (id: number, text: string, variant: NoteVariant, isNew?: boolean) => {
+    
     queryClient.setQueryData<SyncWeekResponse>(['weekSync', mondayStr], (oldData) => {
       if (!oldData) return oldData;
-      return { ...oldData, note: (oldData.note || []).map((n) => n.id === id ? { ...n, testo: text, isNew: false } : n) };
+      return { 
+        ...oldData, 
+        note: (oldData.note || []).map((n) => 
+          // 🪄 Aggiorniamo la cache anche con il nuovo 'tipo: variant'
+          n.id === id ? { ...n, testo: text, tipo: variant, isNew: false } : n
+        ) 
+      };
     });
-    // Fallback sul tipo corretto "Nota" invece del placeholder
-    saveWeeklyEntry({ id: isNew ? undefined : id, text: text, tipo: 'N1', dateStr: mondayStr });
+    
+    // 🪄 Salviamo dinamicamente il colore nel database passando la variante
+    saveWeeklyEntry({ 
+      id: isNew ? undefined : id, 
+      text: text, 
+      tipo: variant, 
+      dateStr: mondayStr 
+    });
   };
 
   const handleDeleteNote = (id: number, isNew?: boolean) => {
@@ -225,6 +253,9 @@ const WeekPage: React.FC = () => {
       if (!oldData) return oldData;
       return { ...oldData, note: (oldData.note || []).filter((n) => n.id !== id) };
     });
+    
+    // NOTA BENE: Se text è "", il tuo backend cancella l'elemento. 
+    // Manteniamo 'N1' solo per soddisfare il type, tanto la riga verrà eliminata e il colore non importa
     if (!isNew) saveWeeklyEntry({ id, text: "", tipo: 'N1', dateStr: mondayStr }); 
   };
 

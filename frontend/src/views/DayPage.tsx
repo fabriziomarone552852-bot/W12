@@ -7,7 +7,7 @@ import { type CountdownItem } from '@/components/day/CountdownWidget';
 import { type RoutineItem } from '@/components/day/RoutineColumn';
 import { type HabitItem } from '@/components/day/HabitsBar';
 import NotesSidebar from '@/components/day/NotesSidebar';
-import { SharedAgendaHeader } from '@/components/shared/SharedAgendaHeader'; // <-- IMPORT DEL NUOVO HEADER
+import { SharedAgendaHeader } from '@/components/shared/SharedAgendaHeader';
 
 // --- IMPORT ARCHITETTURA NUOVA ---
 import { useDay } from '@/context/DayContext';
@@ -17,8 +17,9 @@ import { mapDayTasksToTasks } from '@/utils/taskUtils';
 import { isHabitScheduledForDay } from '@/utils/habitUtils';
 import { SmartObiettivoTextarea } from '@/components/day/utils/SmartObiettivoTextarea';
 
-import type { CalendarEvent } from '@/types';
-import type { Task, Event, Habit, RawCountdown, DailyEntry, DaySyncResponse } from '@/types';
+import type { CalendarEvent, NoteVariant } from '@/types';
+import type { Task, Event, Habit, RawCountdown, DailyEntry, DaySyncResponse, NoteItem } from '@/types';
+import { isNoteVariant } from '@/types';
 
 // --- SECTIONS ---
 import { EventsSection } from '@/components/day/views/EventsSection';
@@ -73,6 +74,16 @@ const DayPage: React.FC = () => {
   // 3. STATI UI (Rimosso isDatePickerOpen, se ne occupa l'Header!)
   const [isNotesOpen, setIsNotesOpen] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
+  const rawEntries = dayData?.note || [];
+
+  const sidebarNotes: NoteItem[] = rawEntries
+  .filter((entry) => isNoteVariant(entry.tipo))
+  .map((entry) => ({
+    id: entry.id,
+    text: entry.testo,
+    dateStr: entry.data_riferimento,
+    variant: entry.tipo as NoteVariant 
+  }));
 
   // --- LABELS DATE ---
   const today = new Date();
@@ -141,13 +152,18 @@ const DayPage: React.FC = () => {
 
   const mappedNotes = useMemo(() => {
     if (!dayData?.note) return [];
-    return dayData.note.map((n: DailyEntry & { isNew?: boolean }) => ({ 
-      id: n.id, 
-      text: n.testo, 
-      color: "bg-yellow-200 text-yellow-900", 
-      dateStr: n.data_riferimento,
-      isNew: n.isNew 
-    }));
+
+    return dayData.note
+      // 1. FILTRO DI SICUREZZA: Teniamo solo gli elementi che sono veri Post-it (N1, N2, N3, N4)
+      .filter((n: DailyEntry & { isNew?: boolean }) => isNoteVariant(n.tipo))
+      // 2. MAPPATURA: Trasformiamo in NoteItem rigorosi
+      .map((n: DailyEntry & { isNew?: boolean }) => ({ 
+        id: n.id, 
+        text: n.testo, 
+        variant: n.tipo as NoteVariant, // 🪄 Usiamo il codice nativo del DB! Niente più stringhe hardcoded
+        dateStr: n.data_riferimento,
+        isNew: n.isNew 
+      }));
   }, [dayData?.note]);
 
   // --- HANDLER NAVIGAZIONE (Molto più snelli ora) ---
@@ -173,35 +189,51 @@ const DayPage: React.FC = () => {
     toggleTask({ id, isDone }); 
   };
 
-  const handleAddNote = () => {
-    const newId = Date.now();
-    setEditingNoteId(newId);
+  const handleAddNote = (variant: NoteVariant) => {
+  const tempId = Date.now();
+  
+  queryClient.setQueryData(['daySync', targetDateStr], (oldData: DaySyncResponse | undefined) => {
+    if (!oldData) return oldData;
+    const nuovaNotaTemporanea = { 
+      id: tempId, 
+      user_id: 0, // o l'ID utente reale se ce l'hai nello scope
+      data_riferimento: targetDateStr,
+      tipo: variant, // 🪄 La creiamo subito col codice corretto
+      testo: "",
+      isNew: true 
+    };
+    
+    return {
+      ...oldData,
+      note: [nuovaNotaTemporanea, ...(oldData.note || [])]
+    };
+  });
 
-    queryClient.setQueryData(['daySync', targetDateStr], (oldData: DaySyncResponse | undefined) => {
-      if (!oldData) return oldData;
-      return {
-        ...oldData,
-        note: [
-          { id: newId, testo: "", data_riferimento: targetDateStr, tipo: 'N1', user_id: 0, isNew: true },
-          ...(oldData.note || [])
-        ]
-      };
-    });
-  };
+  setEditingNoteId(tempId);
+};
 
-  const handleAutoSaveNote = (id: number, text: string, isNew?: boolean) => {
-    queryClient.setQueryData(['daySync', targetDateStr], (oldData: DaySyncResponse | undefined) => {
-      if (!oldData) return oldData;
-      return {
-        ...oldData,
-        note: (oldData.note || []).map((n: DailyEntry & { isNew?: boolean }) => 
-          n.id === id ? { ...n, testo: text, isNew: false } : n
-        )
-      };
-    });
+  const handleAutoSaveNote = (id: number, text: string, variant: NoteVariant, isNew?: boolean) => {
+  // 1. Aggiornamento Optimistic UI della Cache Locale
+  queryClient.setQueryData(['daySync', targetDateStr], (oldData: DaySyncResponse | undefined) => {
+    if (!oldData) return oldData;
+    return {
+      ...oldData,
+      note: (oldData.note || []).map((n: DailyEntry & { isNew?: boolean }) => 
+        // 🪄 MAGIA: Aggiungiamo `tipo: variant` in modo che la cache 
+        // sappia subito che si tratta di 'N1', 'N2', ecc.
+        n.id === id ? { ...n, testo: text, tipo: variant, isNew: false } : n
+      )
+    };
+  });
 
-    saveNote({ id: isNew ? undefined : id, text: text, dateStr: targetDateStr });
-  };
+  // 2. Chiamata API al Backend
+  saveNote({ 
+    id: isNew ? undefined : id, 
+    text: text, 
+    dateStr: targetDateStr,
+    variant: variant // 🪄 Passiamo la variante alla mutazione per salvarla nel DB!
+  });
+};
 
   const handleDeleteNote = (id: number, isNew?: boolean) => {
     queryClient.setQueryData(['daySync', targetDateStr], (oldData: DaySyncResponse | undefined) => {

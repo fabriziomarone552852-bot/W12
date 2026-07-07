@@ -88,7 +88,23 @@ export interface DailyEntry {
   immagine_url?: string | null;
 }
 
-export type DailyEntryType = 'OD' | 'PD' | 'N1' | 'OW' | 'PW' | 'EP' | 'EN';
+export type DailyEntryType = 'OD' | 'PD' | 'OW' | 'PW' | 'EP' | 'EN' | NoteVariant;
+
+// --- NOTE ---
+
+export type NoteVariant = 'N1' | 'N2' | 'N3' | 'N4';
+
+export interface NoteItem {
+  id: number;
+  text: string;
+  dateStr: string;
+  variant: NoteVariant;
+  isNew?: boolean; 
+}
+
+export const isNoteVariant = (tipo: string): tipo is NoteVariant => {
+  return ['N1', 'N2', 'N3', 'N4'].includes(tipo);
+};
 
 export interface Countdown {
   id: number;
@@ -162,15 +178,6 @@ export interface SaveHabitPayload {
   data: HabitFormData; 
 }
 
-// --- NOTE ---
-
-export interface NoteItem {
-  id: number;
-  text: string;
-  dateStr: string;
-  color: string;
-  isNew?: boolean; 
-}
 
 // ---- SYNC ----
 
