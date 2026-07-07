@@ -1,7 +1,7 @@
 // src/hooks/useAgendaMutations.ts
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApi } from './useApi';
-import type { Task, Event } from '@/types';
+import type { Task, DbEvent } from '@/types';
 
 export const useAgendaMutations = () => {
   const api = useApi();
@@ -52,12 +52,12 @@ export const useAgendaMutations = () => {
 
   // --- EVENTS ---
   const addEvent = useMutation({
-    mutationFn: (event: Partial<Event>) => api.post('/events', event),
+    mutationFn: (event: Partial<DbEvent>) => api.post('/events', event),
     onSuccess: resyncAll
   });
 
   const updateEvent = useMutation({
-    mutationFn: ({ id, data }: { id: string | number; data: Partial<Event> }) => {
+    mutationFn: ({ id, data }: { id: string | number; data: Partial<DbEvent> }) => {
       const originalId = String(id).split('-')[0];
       return api.patch(`/events/${originalId}`, data);
     },

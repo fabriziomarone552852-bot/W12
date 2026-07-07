@@ -3,35 +3,39 @@ import { useCallback } from 'react';
 import { apiClient } from '@/api/client'; 
 import axios, { AxiosError, type AxiosRequestConfig } from 'axios';
 
+// 1. IL CONTRATTO (Aggiornato per supportare le options di Axios e i tipi di ritorno)
+export interface ApiClient {
+  get: <T = any>(url: string, options?: AxiosRequestConfig) => Promise<T>;
+  post: <T = any, D = unknown>(url: string, data?: D) => Promise<T>;
+  patch: <T = any, D = unknown>(url: string, data: D) => Promise<T>;
+  delete: <T = any>(url: string) => Promise<T>;
+}
+
 interface ApiErrorData {
-  detail?: string;
+  detail?: string | { loc: (string | number)[]; msg: string; type: string }[];
   message?: string;
 }
 
-export const useApi = () => {
-  // Non ci serve più useAuth() qui dentro! L'interceptor fa tutto da solo.
+// 2. L'IMPLEMENTAZIONE (Dichiariamo che ritorna un ApiClient)
+export const useApi = (): ApiClient => {
 
-  // Funzione per formattare gli errori esattamente come facevi prima
-  // 🪄 3. (error: unknown) è la best-practice. Non diamo nulla per scontato!
-  const handleAxiosError = (error: unknown) => {
+  const handleAxiosError = (error: unknown): never => {
     if (axios.isAxiosError(error)) {
-      const axiosError = error as AxiosError<any>; // Usiamo any per catturare il formato FastAPI
+      const axiosError = error as AxiosError<ApiErrorData>; 
       
       if (axiosError.response) {
         const errorData = axiosError.response.data;
         let errorMessage = `Errore API: ${axiosError.response.status}`;
 
-        // 1. Se FastAPI ci manda un Array di errori (Errore 422 classico)
+        // Errore 422 di FastAPI
         if (Array.isArray(errorData?.detail)) {
           errorMessage = errorData.detail
-            .map((err: any) => `${err.loc.join(' -> ')}: ${err.msg}`)
+            .map((err) => `${err.loc.join(' -> ')}: ${err.msg}`)
             .join(' | ');
         } 
-        // 2. Se è una stringa semplice
         else if (typeof errorData?.detail === 'string') {
           errorMessage = errorData.detail;
         } 
-        // 3. Fallback sul message
         else if (errorData?.message) {
           errorMessage = errorData.message;
         }
@@ -40,39 +44,47 @@ export const useApi = () => {
       }
     }
     
-    // Errore generico (Rete assente, server down)
     const genericError = error as Error;
     throw new Error(genericError.message || "Errore di rete o server non raggiungibile");
   };
+
+  // 3. I METODI (Ora accettano <T> per la risposta e <D> per il payload)
   
-  const get = useCallback(async (endpoint: string, options?: AxiosRequestConfig) => {
+  const get = useCallback(async <T = any>(endpoint: string, options?: AxiosRequestConfig): Promise<T> => {
     try {
-      const response = await apiClient.get(endpoint, options);
-      return response.status === 204 ? null : response.data;
+      const response = await apiClient.get<T>(endpoint, options);
+      // Il cast "as unknown as T" serve per rassicurare TypeScript quando torniamo null
+      return response.status === 204 ? (null as unknown as T) : response.data;
     } catch (error) { 
       return handleAxiosError(error); 
     }
   }, []);
 
-  const post = useCallback(async <T = unknown>(endpoint: string, body?: T) => {
+  const post = useCallback(async <T = any, D = unknown>(endpoint: string, body?: D): Promise<T> => {
     try {
-      const response = await apiClient.post(endpoint, body);
-      return response.status === 204 ? null : response.data;
-    } catch (error) { return handleAxiosError(error); }
+      const response = await apiClient.post<T>(endpoint, body);
+      return response.status === 204 ? (null as unknown as T) : response.data;
+    } catch (error) { 
+      return handleAxiosError(error); 
+    }
   }, []);
 
-  const patch = useCallback(async <T = unknown>(endpoint: string, body: T) => {
+  const patch = useCallback(async <T = any, D = unknown>(endpoint: string, body: D): Promise<T> => {
     try {
-      const response = await apiClient.patch(endpoint, body);
-      return response.status === 204 ? null : response.data;
-    } catch (error) { return handleAxiosError(error); }
+      const response = await apiClient.patch<T>(endpoint, body);
+      return response.status === 204 ? (null as unknown as T) : response.data;
+    } catch (error) { 
+      return handleAxiosError(error); 
+    }
   }, []);
 
-  const del = useCallback(async (endpoint: string) => {
+  const del = useCallback(async <T = any>(endpoint: string): Promise<T> => {
     try {
-      const response = await apiClient.delete(endpoint);
-      return response.status === 204 ? null : response.data;
-    } catch (error) { return handleAxiosError(error); }
+      const response = await apiClient.delete<T>(endpoint);
+      return response.status === 204 ? (null as unknown as T) : response.data;
+    } catch (error) { 
+      return handleAxiosError(error); 
+    }
   }, []);
 
   return { get, post, patch, delete: del };

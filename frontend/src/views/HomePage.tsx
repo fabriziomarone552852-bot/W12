@@ -7,11 +7,8 @@ import { useCategories } from '@/hooks/useCategories';
 
 import CalendarColumn from '@/components/dashboard/CalendarColumn';
 import TaskColumn from '@/components/shared/tasks/TaskColumn';
-import { type TaskSummary } from '@/types';
 import EventsColumn from '@/components/shared/events/EventsColumn';
 
-import TaskNewModal from '@/components/shared/tasks/TaskNewModal';
-import TaskDetailModal from '@/components/shared/tasks/TaskDetailModal';
 import NewEventModal from '@/components/shared/events/EventNewModal';
 import EventDetailModal from '@/components/shared/events/EventDetailModal';
 
@@ -24,12 +21,8 @@ import { useTaskModals } from '@/context/TaskModalContext';
 import { getUpcomingTasks } from '@/utils/taskUtils';
 import { Badge } from '@/components/shared/utils/Badges';
 import { EmptyState } from '@/components/shared/utils/EmptyState';
-import type { Event as AgendaEvent, CalendarEvent } from '@/types';
-
-interface TaskFormModalState {
-  taskToEdit?: TaskSummary | null;
-  initialParentId?: number | null;
-}
+import type { DbEvent, CalendarEvent } from '@/types';
+import { LoadingIcon } from '@/components/shared/utils/Icons';
 
 const HomePage: React.FC = () => {
   // 1. Modali di Dettaglio (il dato è l'elemento selezionato)
@@ -63,7 +56,7 @@ const eventFormModal = useModal<{
   const mappedTasks = useMemo(() => mapTasksToTasks(tasks || [], oggiStr), [tasks, oggiStr]);
   
   const calendarEvents = useMemo(() => {
-    return (eventiDalServer || []).map((e: AgendaEvent) => ({
+    return (eventiDalServer || []).map((e: DbEvent) => ({
       id: `${e.id}-${e.data_inizio.substring(0, 10)}`, // ID univoco per il frontend
       originalId: e.id,
       title: e.titolo,
@@ -93,10 +86,19 @@ const eventFormModal = useModal<{
     eventDetailModal.close();
   };
 
-  if (isLoading) return <div className="flex justify-center items-center h-full">Caricamento...</div>;
+  const isInitialLoad = isLoading && (!tasks || tasks.length === 0) && (!eventiDalServer || eventiDalServer.length === 0);
+
+  if (isInitialLoad) {
+    return (
+      <div className="flex justify-center items-center h-full">
+      <LoadingIcon className="w-6 h-6 text-gray-500 animate-spin" />
+      Caricamento...
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-6 max-w-[1600px] mx-auto min-h-full xl:h-full xl:overflow-hidden relative">
+    <div className="flex flex-col gap-6 max-w-[1600px] mx-auto min-h-full xl:h-full relative">
       
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 shrink-0 flex flex-col items-center justify-center">
         <div className="text-xs font-bold text-gray-500 mb-2 tracking-wider uppercase">Progressione dell'Anno</div>
@@ -119,7 +121,15 @@ const eventFormModal = useModal<{
         </div>
 
         {/* 🪄 FIX: Aggiunte le classi bg-white, rounded-xl, shadow-sm, border, p-5... */}
-        <div className="xl:col-span-6 flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 p-5 h-full min-h-0 overflow-hidden relative">
+        <div className="xl:col-span-6 flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 p-5 h-full min-h-0 overflow-visible relative z-10">
+          
+          {isLoading && !isInitialLoad && (
+            <div className="absolute inset-0 z-50 bg-white/50 backdrop-blur-[1px] flex justify-center items-center rounded-xl">
+               <LoadingIcon className="w-6 h-6 text-gray-500 animate-spin" />
+               <span className="text-sm font-bold text-gray-500 animate-pulse">Aggiornamento...</span>
+            </div>
+          )}
+
           <CalendarColumn 
             hideHeader={false}
             events={calendarEvents} 
@@ -145,10 +155,16 @@ const eventFormModal = useModal<{
 
       {/* Tabella 30 giorni VERA! */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 shrink-0">
-        <h3 className="text-lg font-bold text-gray-800 mb-4 uppercase tracking-wider border-b pb-2">In Scadenza (Prossimi 30 Giorni)</h3>
-        <div className="overflow-x-auto">
+        <h3 className="text-lg font-bold text-gray-800 mb-4 uppercase tracking-wider border-b pb-2">
+          In Scadenza (Prossimi 30 Giorni)
+        </h3>
+        
+        {/* 🪄 FIX: Aggiunto max-h-[120px] (circa 1-2 task visibili), overflow-y-auto e custom-scrollbar */}
+        <div className="overflow-y-auto max-h-[120px] custom-scrollbar relative">
           <table className="w-full text-left border-collapse">
-            <thead>
+            
+            {/* 🪄 FIX: Aggiunto sticky e bg-white al thead per non farlo scorrere via */}
+            <thead className="sticky top-0 bg-white z-10">
               <tr className="text-xs text-gray-400 uppercase tracking-wider border-b">
                 <th className="pb-2">Task</th>
                 <th className="pb-2">Categoria</th>
@@ -156,6 +172,7 @@ const eventFormModal = useModal<{
                 <th className="pb-2">Priorità</th>
               </tr>
             </thead>
+            
             <tbody>
               {next30DaysTasks.length === 0 ? (
                 <tr>

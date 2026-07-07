@@ -18,7 +18,7 @@ import { isHabitScheduledForDay } from '@/utils/habitUtils';
 import { SmartObiettivoTextarea } from '@/components/day/utils/SmartObiettivoTextarea';
 
 import type { CalendarEvent, NoteVariant } from '@/types';
-import type { Task, Event, Habit, RawCountdown, DailyEntry, DaySyncResponse, NoteItem } from '@/types';
+import type { Task, DbEvent, Habit, RawCountdown, DailyEntry, DaySyncResponse, NoteItem } from '@/types';
 import { isNoteVariant } from '@/types';
 
 // --- SECTIONS ---
@@ -96,7 +96,7 @@ const DayPage: React.FC = () => {
 
   const queryClient = useQueryClient();
 
-  const mappedEvents: CalendarEvent[] = (dayData?.events || []).map((e: Event) => ({
+  const mappedEvents: CalendarEvent[] = (dayData?.events || []).map((e: DbEvent) => ({
     id: `${e.id}-${e.data_inizio.substring(0,10)}`, 
     originalId: e.id,
     time: e.tutto_il_giorno ? undefined : e.data_inizio.substring(11, 16),

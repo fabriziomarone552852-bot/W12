@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApi } from './useApi';
 
 // 🪄 1. Importiamo TUTTI i tipi che compongono una giornata
-import type { Task, Habit, HabitLog, DaySyncResponse, SaveHabitPayload, NoteVariant } from '@/types';
+import type { Task, Habit, HabitLog, DaySyncResponse, SaveHabitPayload, NoteVariant, DailyEntry, Countdown } from '@/types';
 
 // 🪄 3. Creiamo l'interfaccia esatta per i dati che inviamo quando creiamo un'abitudine
 
@@ -79,36 +79,53 @@ export const useAgendaDay = (dateStr: string) => {
         queryClient.setQueryData(['daySync', dateStr], context.previousDayData);
       }
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['daySync', dateStr] });
-    }
   });
 
   const deleteEventMutation = useMutation({
     mutationFn: (id: string | number) => api.delete(`/events/${id}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['daySync', dateStr] })
+    onSuccess: (_, deletedId) => {
+      queryClient.setQueryData<DaySyncResponse>(['daySync', dateStr], (old) => {
+        if (!old) return old;
+        return { ...old, events: (old.events || []).filter(e => String(e.id) !== String(deletedId)) };
+      });
+    }
   });
 
 
   // --- NOTE ---
   const saveNoteMutation = useMutation({
-    mutationFn: (note: { id?: number; dateStr: string; text: string; variant: NoteVariant }) => {
+    mutationFn: async (note: { id?: number; dateStr: string; text: string; variant: NoteVariant }) => {
       const payload = { data_riferimento: note.dateStr, tipo: note.variant, testo: note.text };
       return note.id 
-        ? api.patch(`/daily-entries/${note.id}`, payload)
-        : api.post('/daily-entries', payload);
+        ? await api.patch<DailyEntry>(`/daily-entries/${note.id}`, payload)
+        : await api.post<DailyEntry>('/daily-entries', payload);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['daySync', dateStr] })
+    onSuccess: (savedNote) => {
+      queryClient.setQueryData<DaySyncResponse>(['daySync', dateStr], (old) => {
+        if (!old) return old;
+        const currentNotes = old.note || []; // Fallback di sicurezza
+        const exists = currentNotes.some(n => n.id === savedNote.id);
+        return {
+          ...old,
+          note: exists ? currentNotes.map(n => n.id === savedNote.id ? savedNote : n) : [savedNote, ...currentNotes]
+        };
+      });
+    }
   });
 
   const deleteNoteMutation = useMutation({
     mutationFn: (id: number) => api.delete(`/daily-entries/${id}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['daySync', dateStr] })
+    onSuccess: (_, deletedId) => {
+      queryClient.setQueryData<DaySyncResponse>(['daySync', dateStr], (old) => {
+        if (!old) return old;
+        return { ...old, note: (old.note || []).filter(n => n.id !== deletedId) };
+      });
+    }
   });
 
   // --- COUNTDOWN ---
   const saveCountdownMutation = useMutation({
-    mutationFn: (countdown: SaveCountdownPayload) => {
+    mutationFn: async (countdown: SaveCountdownPayload) => {
       const isUpdate = countdown.id && countdown.id < 1000000000;
       const payload = {
         title: countdown.title || "Nuovo Countdown",
@@ -116,30 +133,61 @@ export const useAgendaDay = (dateStr: string) => {
         immagine_url: countdown.imageUrl || null
       };
       return isUpdate 
-        ? api.patch(`/countdowns/${countdown.id}`, payload)
-        : api.post('/countdowns', payload);
+        ? await api.patch<Countdown>(`/countdowns/${countdown.id}`, payload)
+        : await api.post<Countdown>('/countdowns', payload);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['daySync', dateStr] })
+    onSuccess: (savedCountdown) => {
+      queryClient.setQueryData<DaySyncResponse>(['daySync', dateStr], (old) => {
+        if (!old) return old;
+        const currentCountdowns = old.countdowns || []; // Fallback di sicurezza
+        const exists = currentCountdowns.some(c => c.id === savedCountdown.id);
+        return {
+          ...old,
+          countdowns: exists ? currentCountdowns.map(c => c.id === savedCountdown.id ? savedCountdown : c) : [...currentCountdowns, savedCountdown]
+        };
+      });
+    }
   });
 
   const deleteCountdownMutation = useMutation({
     mutationFn: (id: number) => api.delete(`/countdowns/${id}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['daySync', dateStr] })
+    onSuccess: (_, deletedId) => {
+      queryClient.setQueryData<DaySyncResponse>(['daySync', dateStr], (old) => {
+        if (!old) return old;
+        return { ...old, countdowns: (old.countdowns || []).filter(c => c.id !== deletedId) };
+      });
+    }
   });
 
   // --- HABIT E ROUTINE ---
   const saveHabitMutation = useMutation({
-    mutationFn: (payload: SaveHabitPayload) => {
-      return payload.existingId 
-        ? api.patch(`/habits/${payload.existingId}`, payload.data)
-        : api.post('/habits', payload.data);
+    mutationFn: async (payload: SaveHabitPayload) => {
+      const { data_inizio, target_completamenti, data_fine, periodId, periods, ...baseData } = payload.data;
+      
+      if (payload.existingId) {
+        return await api.patch(`/habits/${payload.existingId}`, baseData);
+      } else {
+        const createData = {
+          ...baseData,
+          periods: [{
+            data_inizio: dateStr, 
+            target: 1            
+          }]
+        };
+        return await api.post('/habits', createData);
+      }
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['daySync', dateStr] })
   });
 
   const deleteHabitMutation = useMutation({
     mutationFn: (id: number) => api.delete(`/habits/${id}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['daySync', dateStr] })
+    onSuccess: (_, deletedId) => {
+      queryClient.setQueryData<DaySyncResponse>(['daySync', dateStr], (old) => {
+        if (!old) return old;
+        return { ...old, habits: (old.habits || []).filter(h => h.id !== deletedId) };
+      });
+    }
   });
 
   const suspendHabitMutation = useMutation({
@@ -197,33 +245,77 @@ export const useAgendaDay = (dateStr: string) => {
       });
       return { previousData };
     },
-    onError: (err, variables, context) => queryClient.setQueryData(['daySync', dateStr], context?.previousData),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ['daySync', dateStr] })
+    onError: (err, variables, context) => {
+      // 👇 AGGIUNGIAMO QUESTO LOG
+      console.error("Errore del server durante l'untoggle!", err); 
+      queryClient.setQueryData(['daySync', dateStr], context?.previousData);
+    },
   });
 
   // --- MUTAZIONI OBIETTIVO E PRIORITÀ ---
+  const updateDailyEntryInCache = (savedEntry: DailyEntry, key: 'obiettivi' | 'priorita') => {
+    queryClient.setQueryData<DaySyncResponse>(['daySync', dateStr], (old) => {
+      if (!old) return old;
+      
+      // Estraiamo la lista in modo sicuro usando il fallback
+      const currentList = old[key] || [];
+      const exists = currentList.some(e => e.id === savedEntry.id);
+      
+      return {
+        ...old,
+        [key]: exists 
+          ? currentList.map(e => e.id === savedEntry.id ? savedEntry : e) 
+          : [...currentList, savedEntry]
+      };
+    });
+  };
+
   const saveObiettivoMutation = useMutation({
-    mutationFn: (data: { id?: number; text: string }) => {
+    mutationFn: async (data: { id?: number; text: string }) => {
       const payload = { data_riferimento: dateStr, tipo: 'OD', testo: data.text };
-      if (!data.text.trim() && data.id) return api.delete(`/daily-entries/${data.id}`);
-      if (!data.text.trim()) return Promise.resolve(); 
+      if (!data.text.trim() && data.id) {
+        await api.delete(`/daily-entries/${data.id}`);
+        return null;
+      }
+      if (!data.text.trim()) return null;
       return data.id 
-        ? api.patch(`/daily-entries/${data.id}`, payload)
-        : api.post('/daily-entries', payload);
+        ? await api.patch<DailyEntry>(`/daily-entries/${data.id}`, payload)
+        : await api.post<DailyEntry>('/daily-entries', payload);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['daySync', dateStr] })
+    onSuccess: (savedEntry, vars) => {
+      if (!savedEntry && vars.id) {
+        queryClient.setQueryData<DaySyncResponse>(['daySync', dateStr], (old) => {
+          if (!old) return old;
+          return { ...old, obiettivi: (old.obiettivi || []).filter(o => o.id !== vars.id) };
+        });
+      } else if (savedEntry) {
+        updateDailyEntryInCache(savedEntry, 'obiettivi');
+      }
+    }
   });
 
   const savePrioritaMutation = useMutation({
-    mutationFn: (data: { id?: number; text: string }) => {
+    mutationFn: async (data: { id?: number; text: string }) => {
       const payload = { data_riferimento: dateStr, tipo: 'PD', testo: data.text };
-      if (!data.text.trim() && data.id) return api.delete(`/daily-entries/${data.id}`);
-      if (!data.text.trim()) return Promise.resolve();
+      if (!data.text.trim() && data.id) {
+        await api.delete(`/daily-entries/${data.id}`);
+        return null;
+      }
+      if (!data.text.trim()) return null;
       return data.id 
-        ? api.patch(`/daily-entries/${data.id}`, payload)
-        : api.post('/daily-entries', payload);
+        ? await api.patch<DailyEntry>(`/daily-entries/${data.id}`, payload)
+        : await api.post<DailyEntry>('/daily-entries', payload);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['daySync', dateStr] })
+    onSuccess: (savedEntry, vars) => {
+      if (!savedEntry && vars.id) {
+        queryClient.setQueryData<DaySyncResponse>(['daySync', dateStr], (old) => {
+          if (!old) return old;
+          return { ...old, priorita: (old.priorita || []).filter(p => p.id !== vars.id) };
+        });
+      } else if (savedEntry) {
+        updateDailyEntryInCache(savedEntry, 'priorita');
+      }
+    }
   });
 
   return {

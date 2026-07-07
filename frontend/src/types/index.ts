@@ -47,7 +47,7 @@ export interface TaskSummary {
 }
 
 // --- EVENTI ---
-export interface Event {
+export interface DbEvent {
   id: number;
   titolo: string;
   descrizione?: string | null;
@@ -88,7 +88,23 @@ export interface DailyEntry {
   immagine_url?: string | null;
 }
 
-export type DailyEntryType = 'OD' | 'PD' | 'OW' | 'PW' | 'EP' | 'EN' | NoteVariant;
+export interface MoodEvent {
+  id: number;
+  title: string;
+  type: MoodEventType;
+  date: string;
+}
+
+// Struttura del payload per la creazione
+export interface CreateMoodPayload {
+  tipo: MoodEventType;
+  testo: string;
+  data_riferimento: string;
+}
+
+export type MoodEventType = 'EP' | 'EN';
+
+export type DailyEntryType = 'OD' | 'PD' | 'OW' | 'PW' | MoodEventType | NoteVariant;
 
 // --- NOTE ---
 
@@ -185,7 +201,7 @@ export interface SaveHabitPayload {
 export interface DaySyncResponse {
   tasks: Task[];
   habits: Habit[];
-  events?: Event[];
+  events?: DbEvent[];
   countdowns?: Countdown[];
   obiettivi?: DailyEntry[];
   priorita?: DailyEntry[];
@@ -200,7 +216,7 @@ export interface SyncWeekResponse {
   eventi_positivi: DailyEntry[];
   eventi_negativi: DailyEntry[];
   note: DailyEntry[];
-  events: Event[]; 
+  events: DbEvent[]; 
   tasks: Task[];   
 }
 
