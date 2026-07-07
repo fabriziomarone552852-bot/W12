@@ -21,10 +21,11 @@ interface TaskDetailModalProps {
   tasks: TaskSummary[]; 
   onEditClick: () => void; 
   onAddSubtask?: (parentId: number) => void;
+  onTaskDeleted?: () => void;
 }
 
 const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ 
-  isOpen, onClose, selectedTask, onToggleTask, onSelectTask, onEditClick, onAddSubtask
+  isOpen, onClose, selectedTask, onToggleTask, onSelectTask, onEditClick, onAddSubtask, onTaskDeleted
 }) => {
   const { updateTask, deleteTask } = useAgendaMutations();
   const api = useApi();
@@ -112,6 +113,10 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
       isDestructive: true,
       onConfirm: async () => {
         await deleteTask(selectedTask.id);
+        if (onTaskDeleted) {
+          onTaskDeleted();
+        }
+        
         onClose();
       }
     });

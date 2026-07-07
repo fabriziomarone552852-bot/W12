@@ -20,9 +20,11 @@ interface TaskNewModalProps {
   onClose: () => void;
   taskToEdit?: TaskSummary | null;
   initialParentId?: number | null;
+  onTaskSaved?: (savedTask?: Task) => void;
 }
 
-const TaskNewModal: React.FC<TaskNewModalProps> = ({ isOpen, onClose, taskToEdit, initialParentId }) => {
+// ✅ AGGIUNTO onTaskSaved ALLE PROPS DEL COMPONENTE
+const TaskNewModal: React.FC<TaskNewModalProps> = ({ isOpen, onClose, taskToEdit, initialParentId, onTaskSaved }) => {
   const {  user } = useAuth();
   const { addTask, updateTask } = useAgendaMutations();
   const [isSaving, setIsSaving] = useState(false);
@@ -61,8 +63,8 @@ const TaskNewModal: React.FC<TaskNewModalProps> = ({ isOpen, onClose, taskToEdit
         setNewTaskForm({
           titolo: taskToEdit.title || '',
           descrizione: taskToEdit.description || '',
-          data_start: new Date().toISOString().slice(0, 10),
-          data_scadenza: taskToEdit.deadline !== 'Nessuna' ? taskToEdit.dateStr : '',
+          data_start: taskToEdit.dateStr || new Date().toISOString().slice(0, 10),
+          data_scadenza: taskToEdit.deadline && taskToEdit.deadline !== 'Nessuna' ? taskToEdit.deadline : '',
           priorita: taskToEdit.priority || 'Bassa',
           category: taskToEdit.category || '',
           luogo: taskToEdit.location || '',
@@ -99,7 +101,7 @@ const TaskNewModal: React.FC<TaskNewModalProps> = ({ isOpen, onClose, taskToEdit
       const pacchettoPerIlServer: Partial<Task> = {
         titolo: newTaskForm.titolo,
         descrizione: newTaskForm.descrizione || null,
-        data_start: new Date().toISOString().slice(0, 10), // O usare getLocalDateString()
+        data_start: newTaskForm.data_start,
         data_scadenza: newTaskForm.data_scadenza || null,
         priorita: newTaskForm.priorita,
         category_id: categoryId,
@@ -107,16 +109,23 @@ const TaskNewModal: React.FC<TaskNewModalProps> = ({ isOpen, onClose, taskToEdit
         parent_id: newTaskForm.parent_id ? Number(newTaskForm.parent_id) : null
       };
 
+      let savedTask: Task | undefined;
+
       if (taskToEdit) {
-        await updateTask({ id: taskToEdit.id, data: pacchettoPerIlServer }); // ✅ Corretto
+        savedTask = await updateTask({ id: taskToEdit.id, data: pacchettoPerIlServer }); 
       } else {
-        await addTask(pacchettoPerIlServer);
+        savedTask = await addTask(pacchettoPerIlServer);
+      }
+      
+      if (onTaskSaved) {
+        onTaskSaved(savedTask); 
       }
       onClose(); 
+      
     } catch (errore) {
       console.error("Errore nel salvataggio della task", errore);
     } finally {
-      setIsSaving(false); // 🔴 Spegniamo il caricamento!
+      setIsSaving(false); 
     }
   };
 
@@ -219,8 +228,8 @@ const TaskNewModal: React.FC<TaskNewModalProps> = ({ isOpen, onClose, taskToEdit
           </div>
         </div>
 
-      </form>
-    </BaseModal>
+        </form>
+      </BaseModal>
   );
 };
 

@@ -1,7 +1,7 @@
 // src/components/dashboard/EventNewModal.tsx
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { type Category, CategoryGenre } from '@/types';
+import { type Category, CategoryGenre, type DbEvent } from '@/types';
 import type { CalendarEvent } from '@/types';
 import DatePicker from '@/components/shared/utils/DatePicker';
 import { getLocalDateString, smontaOrario, pad, formatTimeToServer } from '@/utils/dateUtils'; 
@@ -21,7 +21,7 @@ interface NewEventModalProps {
   isOpen: boolean; 
   onClose: () => void;
   eventToEdit?: CalendarEvent | null;
-  onEventSaved?: () => void; 
+  onEventSaved?: (savedEvent?: DbEvent) => void;
   initialDate?: string | null;
 }
 
@@ -134,14 +134,16 @@ const NewEventModal: React.FC<NewEventModalProps> = ({
 
   try {
     const veroId = eventToEdit ? String(eventToEdit.id).split('-')[0] : null;
+    let savedEvent: DbEvent | undefined; // Variabile per catturare la risposta
 
     if (eventToEdit && veroId) {
-      await updateEvent({ id: veroId, data: pacchettoPerIlServer }); // ✅ Corretto
+      savedEvent = await updateEvent({ id: veroId, data: pacchettoPerIlServer }); 
     } else {
-      await addEvent(pacchettoPerIlServer);
+      savedEvent = await addEvent(pacchettoPerIlServer);
     }
     
-    if (onEventSaved) onEventSaved();
+    // Passiamo l'evento appena salvato alla pagina madre!
+    if (onEventSaved) onEventSaved(savedEvent);
     onClose();
   } catch (errore) {
     console.error("Errore nel salvataggio dell'evento", errore);

@@ -55,7 +55,14 @@ export const HabitsRoutinesSection: React.FC<HabitsRoutinesSectionProps> = ({
       <div className="flex flex-col gap-6 h-full min-h-0">
         <HabitsBar 
           habits={habits} 
-          onToggleHabit={(id) => updateHabitLog({ habitId: id, delta: 1 })} 
+          onToggleHabit={(id) => {
+            const targetHabit = habits.find(h => h.id === id);
+            
+            if (targetHabit) {
+              const delta = targetHabit.done ? -1 : 1;
+              updateHabitLog({ habitId: id, delta });
+            }
+          }} 
           onAddHabitClick={() => habitFormModal.open()} 
         />
         
