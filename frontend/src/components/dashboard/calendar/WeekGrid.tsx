@@ -391,11 +391,15 @@ const WeekGrid: React.FC<WeekGridProps> = ({
                           </div>
                         </div>
 
-                        {/* TOOLTIP Completamente opaco e in risalto */}
-                        <div className="hidden group-hover:flex flex-col absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded shadow-[0_4px_12px_rgba(0,0,0,0.4)] items-center whitespace-nowrap z-[9999] pointer-events-none">
-                          <span className="text-[10px] text-white font-bold">{ev.title || 'Senza Titolo'}</span>
+                        {/* TOOLTIP Completamente opaco, text-wrapping e larghezza massima controllata */}
+                        <div className="hidden group-hover:flex flex-col absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded shadow-[0_4px_12px_rgba(0,0,0,0.4)] items-center z-[9999] pointer-events-none w-max max-w-[110px] sm:max-w-[140px]">
+                          <span className="text-[10px] text-white font-bold text-center break-words w-full">
+                            {ev.title || 'Senza Titolo'}
+                          </span>
                           {hoverTimeText && (
-                            <span className="text-slate-300 text-[9px] mt-[2px] font-medium tracking-wide">{hoverTimeText}</span>
+                            <span className="text-slate-300 text-[9px] mt-[2px] font-medium tracking-wide whitespace-nowrap">
+                              {hoverTimeText}
+                            </span>
                           )}
                           <div className="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-slate-900"></div>
                         </div>

@@ -13,7 +13,7 @@ interface DatePickerProps {
   placeholder?: string;
   align?: 'left' | 'right' | 'center';
   customTrigger?: React.ReactNode; 
-  selectionMode?: 'day' | 'week' | 'month'; // <-- Aggiunto 'month'
+  selectionMode?: 'day' | 'week' | 'month';
 }
 
 const DatePicker: React.FC<DatePickerProps> = ({ 
@@ -55,6 +55,12 @@ const DatePicker: React.FC<DatePickerProps> = ({
 
   const year = pickerMonthDate.getFullYear();
   const month = pickerMonthDate.getMonth();
+  
+  // Data di "oggi" per calcolare l'indicatore ambra "pieno"
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth();
+  const currentDay = today.getDate();
 
   // --- LOGICA DI RAGGRUPPAMENTO PER SETTIMANE ---
   const firstDayIdx = getFirstDayIndex(year, month);
@@ -74,17 +80,17 @@ const DatePicker: React.FC<DatePickerProps> = ({
   // Helper per la navigazione condizionale (Anno vs Mese)
   const handleBack = () => {
     if (selectionMode === 'month') {
-      setPickerMonthDate(new Date(year - 1, month, 1)); // Indietro di 1 anno
+      setPickerMonthDate(new Date(year - 1, month, 1));
     } else {
-      setPickerMonthDate(new Date(year, month - 1, 1)); // Indietro di 1 mese
+      setPickerMonthDate(new Date(year, month - 1, 1));
     }
   };
 
   const handleForward = () => {
     if (selectionMode === 'month') {
-      setPickerMonthDate(new Date(year + 1, month, 1)); // Avanti di 1 anno
+      setPickerMonthDate(new Date(year + 1, month, 1));
     } else {
-      setPickerMonthDate(new Date(year, month + 1, 1)); // Avanti di 1 mese
+      setPickerMonthDate(new Date(year, month + 1, 1));
     }
   };
 
@@ -130,10 +136,12 @@ const DatePicker: React.FC<DatePickerProps> = ({
           </div>
           
           {selectionMode === 'month' ? (
-            // GRIGLIA MENSILE (Come il vecchio CalendarHeader)
+            // GRIGLIA MENSILE
             <div className="grid grid-cols-4 gap-y-3 gap-x-1 mt-2">
               {nomiMesiCorto.map((mese, idx) => {
                 const isActive = value.startsWith(`${year}-${pad(idx + 1)}-`);
+                const isCurrentMonth = currentYear === year && currentMonth === idx;
+                
                 return (
                   <div key={mese} className="flex justify-center items-center">
                     <button 
@@ -142,7 +150,13 @@ const DatePicker: React.FC<DatePickerProps> = ({
                         onChange(`${year}-${pad(idx + 1)}-01`); 
                         onClose(); 
                       }} 
-                      className={`w-11 h-11 flex justify-center items-center rounded-full text-xs font-bold transition-all focus:outline-none ${isActive ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}
+                      className={`w-11 h-11 flex justify-center items-center rounded-full text-xs font-bold transition-all focus:outline-none ${
+                        isActive 
+                          ? 'bg-blue-100 text-blue-700' 
+                          : isCurrentMonth
+                            ? 'bg-amber-500 text-white shadow-md ring-4 ring-amber-100 font-extrabold hover:bg-amber-600'
+                            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                      }`}
                     >
                       {mese}
                     </button>
@@ -187,6 +201,7 @@ const DatePicker: React.FC<DatePickerProps> = ({
                         
                         const dateStr = `${year}-${pad(month + 1)}-${pad(dayNum)}`;
                         const isSelectedDay = value === dateStr;
+                        const isToday = currentYear === year && currentMonth === month && currentDay === dayNum;
                         
                         return (
                           <button 
@@ -199,8 +214,16 @@ const DatePicker: React.FC<DatePickerProps> = ({
                             }} 
                             className={`w-7 h-7 flex mx-auto items-center justify-center rounded-full text-xs font-medium transition-colors focus:outline-none ${
                               selectionMode === 'week'
-                                ? (isWeekSelected ? 'text-blue-800 font-bold' : 'text-gray-700 hover:bg-white hover:shadow-sm')
-                                : (isSelectedDay ? 'bg-blue-100 text-blue-700 font-bold shadow-sm' : 'text-gray-700 hover:bg-gray-100')
+                                ? (isWeekSelected 
+                                    ? 'text-blue-800 font-bold' 
+                                    : isToday 
+                                      ? 'bg-amber-500 text-white shadow-md ring-4 ring-amber-100 font-extrabold hover:bg-amber-600'
+                                      : 'text-gray-700 hover:bg-white hover:shadow-sm')
+                                : (isSelectedDay 
+                                    ? 'bg-blue-100 text-blue-700 font-bold shadow-sm' 
+                                    : isToday 
+                                      ? 'bg-amber-500 text-white shadow-md ring-4 ring-amber-100 font-extrabold hover:bg-amber-600'
+                                      : 'text-gray-700 hover:bg-gray-100')
                             }`}
                           >
                             {dayNum}
