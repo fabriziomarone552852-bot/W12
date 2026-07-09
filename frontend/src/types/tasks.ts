@@ -1,27 +1,45 @@
+import type { Category } from './categories';
+
 export type Priorita = 'Alta' | 'Media' | 'Bassa';
 
-export interface Task {
+export interface DbTask {
   id: number;
   titolo: string;
-  descrizione: string | null;
+  descrizione?: string | null;
   data_start: string;
-  data_scadenza: string | null;
-  priorita: Priorita;
-  fatto: boolean;
-  data_fatto: string | null;
-  category_id: number | null;
+  data_scadenza?: string | null;
+  priorita: 'Alta' | 'Media' | 'Bassa';
+  category_id?: number | null;
+  category?: Category | null;
   category_name?: string | null;
-  luogo: string | null;
+  luogo?: string | null;
+  fatto: boolean;
+  data_fatto?: string | null;
   user_id: number;
   parent_id?: number | null;
-  subtasks?: Task[];
+  subtasks: DbTask[]; 
 }
 
-export interface Category {
+export interface TaskSummary {
   id: number;
-  name: string;
-  colore?: string | null;
-  genre: number;
+  title: string;
+  deadline: string;
+  dateStr: string;
+  done: boolean;
+  priority: 'Alta' | 'Media' | 'Bassa';
+  category: string;
+  categoryColor?: string;
+  description: string;
+  location: string;
+  parent_id?: number | null;
+  isUrgentFromSubtask?: boolean;
+  hasActiveSubtasks?: boolean;
+  isPromotedSubtask?: boolean;
+  data_fatto?: string | null;
+}
+
+export interface UITask extends DbTask {
+  subtasks: UITask[]; 
 }
 
 export interface TaskCreateFormState {

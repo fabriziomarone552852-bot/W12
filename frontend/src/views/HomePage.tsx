@@ -65,11 +65,9 @@ const eventFormModal = useModal<{
   // --- TASK DEI PROSSIMI 30 GIORNI (VERI) ---
   const next30DaysTasks = useMemo(() => getUpcomingTasks(tasks, 30), [tasks]);
 
-  const handleToggleTask = (id: number, e?: React.MouseEvent) => {
+  const handleToggleTask = (id: number, currentStatus: boolean, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    const taskCorrente = tasks?.find(t => t.id === id);
-    if (!taskCorrente) return;
-    toggleTask({ id, isDone: !taskCorrente.fatto });
+    toggleTask({ id, isDone: !currentStatus });
   };
 
   const handleDeleteEvent = (id: number | string) => {

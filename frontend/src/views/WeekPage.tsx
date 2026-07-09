@@ -24,6 +24,7 @@ import { useDay } from '@/context/DayContext';
 import { useModal } from '@/hooks/useModals';
 import { mapDbEventsToCalendarEvents } from '@/utils/eventUtils';
 import { mapTasksToSummaries } from '@/utils/taskUtils';
+import { getRandomVariant } from '@/utils/noteUtils';
 
 // 1. TIPIZZAZIONE RIGOROSA (Via le intersezioni inline)
 
@@ -90,14 +91,16 @@ const WeekPage: React.FC = () => {
   };
 
   // Aggiungere Nota
-  const handleAddNote = (variant: NoteVariant): void => {
+  const handleAddNote = (): void => {
     const tempId = Date.now();
 
     const TodayStr = getLocalTodayStr();
     const isCurrentWeek = TodayStr >= mondayStr && TodayStr <= sundayStr;
     const targetDate = isCurrentWeek ? TodayStr : mondayStr;
 
-    saveNote({ id: tempId, variant, dateStr: targetDate, text: "", isNew: true });
+    const noteVariant = getRandomVariant();
+
+    saveNote({ id: tempId, variant: noteVariant, dateStr: targetDate, text: "", isNew: true });
     setEditingNoteId(tempId);
   };
 

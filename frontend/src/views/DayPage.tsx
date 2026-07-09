@@ -16,6 +16,7 @@ import { buildTaskTree, filterAndSortTree, type UITask } from '@/utils/taskUtils
 import { isHabitScheduledForDay } from '@/utils/habitUtils';
 import { mapDbEventsToCalendarEvents } from '@/utils/eventUtils';
 import { GoalsAndPrioritiesPanel } from '@/components/shared/GoalsAndPrioritiesPanel';
+import { getRandomVariant } from '@/utils/noteUtils';
 
 import type { CalendarEvent, NoteVariant } from '@/types';
 import type { Habit, RawCountdown, LocalNoteEntry } from '@/types';
@@ -169,21 +170,20 @@ const DayPage: React.FC = () => {
   };
 
   // --- HANDLER AZIONI ---
-  const handleToggleTask = (id: number, e?: React.MouseEvent) => {
+  const handleToggleTask = (id: number, currentStatus: boolean, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    const taskCorrente = dayData?.tasks.find(t => t.id === id); 
-    if (!taskCorrente) return;
-    toggleTask({ id, isDone: !taskCorrente.fatto }); 
+    toggleTask({ id, isDone: !currentStatus }); 
   };
 
-  const handleAddNote = (variant: NoteVariant) => {
+  const handleAddNote = () => {
     const tempId = Date.now();
     // Chiamiamo direttamente la mutazione indicando che è nuova
+    const noteVariant = getRandomVariant();
     saveNote({
       id: tempId,
       dateStr: targetDateStr,
       text: "", 
-      variant,
+      variant: noteVariant,
       isNew: true
     });
     setEditingNoteId(tempId);
