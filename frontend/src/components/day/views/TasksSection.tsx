@@ -7,14 +7,13 @@ import { useTaskModals } from '@/context/TaskModalContext';
 interface TasksSectionProps {
   tasks: UITask[];
   targetDate: Date;
-  onToggleTask: (id: number) => void;
+  onToggleTask: (id: number, currentStatus: boolean, e?: React.MouseEvent) => void;
 }
 
 export const TasksSection: React.FC<TasksSectionProps> = ({ tasks, targetDate, onToggleTask }) => {
   const { openTaskDetail, openTaskForm } = useTaskModals();
 
   return (
-    <>
       <div className="flex-1 overflow-hidden flex flex-col min-h-0 w-full min-w-0">
         <TaskColumn 
         tasks={tasks} 
@@ -24,8 +23,6 @@ export const TasksSection: React.FC<TasksSectionProps> = ({ tasks, targetDate, o
         onAddTaskClick={() => openTaskForm()}
       />
     </div>
-
-    </>
   );
 };
 

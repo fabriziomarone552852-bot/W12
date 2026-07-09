@@ -1,6 +1,7 @@
 // src/components/shared/utils/TaskTreeNode.tsx
 import React from 'react';
 import type { UITask } from '@/utils/taskUtils';
+import { formatToItalianShortDate } from '@/utils/dateUtils';
 
 interface TaskTreeNodeProps {
   task: UITask; // 🪄 FIX 1: Riceve direttamente il nodo dell'albero! Niente più Map o ID.
@@ -51,7 +52,7 @@ export const TaskTreeNode: React.FC<TaskTreeNodeProps> = ({
               <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 whitespace-nowrap ${
                 task.done ? 'bg-gray-100 text-gray-400' : 'text-red-500'
               }`}>
-                {task.deadline}
+                {formatToItalianShortDate(task.deadline)}
               </span>
             )}
           </div>

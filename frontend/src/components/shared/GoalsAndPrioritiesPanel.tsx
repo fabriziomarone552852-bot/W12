@@ -19,7 +19,7 @@ export const GoalsAndPrioritiesPanel: React.FC<GoalsAndPrioritiesPanelProps> = (
   prioritiesTitle,
   dateKey,
   goalEntry,
-  prioritiesEntries, // Rimosso il default = [] qui, lo gestiamo sotto in modo più sicuro
+  prioritiesEntries, 
   onSaveGoal,
   onSavePriority,
 }) => {

@@ -90,7 +90,7 @@ interface NotesSidebarProps {
   editingNoteId: number | null;
   onOpen: () => void;
   onClose: () => void;
-  onAddNote: (variant: NoteVariant) => void;
+  onAddNote: () => void;
   onAutoSaveNote: (id: number, text: string, variant: NoteVariant, isNew?: boolean) => void;
   onDeleteNote: (id: number, isNew?: boolean) => void;
   clearEditingNoteId: () => void;
@@ -100,13 +100,6 @@ const NotesSidebar: React.FC<NotesSidebarProps> = ({
   isOpen, notes, editingNoteId, onOpen, onClose, onAddNote, onAutoSaveNote, onDeleteNote, clearEditingNoteId 
 }) => {
   
-  // Sceglie a caso una chiave tra N1, N2, N3, N4
-  const handleAddNewNoteRandom = () => {
-    const varianti: NoteVariant[] = ['N1', 'N2', 'N3', 'N4'];
-    const randomVariant = varianti[Math.floor(Math.random() * varianti.length)];
-    onAddNote(randomVariant);
-  };
-
   return (
     <>
       <div onClick={onOpen} className="fixed right-0 top-1/2 -translate-y-1/2 translate-x-8 hover:translate-x-0 w-20 hover:w-28 h-14 bg-[#fde047] hover:bg-[#facc15] text-yellow-900 rounded-l-2xl shadow-[-5px_0_15px_rgba(0,0,0,0.1)] flex items-center justify-start pl-3 cursor-pointer transition-all duration-300 z-60 border border-y-yellow-300 border-l-yellow-300 group">
@@ -126,7 +119,7 @@ const NotesSidebar: React.FC<NotesSidebarProps> = ({
         </div>
         
         <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-gray-50/50 custom-scrollbar">
-          <button onClick={handleAddNewNoteRandom} className="w-full py-2.5 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 active:scale-95 active:bg-blue-100 transition-all flex justify-center items-center font-bold text-sm gap-2">
+          <button onClick={onAddNote} className="w-full py-2.5 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 active:scale-95 active:bg-blue-100 transition-all flex justify-center items-center font-bold text-sm gap-2">
             <PlusIcon />
             Nuova Nota
           </button>

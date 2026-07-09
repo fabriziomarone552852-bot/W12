@@ -1,5 +1,5 @@
 // src/components/shared/TaskColumn.tsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { TruncatedTitle } from '@/components/shared/utils/TruncatedTitle';
 import { Pagination } from '@/components/shared/utils/Pagination';
 import { EmptyState } from '@/components/shared/utils/EmptyState';
@@ -10,12 +10,13 @@ import { useAutoFitPagination } from '@/hooks/useAutoFitPagination';
 import { CalendarIcon, CalendarXIcon, SwitchIcon } from '@/components/shared/utils/Icons';
 import { Badge } from '@/components/shared/utils/Badges';
 import { type TaskSummary } from '@/types';
+import { formatToItalianShortDate } from '@/utils/dateUtils';
 
 
 interface TaskColumnProps {
   tasks: UITask[];
   selectedDate?: Date; 
-  onToggleTask: (id: number, e: React.MouseEvent) => void;
+  onToggleTask: (id: number, currentStatus: boolean, e?: React.MouseEvent) => void;
   onSelectTask: (task: TaskSummary) => void;
   onAddTaskClick: () => void;
 }
@@ -27,11 +28,10 @@ const TaskColumn: React.FC<TaskColumnProps> = ({ tasks, selectedDate, onToggleTa
   const listContainerRef = useRef<HTMLDivElement>(null);
 
   const showNotificationDot = showWithDeadline 
-    ? tasks.some(t => t.deadline === 'Nessuna' && !t.done) 
-    : tasks.some(t => t.deadline !== 'Nessuna' && !t.done);
+    ? tasks.some(t => !t.deadline && !t.done) 
+    : tasks.some(t => !!t.deadline && !t.done);
 
-  // Filtriamo solo per data/non data. Il sort vero e proprio lo fa taskUtils.ts!
-  const filteredTasks = tasks.filter(task => showWithDeadline ? task.deadline !== 'Nessuna' : task.deadline === 'Nessuna');
+  const filteredTasks = tasks.filter(task => showWithDeadline ? !!task.deadline : !task.deadline);
   const sortedTasks = filterAndSortTree(filteredTasks, false, selectedDate ? 'priority' : sortMode);
 
   const { 
@@ -65,10 +65,10 @@ const TaskColumn: React.FC<TaskColumnProps> = ({ tasks, selectedDate, onToggleTa
                   message: "Questa task principale presenta ancora delle sottotask non completate. Sei sicuro di volerla chiudere?",
                   confirmText: "Conferma",
                   isDestructive: false,
-                  onConfirm: () => onToggleTask(task.id, e) 
+                  onConfirm: () => onToggleTask(task.id, false, e) 
                 });
               } else {
-                onToggleTask(task.id, e);
+                onToggleTask(task.id, !task.done, e);
               }
             }}
             className={`w-4 h-4 rounded border-gray-300 cursor-pointer flex-shrink-0 transition-colors ${task.done ? 'text-gray-500 accent-gray-500 focus:ring-gray-500' : 'text-blue-600 accent-blue-600 focus:ring-blue-500'}`}
@@ -81,7 +81,7 @@ const TaskColumn: React.FC<TaskColumnProps> = ({ tasks, selectedDate, onToggleTa
             priorityLevel={task.done ? 'default' : task.priority}
             className={`flex-shrink-0 ml-2 ${task.done ? 'opacity-50 grayscale' : ''}`}
           >
-          {task.deadline}
+          {task.deadline ? formatToItalianShortDate(task.deadline) : 'Nessuna'}
         </Badge>
       </div>
 
@@ -147,10 +147,10 @@ const TaskColumn: React.FC<TaskColumnProps> = ({ tasks, selectedDate, onToggleTa
                         message: "Questa task principale presenta ancora delle sottotask non completate. Sei sicuro di volerla chiudere?",
                         confirmText: "Conferma",
                         isDestructive: false,
-                        onConfirm: () => onToggleTask(task.id, e) // Eseguiamo il toggle se conferma
+                        onConfirm: () => onToggleTask(task.id, task.done, e)
                       });
                     } else {
-                      onToggleTask(task.id, e);
+                      onToggleTask(task.id, task.done, e);
                     }
                   }}
                   className={`w-4 h-4 rounded border-gray-300 cursor-pointer flex-shrink-0 transition-colors ${task.done ? 'text-gray-500 accent-gray-500 focus:ring-gray-500' : 'text-blue-600 accent-blue-600 focus:ring-blue-500'}`}
@@ -163,7 +163,7 @@ const TaskColumn: React.FC<TaskColumnProps> = ({ tasks, selectedDate, onToggleTa
                   priorityLevel={task.done ? 'default' : (task.isUrgentFromSubtask ? 'Alta' : task.priority)}
                   className={`flex-shrink-0 ml-2 ${task.done ? 'opacity-50 grayscale' : ''}`}
                 >
-                {task.deadline}
+                {task.deadline ? formatToItalianShortDate(task.deadline) : 'Nessuna'}
               </Badge>
             </div>
           )))}
