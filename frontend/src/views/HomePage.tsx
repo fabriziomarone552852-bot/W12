@@ -1,9 +1,9 @@
 // src/views/HomePage.tsx
 import React, { useState, useMemo } from 'react';
 import { useAgendaHome } from '@/hooks/useAgendaHome';
-import { useAgendaMutations } from '@/hooks/useAgendaMutations';
+import { useTaskMutations } from '@/hooks/mutations/useTaskMutations';
+import { useEventMutations } from '@/hooks/mutations/useEventMutations';
 import { useNavigate } from 'react-router-dom';
-import { useCategories } from '@/hooks/useCategories';
 
 import CalendarColumn from '@/components/dashboard/CalendarColumn';
 import TaskColumn from '@/components/shared/tasks/TaskColumn';
@@ -14,14 +14,15 @@ import EventDetailModal from '@/components/shared/events/EventDetailModal';
 
 // Le nostre super-utility
 import { calculateYearProgress } from '@/utils/dateUtils';
-import { mapTasksToTasks } from '@/utils/taskUtils';
+import { buildTaskTree, filterAndSortTree, type UITask } from '@/utils/taskUtils';
+import { mapDbEventsToCalendarEvents } from '@/utils/eventUtils';
 import { useModal } from '@/hooks/useModals';
 import { useTaskModals } from '@/context/TaskModalContext';
 
 import { getUpcomingTasks } from '@/utils/taskUtils';
 import { Badge } from '@/components/shared/utils/Badges';
 import { EmptyState } from '@/components/shared/utils/EmptyState';
-import type { DbEvent, CalendarEvent } from '@/types';
+import type { CalendarEvent, DbTask, DbEvent } from '@/types';
 import { LoadingIcon } from '@/components/shared/utils/Icons';
 
 const HomePage: React.FC = () => {
@@ -40,8 +41,8 @@ const eventFormModal = useModal<{
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const { events: eventiDalServer, tasks, isLoading } = useAgendaHome(currentMonth);
-  const { updateTask, deleteEvent } = useAgendaMutations();
-  const { dbCategories } = useCategories();
+  const { toggleTask } = useTaskMutations<{ tasks: DbTask[] }>(['tasks']);
+  const { deleteEvent } = useEventMutations<{ events: DbEvent[] }>(['events']);
   const navigate = useNavigate();
 
   const yearProgress = useMemo(() => calculateYearProgress(), []);
@@ -52,37 +53,27 @@ const eventFormModal = useModal<{
 };
 
   // --- DATI REALI DALLE UTILITY ---
-  const oggiStr = new Date().toISOString().substring(0, 10);
-  const mappedTasks = useMemo(() => mapTasksToTasks(tasks || [], oggiStr), [tasks, oggiStr]);
+  const taskTree: UITask[] = useMemo(() => {
+    const rawTree = buildTaskTree(tasks || []);
+    return filterAndSortTree(rawTree, false, 'priority');
+  }, [tasks]);
   
   const calendarEvents = useMemo(() => {
-    return (eventiDalServer || []).map((e: DbEvent) => ({
-      id: `${e.id}-${e.data_inizio.substring(0, 10)}`, // ID univoco per il frontend
-      originalId: e.id,
-      title: e.titolo,
-      dateStr: e.data_inizio.substring(0, 10),
-      endDateStr: e.data_fine ? e.data_fine.substring(0, 10) : undefined,
-      time: e.tutto_il_giorno ? undefined : e.data_inizio.substring(11, 16),
-      endTime: e.tutto_il_giorno || !e.data_fine ? undefined : e.data_fine.substring(11, 16),
-      category: e.category?.name || e.category_name || 'Generico',
-      categoryColor: e.category?.colore || '#9ca3af',
-      tutto_il_giorno: e.tutto_il_giorno,
-      rrule: e.rrule || undefined,
-    }));
-  }, [eventiDalServer]);
+  return mapDbEventsToCalendarEvents(eventiDalServer || []);
+}, [eventiDalServer]);
 
   // --- TASK DEI PROSSIMI 30 GIORNI (VERI) ---
-  const next30DaysTasks = useMemo(() => getUpcomingTasks(mappedTasks, 30), [mappedTasks]);
+  const next30DaysTasks = useMemo(() => getUpcomingTasks(tasks, 30), [tasks]);
 
-  const toggleTask = async (id: number, e?: React.MouseEvent) => {
+  const handleToggleTask = (id: number, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    const taskCorrente = mappedTasks.find(t => t.id === id);
+    const taskCorrente = tasks?.find(t => t.id === id);
     if (!taskCorrente) return;
-    await updateTask({ id, data: { fatto: !taskCorrente.done } });
+    toggleTask({ id, isDone: !taskCorrente.fatto });
   };
 
-  const handleDeleteEvent = async (id: number | string) => {
-    await deleteEvent(id);
+  const handleDeleteEvent = (id: number | string) => {
+    deleteEvent(id);
     eventDetailModal.close();
   };
 
@@ -113,15 +104,15 @@ const eventFormModal = useModal<{
         
         <div className="xl:col-span-3 flex flex-col h-full min-h-0">
           <TaskColumn 
-              tasks={mappedTasks} 
-              onToggleTask={toggleTask} 
+              tasks={taskTree} 
+              onToggleTask={handleToggleTask} 
               onSelectTask={openTaskDetail} 
               onAddTaskClick={() => openTaskForm()} 
             />
         </div>
 
         {/* 🪄 FIX: Aggiunte le classi bg-white, rounded-xl, shadow-sm, border, p-5... */}
-        <div className="xl:col-span-6 flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 p-5 h-full min-h-0 overflow-visible relative z-10">
+        <div className="xl:col-span-6 flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 p-5 h-full min-h-0 overflow-visible relative z-50">
           
           {isLoading && !isInitialLoad && (
             <div className="absolute inset-0 z-50 bg-white/50 backdrop-blur-[1px] flex justify-center items-center rounded-xl">
@@ -160,7 +151,7 @@ const eventFormModal = useModal<{
         </h3>
         
         {/* 🪄 FIX: Aggiunto max-h-[120px] (circa 1-2 task visibili), overflow-y-auto e custom-scrollbar */}
-        <div className="overflow-y-auto max-h-[120px] custom-scrollbar relative">
+        <div className="overflow-hidden max-h-[120px] custom-scrollbar relative">
           <table className="w-full text-left border-collapse">
             
             {/* 🪄 FIX: Aggiunto sticky e bg-white al thead per non farlo scorrere via */}

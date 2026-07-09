@@ -1,11 +1,11 @@
 // src/hooks/useAgendaDay.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApi } from './useApi';
-
-// 🪄 1. Importiamo TUTTI i tipi che compongono una giornata
-import type { Task, Habit, HabitLog, DaySyncResponse, SaveHabitPayload, NoteVariant, DailyEntry, Countdown } from '@/types';
-
-// 🪄 3. Creiamo l'interfaccia esatta per i dati che inviamo quando creiamo un'abitudine
+import type { DbTask, Habit, HabitLog, SyncDayResponse, SaveHabitPayload, Countdown } from '@/types';
+import { useTaskMutations } from './mutations/useTaskMutations';
+import { useNoteMutations } from './mutations/useNoteMutations';
+import { useDailyEntryMutations } from './mutations/useDailyEntryMutations';
+import { useEventMutations } from './mutations/useEventMutations';
 
 export interface SaveCountdownPayload {
   id?: number;
@@ -17,6 +17,12 @@ export interface SaveCountdownPayload {
 export const useAgendaDay = (dateStr: string) => {
   const api = useApi();
   const queryClient = useQueryClient();
+  const queryKey = ['daySync', dateStr];
+
+  const noteMutations = useNoteMutations<SyncDayResponse>(queryKey);
+  const { toggleTask } = useTaskMutations<SyncDayResponse>(queryKey);
+  const entryMutations = useDailyEntryMutations<SyncDayResponse>(queryKey);
+  const eventMutations = useEventMutations<SyncDayResponse>(queryKey);
 
   const { data: dayData, isLoading, isError } = useQuery({
     queryKey: ['daySync', dateStr],
@@ -25,7 +31,7 @@ export const useAgendaDay = (dateStr: string) => {
       const rawData = await api.get(`/sync/day?data_riferimento=${dateStr}`);
 
       // 2. 🪄 NORMALIZZAZIONE STRICT TYPESCRIPT
-      const safeData: DaySyncResponse = {
+      const safeData: SyncDayResponse = {
         ...rawData,
         // Livello 1: Assicuriamoci che i macro-gruppi esistano
         events: rawData?.events || [],
@@ -35,7 +41,7 @@ export const useAgendaDay = (dateStr: string) => {
         note: rawData?.note || [],
         
         // Livello 2: Pulizia profonda sui Task (Usiamo il tipo Task!)
-        tasks: (rawData?.tasks || []).map((t: Task) => ({
+        tasks: (rawData?.tasks || []).map((t: DbTask) => ({
           ...t,
           subtasks: t.subtasks || [] 
         })),
@@ -49,77 +55,6 @@ export const useAgendaDay = (dateStr: string) => {
       };
 
       return safeData;
-    }
-  });
-
-  // --- MUTAZIONI ESISTENTI ---
-  const toggleTaskMutation = useMutation({
-    mutationFn: ({ id, isDone }: { id: number; isDone: boolean }) => 
-      api.patch(`/tasks/${id}`, { fatto: !isDone }),
-    
-    onMutate: async ({ id, isDone }) => {
-      await queryClient.cancelQueries({ queryKey: ['daySync', dateStr] });
-      const previousDayData = queryClient.getQueryData(['daySync', dateStr]);
-
-      queryClient.setQueryData(['daySync', dateStr], (oldData: DaySyncResponse | undefined) => {
-        if (!oldData) return oldData;
-        return {
-          ...oldData,
-          tasks: oldData.tasks.map((t: Task) => 
-            t.id === id ? { ...t, fatto: !isDone } : t
-          )
-        };
-      });
-
-      return { previousDayData };
-    },
-    onError: (err, newTask, context) => {
-      console.error("Errore nel toggle, ripristino UI...", err);
-      if (context?.previousDayData) {
-        queryClient.setQueryData(['daySync', dateStr], context.previousDayData);
-      }
-    },
-  });
-
-  const deleteEventMutation = useMutation({
-    mutationFn: (id: string | number) => api.delete(`/events/${id}`),
-    onSuccess: (_, deletedId) => {
-      queryClient.setQueryData<DaySyncResponse>(['daySync', dateStr], (old) => {
-        if (!old) return old;
-        return { ...old, events: (old.events || []).filter(e => String(e.id) !== String(deletedId)) };
-      });
-    }
-  });
-
-
-  // --- NOTE ---
-  const saveNoteMutation = useMutation({
-    mutationFn: async (note: { id?: number; dateStr: string; text: string; variant: NoteVariant }) => {
-      const payload = { data_riferimento: note.dateStr, tipo: note.variant, testo: note.text };
-      return note.id 
-        ? await api.patch<DailyEntry>(`/daily-entries/${note.id}`, payload)
-        : await api.post<DailyEntry>('/daily-entries', payload);
-    },
-    onSuccess: (savedNote) => {
-      queryClient.setQueryData<DaySyncResponse>(['daySync', dateStr], (old) => {
-        if (!old) return old;
-        const currentNotes = old.note || []; // Fallback di sicurezza
-        const exists = currentNotes.some(n => n.id === savedNote.id);
-        return {
-          ...old,
-          note: exists ? currentNotes.map(n => n.id === savedNote.id ? savedNote : n) : [savedNote, ...currentNotes]
-        };
-      });
-    }
-  });
-
-  const deleteNoteMutation = useMutation({
-    mutationFn: (id: number) => api.delete(`/daily-entries/${id}`),
-    onSuccess: (_, deletedId) => {
-      queryClient.setQueryData<DaySyncResponse>(['daySync', dateStr], (old) => {
-        if (!old) return old;
-        return { ...old, note: (old.note || []).filter(n => n.id !== deletedId) };
-      });
     }
   });
 
@@ -137,7 +72,7 @@ export const useAgendaDay = (dateStr: string) => {
         : await api.post<Countdown>('/countdowns', payload);
     },
     onSuccess: (savedCountdown) => {
-      queryClient.setQueryData<DaySyncResponse>(['daySync', dateStr], (old) => {
+      queryClient.setQueryData<SyncDayResponse>(['daySync', dateStr], (old) => {
         if (!old) return old;
         const currentCountdowns = old.countdowns || []; // Fallback di sicurezza
         const exists = currentCountdowns.some(c => c.id === savedCountdown.id);
@@ -152,7 +87,7 @@ export const useAgendaDay = (dateStr: string) => {
   const deleteCountdownMutation = useMutation({
     mutationFn: (id: number) => api.delete(`/countdowns/${id}`),
     onSuccess: (_, deletedId) => {
-      queryClient.setQueryData<DaySyncResponse>(['daySync', dateStr], (old) => {
+      queryClient.setQueryData<SyncDayResponse>(['daySync', dateStr], (old) => {
         if (!old) return old;
         return { ...old, countdowns: (old.countdowns || []).filter(c => c.id !== deletedId) };
       });
@@ -183,7 +118,7 @@ export const useAgendaDay = (dateStr: string) => {
   const deleteHabitMutation = useMutation({
     mutationFn: (id: number) => api.delete(`/habits/${id}`),
     onSuccess: (_, deletedId) => {
-      queryClient.setQueryData<DaySyncResponse>(['daySync', dateStr], (old) => {
+      queryClient.setQueryData<SyncDayResponse>(['daySync', dateStr], (old) => {
         if (!old) return old;
         return { ...old, habits: (old.habits || []).filter(h => h.id !== deletedId) };
       });
@@ -221,7 +156,7 @@ export const useAgendaDay = (dateStr: string) => {
       await queryClient.cancelQueries({ queryKey: ['daySync', dateStr] });
       const previousData = queryClient.getQueryData(['daySync', dateStr]);
       
-      queryClient.setQueryData(['daySync', dateStr], (old: DaySyncResponse | undefined) => {
+      queryClient.setQueryData(['daySync', dateStr], (old: SyncDayResponse | undefined) => {
         if (!old) return old;
         return {
           ...old,
@@ -246,75 +181,11 @@ export const useAgendaDay = (dateStr: string) => {
       return { previousData };
     },
     onError: (err, variables, context) => {
-      // 👇 AGGIUNGIAMO QUESTO LOG
       console.error("Errore del server durante l'untoggle!", err); 
       queryClient.setQueryData(['daySync', dateStr], context?.previousData);
     },
-  });
-
-  // --- MUTAZIONI OBIETTIVO E PRIORITÀ ---
-  const updateDailyEntryInCache = (savedEntry: DailyEntry, key: 'obiettivi' | 'priorita') => {
-    queryClient.setQueryData<DaySyncResponse>(['daySync', dateStr], (old) => {
-      if (!old) return old;
-      
-      // Estraiamo la lista in modo sicuro usando il fallback
-      const currentList = old[key] || [];
-      const exists = currentList.some(e => e.id === savedEntry.id);
-      
-      return {
-        ...old,
-        [key]: exists 
-          ? currentList.map(e => e.id === savedEntry.id ? savedEntry : e) 
-          : [...currentList, savedEntry]
-      };
-    });
-  };
-
-  const saveObiettivoMutation = useMutation({
-    mutationFn: async (data: { id?: number; text: string }) => {
-      const payload = { data_riferimento: dateStr, tipo: 'OD', testo: data.text };
-      if (!data.text.trim() && data.id) {
-        await api.delete(`/daily-entries/${data.id}`);
-        return null;
-      }
-      if (!data.text.trim()) return null;
-      return data.id 
-        ? await api.patch<DailyEntry>(`/daily-entries/${data.id}`, payload)
-        : await api.post<DailyEntry>('/daily-entries', payload);
-    },
-    onSuccess: (savedEntry, vars) => {
-      if (!savedEntry && vars.id) {
-        queryClient.setQueryData<DaySyncResponse>(['daySync', dateStr], (old) => {
-          if (!old) return old;
-          return { ...old, obiettivi: (old.obiettivi || []).filter(o => o.id !== vars.id) };
-        });
-      } else if (savedEntry) {
-        updateDailyEntryInCache(savedEntry, 'obiettivi');
-      }
-    }
-  });
-
-  const savePrioritaMutation = useMutation({
-    mutationFn: async (data: { id?: number; text: string }) => {
-      const payload = { data_riferimento: dateStr, tipo: 'PD', testo: data.text };
-      if (!data.text.trim() && data.id) {
-        await api.delete(`/daily-entries/${data.id}`);
-        return null;
-      }
-      if (!data.text.trim()) return null;
-      return data.id 
-        ? await api.patch<DailyEntry>(`/daily-entries/${data.id}`, payload)
-        : await api.post<DailyEntry>('/daily-entries', payload);
-    },
-    onSuccess: (savedEntry, vars) => {
-      if (!savedEntry && vars.id) {
-        queryClient.setQueryData<DaySyncResponse>(['daySync', dateStr], (old) => {
-          if (!old) return old;
-          return { ...old, priorita: (old.priorita || []).filter(p => p.id !== vars.id) };
-        });
-      } else if (savedEntry) {
-        updateDailyEntryInCache(savedEntry, 'priorita');
-      }
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['daySync', dateStr] });
     }
   });
 
@@ -322,10 +193,10 @@ export const useAgendaDay = (dateStr: string) => {
     dayData,
     isLoading,
     isError,
-    toggleTask: toggleTaskMutation.mutateAsync,
-    deleteEvent: deleteEventMutation.mutateAsync,
-    saveNote: saveNoteMutation.mutateAsync,
-    deleteNote: deleteNoteMutation.mutateAsync,
+    toggleTask,
+    deleteEvent: eventMutations.deleteEvent,
+    saveNote: noteMutations.saveNote,
+    deleteNote: noteMutations.deleteNote,
     saveCountdown: saveCountdownMutation.mutateAsync,
     deleteCountdown: deleteCountdownMutation.mutateAsync,
     saveHabit: saveHabitMutation.mutateAsync,
@@ -335,7 +206,9 @@ export const useAgendaDay = (dateStr: string) => {
     updateHabitPeriod: updateHabitPeriodMutation.mutateAsync,
     updateHabitLog: updateHabitLogMutation.mutateAsync,
     updateHabitCount: updateHabitLogMutation.mutateAsync, 
-    saveObiettivo: saveObiettivoMutation.mutateAsync,
-    savePriorita: savePrioritaMutation.mutateAsync
+    saveObiettivo: (data: { id?: number; text: string }) => 
+       entryMutations.saveDailyEntry({ id: data.id, tipo: 'OD', text: data.text, dateStr }),
+    savePriorita: (data: { id?: number; text: string }) => 
+       entryMutations.saveDailyEntry({ id: data.id, tipo: 'PD', text: data.text, dateStr }),
   };
 };

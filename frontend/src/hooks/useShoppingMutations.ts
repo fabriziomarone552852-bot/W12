@@ -1,5 +1,4 @@
 // src/hooks/useShoppingMutations.ts
-// Mutations con React Query - segue il pattern di useAgendaMutations
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useShoppingApi } from '../api/shoppingApi';
 import type {

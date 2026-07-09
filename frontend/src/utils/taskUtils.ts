@@ -1,16 +1,104 @@
-// src/utils/taskUtils.ts
-import type { Task } from '@/types';
-import type { TaskSummary } from '@/types';
+// frontend/src/utils/taskUtils.ts
+import type { DbTask, TaskSummary } from '@/types';
 import { formatToItalianShortDate } from './dateUtils'; 
 
 // ------------------------------------------------------------------
-// 1. FUNZIONI DI ORDINAMENTO E MAPPING BASE
+// 1. INTERFACCE DEFINITIVE (Zero any)
 // ------------------------------------------------------------------
 
-export const sortTasks = (tasks: TaskSummary[], sortMode: 'chrono' | 'priority'): TaskSummary[] => {
+// UITask ora estende TaskSummary (quindi ha date formattate) E possiede subtasks
+export interface UITask extends TaskSummary {
+  subtasks: UITask[];
+}
+
+// Il Capolavoro: Schwartzian Transform per la Dashboard (Intatto)
+export const getUpcomingTasks = (tasks: DbTask[], days: number = 30, limit: number = 6): TaskSummary[] => {
+  if (!tasks || !Array.isArray(tasks)) return [];
+
+  const now = Date.now();
+  const timeLimit = days * 24 * 60 * 60 * 1000;
+  
+  return tasks
+    .filter(t => !t.fatto && t.data_scadenza)
+    .map(t => ({
+      task: mapTaskToSummary(t),
+      time: new Date(t.data_scadenza!.substring(0, 10)).getTime()
+    }))
+    .filter(item => {
+      const diff = item.time - now;
+      return diff >= 0 && diff <= timeLimit;
+    })
+    .sort((a, b) => a.time - b.time) 
+    .slice(0, limit)
+    .map(item => item.task);
+};
+
+// ------------------------------------------------------------------
+// 3. IL MOTORE DELL'ALBERO (Dal tuo 2° Snippet - Ottimizzato O(N))
+// ------------------------------------------------------------------
+
+
+// Trasforma la lista grezza del DB in un albero formattato per la UI.
+
+export const buildTaskTree = (flatTasks: DbTask[] = []): UITask[] => {
+  if (!flatTasks || !Array.isArray(flatTasks) || flatTasks.length === 0) return [];
+
+  const taskMap = new Map<number, UITask>();
+  const roots: UITask[] = [];
+
+  // FASE 1: Formattiamo tutti i task e li prepariamo come nodi isolati
+  flatTasks.forEach((task) => {
+    const summary = mapTaskToSummary(task);
+    taskMap.set(task.id, { ...summary, subtasks: [] });
+  });
+
+  // FASE 2: Creiamo i legami Padre-Figlio in memoria
+  flatTasks.forEach((task) => {
+    const uiTask = taskMap.get(task.id);
+    if (!uiTask) return;
+
+    if (task.parent_id && taskMap.has(task.parent_id)) {
+      const parent = taskMap.get(task.parent_id)!;
+      parent.subtasks.push(uiTask);
+      // Aggiorniamo la prop hasActiveSubtasks del padre se il figlio non è fatto
+      if (!uiTask.done) {
+        parent.hasActiveSubtasks = true;
+      }
+    } else {
+      roots.push(uiTask);
+    }
+  });
+
+  return roots;
+};
+
+// ------------------------------------------------------------------
+// 4. ORDINAMENTO E FILTRAGGIO RICORSIVO (Mantiene l'albero)
+// ------------------------------------------------------------------
+
+/**
+ * Filtra e ordina un albero di task mantenendone la gerarchia intatta.
+ */
+export const filterAndSortTree = (
+  tasks: UITask[], 
+  hideCompleted: boolean,
+  sortMode: 'chrono' | 'priority'
+): UITask[] => {
   const priorityWeights = { Alta: 3, Media: 2, Bassa: 1 };
 
-  return [...tasks].sort((a, b) => {
+  return tasks.reduce<UITask[]>((acc, task) => {
+    // 1. Nascondi completati
+    if (hideCompleted && task.done) return acc;
+
+    // 2. Ricorsione sui figli
+    const filteredSubtasks = filterAndSortTree(task.subtasks, hideCompleted, sortMode);
+
+    // 3. Aggiungiamo all'accumulatore
+    acc.push({ ...task, subtasks: filteredSubtasks });
+    return acc;
+  }, [])
+  // 4. Ordiniamo i fratelli dello stesso livello
+  .sort((a, b) => {
     if (a.done !== b.done) return a.done ? 1 : -1;
 
     if (sortMode === 'priority') {
@@ -24,215 +112,39 @@ export const sortTasks = (tasks: TaskSummary[], sortMode: 'chrono' | 'priority')
   });
 };
 
-export const mapTaskToTask = (
-  t: Task, 
-  hasActiveSubtasks: boolean, 
+export const mapTaskToSummary = (
+  t: DbTask, 
   extraProps: Partial<TaskSummary> = {}
 ): TaskSummary => {
-  const dateVal = t.data_scadenza ? t.data_scadenza.substring(0, 10) : '';
+  // 🛡️ Sicurezza: Se arrivano orari o fusi orari, li tagliamo tenendo solo YYYY-MM-DD
+  const cleanScadenza = t.data_scadenza ? t.data_scadenza.substring(0, 10) : "";
+  const cleanStart = t.data_start ? t.data_start.substring(0, 10) : "";
+
   return {
     id: t.id,
     title: t.titolo,
-    deadline: dateVal ? formatToItalianShortDate(dateVal) : 'Nessuna',
-    dateStr: dateVal || (t.data_start ? t.data_start.substring(0, 10) : ''),
+    // 🪄 Dati GREZZI e sicuri, niente formatToItalianShortDate qui!
+    deadline: cleanScadenza, 
+    dateStr: cleanStart, 
     done: t.fatto,
+    data_fatto: t.data_fatto, // 👈 Non dimentichiamo questo!
     priority: t.priorita,
     category: t.category?.name || t.category_name || 'Generico',
     categoryColor: t.category?.colore || '#9ca3af',
-    description: t.descrizione || '',
-    location: t.luogo || '',
+    description: t.descrizione || "",
+    location: t.luogo || "",
     parent_id: t.parent_id,
-    hasActiveSubtasks,
+    // 🪄 Calcolato istantaneamente se i subtasks esistono
+    hasActiveSubtasks: !!t.subtasks && t.subtasks.some(st => !st.fatto),
+    
+    // Sovrascritture eventuali
     ...extraProps
   };
 };
 
-// 🪄 IL CAPOLAVORO: Schwartzian Transform dal tuo Secondo Snippet
-export const getUpcomingTasks = (tasks: TaskSummary[], days: number = 30, limit: number = 6): TaskSummary[] => {
-  const now = Date.now();
-  const timeLimit = days * 24 * 60 * 60 * 1000;
-  
-  return tasks
-    .filter(t => !t.done && t.deadline !== 'Nessuna' && t.dateStr)
-    .map(t => ({
-      task: t,
-      time: new Date(t.dateStr!).getTime() // Calcolato UNA volta
-    }))
-    .filter(item => {
-      const diff = item.time - now;
-      return diff >= 0 && diff <= timeLimit;
-    })
-    .sort((a, b) => a.time - b.time) // Sorting O(1) leggerissimo
-    .slice(0, limit)
-    .map(item => item.task);
-};
+//  Converte in modo sicuro un array di Task in un array di TaskSummary
 
-// ------------------------------------------------------------------
-// 2. FUNZIONI OTTIMIZZATE DI RICERCA (Complessità O(1))
-// ------------------------------------------------------------------
-
-export const getAncestorsOptimized = (taskId: number, taskById: Map<number, Task>): Task[] => {
-  const ancestors: Task[] = []; 
-  let current = taskById.get(taskId);
-  
-  while (current && current.parent_id != null) {
-    const parent = taskById.get(current.parent_id);
-    if (parent) {
-      ancestors.push(parent);
-      current = parent;
-    } else {
-      break;
-    }
-  }
-  return ancestors;
-};
-
-// 🪄 IL CAPOLAVORO: Accumulatore in memoria per evitare Garbage Collection
-export const getAllActiveSubtasksOptimized = (
-  parentId: number, 
-  tasksByParent: Map<number | null, Task[]>,
-  accumulator: Task[] = []
-): Task[] => {
-  const children = tasksByParent.get(parentId) || [];
-  const activeChildren = children.filter(c => !c.fatto);
-  
-  accumulator.push(...activeChildren);
-  
-  activeChildren.forEach(c => {
-    getAllActiveSubtasksOptimized(c.id, tasksByParent, accumulator);
-  });
-  
-  return accumulator;
-};
-
-// ------------------------------------------------------------------
-// 3. MOTORI DI MAPPING PRINCIPALI (Primo Snippet pulito)
-// ------------------------------------------------------------------
-
-export const mapTasksToTasks = (allTasks: Task[], oggiStr: string): TaskSummary[] => {
-  if (!allTasks || !Array.isArray(allTasks)) return [];
-  const taskDaMostrare: TaskSummary[] = [];
-
-  const tasksByParent = new Map<number | null, Task[]>();
-  allTasks.forEach(t => {
-    const pId = t.parent_id ?? null;
-    if (!tasksByParent.has(pId)) tasksByParent.set(pId, []);
-    tasksByParent.get(pId)!.push(t);
-  });
-
-  const taskPadre = allTasks.filter((t) => {
-    if (t.parent_id) return false; 
-    if (t.fatto) {
-      const dataFattoStr = t.data_fatto ? t.data_fatto.substring(0, 10) : null;
-      if (dataFattoStr !== oggiStr) return false; 
-    }
-    return true; 
-  });
-
-  taskPadre.forEach((t) => {
-    let scadenzaPadreStr = t.data_scadenza ? t.data_scadenza.substring(0, 10) : null;
-    const tempoPadre = scadenzaPadreStr ? new Date(scadenzaPadreStr).getTime() : Infinity;
-
-    const sottotaskAttive = getAllActiveSubtasksOptimized(t.id, tasksByParent); 
-    let sottotaskPromossePerData: Task[] = [];
-    let sottotaskUrgentiSenzaData: Task[] = [];
-
-    if (sottotaskAttive.length > 0) {
-      const sottotaskConScadenza = sottotaskAttive.filter(sub => sub.data_scadenza);
-      let tempoMinimo = Infinity;
-      
-      sottotaskConScadenza.forEach(sub => {
-        const tSub = new Date(sub.data_scadenza!.substring(0, 10)).getTime();
-        if (tSub < tempoPadre && tSub < tempoMinimo) tempoMinimo = tSub;
-      });
-
-      if (tempoMinimo < tempoPadre) {
-        sottotaskPromossePerData = sottotaskConScadenza.filter(sub => new Date(sub.data_scadenza!.substring(0, 10)).getTime() === tempoMinimo);
-      }
-      sottotaskUrgentiSenzaData = sottotaskAttive.filter(sub => !sub.data_scadenza && sub.priorita === 'Alta');
-    }
-
-    const hasActiveSubtasks = sottotaskAttive.length > 0;
-
-    if (sottotaskPromossePerData.length > 0) {
-      sottotaskPromossePerData.forEach(sub => {
-        taskDaMostrare.push(mapTaskToTask(sub, false, { isPromotedSubtask: true }));
-      });
-    } else {
-      taskDaMostrare.push(mapTaskToTask(t, hasActiveSubtasks));
-    }
-
-    if (sottotaskUrgentiSenzaData.length > 0) {
-      sottotaskUrgentiSenzaData.forEach(sub => {
-        taskDaMostrare.push(mapTaskToTask(sub, false, { isPromotedSubtask: true, isUrgentFromSubtask: true }));
-      });
-    }
-  });
-
-  return taskDaMostrare; 
-};
-
-export const mapDayTasksToTasks = (allTasks: Task[], targetDateStr: string): TaskSummary[] => {
-  const tasksToShow: TaskSummary[] = [];
-
-  const taskById = new Map<number, Task>();
-  const tasksByParent = new Map<number | null, Task[]>();
-
-  allTasks.forEach(t => {
-    taskById.set(t.id, t);
-    const pId = t.parent_id ?? null;
-    if (!tasksByParent.has(pId)) tasksByParent.set(pId, []);
-    tasksByParent.get(pId)!.push(t);
-  });
-
-  const isDueTodayOrPast = (t: Task) => t.data_scadenza && t.data_scadenza.substring(0, 10) <= targetDateStr;
-  const hasNoDate = (t: Task) => !t.data_scadenza;
-
-  allTasks.forEach((t: Task) => {
-    if (t.fatto && t.data_fatto?.substring(0, 10) !== targetDateStr) return;
-
-    const ancestors = getAncestorsOptimized(t.id, taskById);
-    let shouldShow = false;
-
-    if (isDueTodayOrPast(t)) {
-      shouldShow = !ancestors.some(isDueTodayOrPast);
-    } else if (hasNoDate(t)) {
-      if (t.priorita === 'Alta') {
-        shouldShow = true; 
-      } else {
-        shouldShow = !ancestors.some(isDueTodayOrPast) && !ancestors.some(hasNoDate);
-      }
-    }
-
-    if (shouldShow) {
-      const children = tasksByParent.get(t.id) || [];
-      const hasActiveSubtasks = children.some(sub => !sub.fatto);
-      
-      tasksToShow.push(mapTaskToTask(t, hasActiveSubtasks));
-    }
-  });
-
-  return tasksToShow;
-};
-
-export const getDeepEarliestDeadline = (
-  taskId: number,
-  taskById: Map<number, Task>,
-  tasksByParent: Map<number | null, Task[]>
-): number => {
-  const task = taskById.get(taskId);
-  // Se non c'è scadenza, impostiamo a Infinito (verrà messa alla fine dell'ordinamento)
-  let earliest = task?.data_scadenza ? new Date(task.data_scadenza.substring(0, 10)).getTime() : Infinity;
-
-  const children = tasksByParent.get(taskId) || [];
-  
-  // Ricorsione sui figli per trovare scadenze più brevi
-  for (const child of children) {
-    const childEarliest = getDeepEarliestDeadline(child.id, taskById, tasksByParent);
-    if (childEarliest < earliest) {
-      earliest = childEarliest;
-    }
-  }
-
-  return earliest;
+export const mapTasksToSummaries = (tasks: DbTask[]): TaskSummary[] => {
+  if (!tasks || !Array.isArray(tasks)) return [];
+  return tasks.map(t => mapTaskToSummary(t));
 };

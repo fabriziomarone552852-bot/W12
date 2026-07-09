@@ -2,8 +2,8 @@ import React, { createContext, useContext, type ReactNode } from 'react';
 import { useModal } from '@/hooks/useModals';
 import TaskDetailModal from '@/components/shared/tasks/TaskDetailModal';
 import NewTaskModal from '@/components/shared/tasks/TaskNewModal';
-import type { TaskSummary } from '@/types';
-import { useAgendaMutations } from '@/hooks/useAgendaMutations';
+import type { Task, TaskSummary } from '@/types';
+import { useTaskMutations } from '@/hooks/mutations/useTaskMutations';
 
 interface TaskFormModalState {
   taskToEdit?: TaskSummary | null;
@@ -23,7 +23,7 @@ export const TaskModalProvider: React.FC<{ children: ReactNode }> = ({ children 
   const detailModal = useModal<TaskSummary>();
   const formModal = useModal<TaskFormModalState>();
   
-  const { updateTask } = useAgendaMutations();
+  const { toggleTask } = useTaskMutations<{ tasks: Task[] }>(['tasks']);
 
   // 1. La nostra logica di transizione globale
   const handleAddSubtaskTransition = (parentId: number) => {
@@ -32,11 +32,11 @@ export const TaskModalProvider: React.FC<{ children: ReactNode }> = ({ children 
   };
 
   // 2. Il toggle del dettaglio gestito centralmente
-  const handleToggleTask = async (id: number) => {
+  const handleToggleTask = (id: number) => {
     const currentTask = detailModal.data;
     if (currentTask && currentTask.id === id) {
       const newDoneStatus = !currentTask.done;
-      await updateTask({ id, data: { fatto: newDoneStatus } });
+      toggleTask({ id, isDone: newDoneStatus });
       // Aggiorniamo istantaneamente la UI del modale
       detailModal.open({ ...currentTask, done: newDoneStatus });
     }

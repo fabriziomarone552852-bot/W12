@@ -10,7 +10,7 @@ export interface Category {
 }
 
 // --- TASKS ---
-export interface Task {
+export interface DbTask {
   id: number;
   titolo: string;
   descrizione?: string | null;
@@ -25,7 +25,7 @@ export interface Task {
   data_fatto?: string | null;
   user_id: number;
   parent_id?: number | null;
-  subtasks: Task[]; 
+  subtasks: DbTask[]; 
 }
 
 export interface TaskSummary {
@@ -44,6 +44,10 @@ export interface TaskSummary {
   hasActiveSubtasks?: boolean;
   isPromotedSubtask?: boolean;
   data_fatto?: string | null;
+}
+
+export interface UITask extends DbTask {
+  subtasks: UITask[]; 
 }
 
 // --- EVENTI ---
@@ -86,6 +90,9 @@ export interface DailyEntry {
   tipo: DailyEntryType;
   testo: string;
   immagine_url?: string | null;
+}
+export interface LocalNoteEntry extends DailyEntry {
+  isNew?: boolean;
 }
 
 export interface MoodEvent {
@@ -198,8 +205,8 @@ export interface SaveHabitPayload {
 // ---- SYNC ----
 
 
-export interface DaySyncResponse {
-  tasks: Task[];
+export interface SyncDayResponse {
+  tasks: DbTask[];
   habits: Habit[];
   events?: DbEvent[];
   countdowns?: Countdown[];
@@ -217,7 +224,7 @@ export interface SyncWeekResponse {
   eventi_negativi: DailyEntry[];
   note: DailyEntry[];
   events: DbEvent[]; 
-  tasks: Task[];   
+  tasks: DbTask[];
 }
 
 export const CategoryGenre = {

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router';
-import { useQueryClient } from '@tanstack/react-query';
 
 // --- IMPORT COMPONENTI ---
 import { type CountdownItem } from '@/components/day/CountdownWidget';
@@ -13,12 +12,13 @@ import { SharedAgendaHeader } from '@/components/shared/SharedAgendaHeader';
 import { useDay } from '@/context/DayContext';
 import { useAgendaDay } from '@/hooks/useAgendaDay';
 import { formatDateString } from '@/utils/dateUtils';
-import { mapDayTasksToTasks } from '@/utils/taskUtils';
+import { buildTaskTree, filterAndSortTree, type UITask } from '@/utils/taskUtils';
 import { isHabitScheduledForDay } from '@/utils/habitUtils';
-import { SmartObiettivoTextarea } from '@/components/day/utils/SmartObiettivoTextarea';
+import { mapDbEventsToCalendarEvents } from '@/utils/eventUtils';
+import { GoalsAndPrioritiesPanel } from '@/components/shared/GoalsAndPrioritiesPanel';
 
 import type { CalendarEvent, NoteVariant } from '@/types';
-import type { Task, DbEvent, Habit, RawCountdown, DailyEntry, DaySyncResponse, NoteItem } from '@/types';
+import type { Habit, RawCountdown, LocalNoteEntry } from '@/types';
 import { isNoteVariant } from '@/types';
 
 // --- SECTIONS ---
@@ -74,16 +74,6 @@ const DayPage: React.FC = () => {
   // 3. STATI UI (Rimosso isDatePickerOpen, se ne occupa l'Header!)
   const [isNotesOpen, setIsNotesOpen] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
-  const rawEntries = dayData?.note || [];
-
-  const sidebarNotes: NoteItem[] = rawEntries
-  .filter((entry) => isNoteVariant(entry.tipo))
-  .map((entry) => ({
-    id: entry.id,
-    text: entry.testo,
-    dateStr: entry.data_riferimento,
-    variant: entry.tipo as NoteVariant 
-  }));
 
   // --- LABELS DATE ---
   const today = new Date();
@@ -92,24 +82,17 @@ const DayPage: React.FC = () => {
   const formattedDate = targetDate.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
 
   // --- MAPPATURA DATI (Leggiamo SOLO da dayData) ---
-  const mappedTasks = mapDayTasksToTasks(dayData?.tasks || [], targetDateStr);
+  const taskTree: UITask[] = useMemo(() => {
+    const rawTree = buildTaskTree(dayData?.tasks || []);
+    
+    // 2. Ordiniamo l'albero (es. per priorità) e decidiamo se nascondere quelli completati.
+    // (Sostituisci 'false' con la tua variabile di stato hideCompleted se l'hai definita nel componente)
+    return filterAndSortTree(rawTree, false, 'priority'); 
+  }, [dayData?.tasks]);
 
-  const queryClient = useQueryClient();
-
-  const mappedEvents: CalendarEvent[] = (dayData?.events || []).map((e: DbEvent) => ({
-    id: `${e.id}-${e.data_inizio.substring(0,10)}`, 
-    originalId: e.id,
-    time: e.tutto_il_giorno ? undefined : e.data_inizio.substring(11, 16),
-    endTime: (e.tutto_il_giorno || !e.data_fine) ? undefined : e.data_fine.substring(11, 16),
-    title: e.titolo, 
-    category: e.category?.name || e.category_name || 'Generico', 
-    categoryColor: e.category?.colore || '#9ca3af',
-    dateStr: targetDateStr, 
-    description: e.descrizione || undefined, 
-    location: e.luogo || undefined, 
-    tutto_il_giorno: e.tutto_il_giorno, 
-    rrule: e.rrule || undefined
-  }));
+  const mappedEvents: CalendarEvent[] = useMemo(() => {
+    return mapDbEventsToCalendarEvents(dayData?.events || [], targetDateStr);
+  }, [dayData?.events, targetDateStr]);
 
   const mappedCountdowns: CountdownItem[] = (dayData?.countdowns || []).map((c: RawCountdown) => ({
     id: c.id, 
@@ -140,13 +123,15 @@ const DayPage: React.FC = () => {
   const mappedHabits: HabitItem[] = (dayData?.habits || [])
     .filter((h: Habit) => h.tipo === 'H' && isHabitScheduledForDay(h, targetDateStr))
     .map((h: Habit) => {
-      const period = h.periods && h.periods.length > 0 ? h.periods[0] : { target: 1 };
-      const log = h.logs && h.logs.length > 0 ? h.logs[0] : { count: 0 };
+      const activePeriod = (h.periods || []).find(p => 
+        p.data_inizio <= targetDateStr && (!p.data_fine || p.data_fine >= targetDateStr)
+      ) || (h.periods?.[0] || { target: 1 });
+      const log = (h.logs || []).find(l => l.data_riferimento === targetDateStr) || { count: 0 };
       return { 
         id: h.id, 
         title: h.titolo, 
         icon: h.immagine_url || '✨', 
-        done: log.count >= period.target 
+        done: log.count >= activePeriod.target
       };
     });
 
@@ -155,9 +140,9 @@ const DayPage: React.FC = () => {
 
     return dayData.note
       // 1. FILTRO DI SICUREZZA: Teniamo solo gli elementi che sono veri Post-it (N1, N2, N3, N4)
-      .filter((n: DailyEntry & { isNew?: boolean }) => isNoteVariant(n.tipo))
+      .filter((n: LocalNoteEntry) => isNoteVariant(n.tipo))
       // 2. MAPPATURA: Trasformiamo in NoteItem rigorosi
-      .map((n: DailyEntry & { isNew?: boolean }) => ({ 
+      .map((n: LocalNoteEntry) => ({ 
         id: n.id, 
         text: n.testo, 
         variant: n.tipo as NoteVariant, // 🪄 Usiamo il codice nativo del DB! Niente più stringhe hardcoded
@@ -184,69 +169,41 @@ const DayPage: React.FC = () => {
   };
 
   // --- HANDLER AZIONI ---
-  const handleToggleTask = (id: number) => {
-    const isDone = dayData?.tasks.find((t: Task) => t.id === id)?.fatto || false;
-    toggleTask({ id, isDone }); 
+  const handleToggleTask = (id: number, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    const taskCorrente = dayData?.tasks.find(t => t.id === id); 
+    if (!taskCorrente) return;
+    toggleTask({ id, isDone: !taskCorrente.fatto }); 
   };
 
   const handleAddNote = (variant: NoteVariant) => {
-  const tempId = Date.now();
-  
-  queryClient.setQueryData(['daySync', targetDateStr], (oldData: DaySyncResponse | undefined) => {
-    if (!oldData) return oldData;
-    const nuovaNotaTemporanea = { 
-      id: tempId, 
-      user_id: 0, // o l'ID utente reale se ce l'hai nello scope
-      data_riferimento: targetDateStr,
-      tipo: variant, // 🪄 La creiamo subito col codice corretto
-      testo: "",
-      isNew: true 
-    };
-    
-    return {
-      ...oldData,
-      note: [nuovaNotaTemporanea, ...(oldData.note || [])]
-    };
-  });
-
-  setEditingNoteId(tempId);
-};
+    const tempId = Date.now();
+    // Chiamiamo direttamente la mutazione indicando che è nuova
+    saveNote({
+      id: tempId,
+      dateStr: targetDateStr,
+      text: "", 
+      variant,
+      isNew: true
+    });
+    setEditingNoteId(tempId);
+  };
 
   const handleAutoSaveNote = (id: number, text: string, variant: NoteVariant, isNew?: boolean) => {
-  // 1. Aggiornamento Optimistic UI della Cache Locale
-  queryClient.setQueryData(['daySync', targetDateStr], (oldData: DaySyncResponse | undefined) => {
-    if (!oldData) return oldData;
-    return {
-      ...oldData,
-      note: (oldData.note || []).map((n: DailyEntry & { isNew?: boolean }) => 
-        // 🪄 MAGIA: Aggiungiamo `tipo: variant` in modo che la cache 
-        // sappia subito che si tratta di 'N1', 'N2', ecc.
-        n.id === id ? { ...n, testo: text, tipo: variant, isNew: false } : n
-      )
-    };
-  });
-
-  // 2. Chiamata API al Backend
-  saveNote({ 
-    id: isNew ? undefined : id, 
-    text: text, 
-    dateStr: targetDateStr,
-    variant: variant // 🪄 Passiamo la variante alla mutazione per salvarla nel DB!
-  });
-};
+    // Tutta la logica ottimistica è ora gestita nell'hook!
+    saveNote({ 
+      id, 
+      text, 
+      dateStr: targetDateStr,
+      variant,
+      isNew 
+    });
+  };
 
   const handleDeleteNote = (id: number, isNew?: boolean) => {
-    queryClient.setQueryData(['daySync', targetDateStr], (oldData: DaySyncResponse | undefined) => {
-      if (!oldData) return oldData;
-      return {
-        ...oldData,
-        note: (oldData.note || []).filter((n: DailyEntry & { isNew?: boolean }) => n.id !== id)
-      };
-    });
-
-    if (!isNew) {
-      deleteNote(id); 
-    }
+    // Se era una nota appena creata e mai scritta, possiamo forzare una rimozione ottimistica o usare il delete 
+    // Siccome ora gestiamo isNew bene nel context, chiamiamo deleteNote.
+    deleteNote(id); 
   };
 
   if (isLoading && !dayData) return <div className="flex h-full items-center justify-center font-bold text-gray-500 animate-pulse">Caricamento agenda...</div>;
@@ -270,46 +227,15 @@ const DayPage: React.FC = () => {
           viewMode="day"
         />
 
-        <div className={`bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col flex-1 xl:flex-row gap-6 py-5 z-10`}>
-          <div className="flex-1 xl:border-r border-gray-200 xl:pr-8 flex flex-col justify-center relative h-full">
-            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-2 shrink-0">Obiettivo del Giorno</h3>
-            {(() => {
-              const obiettivoObj = dayData?.obiettivi?.[0];
-              const obiettivoTesto = obiettivoObj?.testo || "";
-              
-              return (
-                <SmartObiettivoTextarea 
-                  key={`obiettivo-${obiettivoObj?.id || 'empty'}-${targetDateStr}`}
-                  initialText={obiettivoTesto}
-                  onSave={(nuovoTesto) => saveObiettivo({ id: obiettivoObj?.id, text: nuovoTesto })}
-                />
-              );
-            })()}
-          </div>
-          <div className="flex-1 flex flex-col justify-center min-w-[280px]">
-            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">Top 3 Priorities</h3>
-            <ul className="space-y-2.5">
-              {[0, 1, 2].map(index => {
-                const prioritaObj = dayData?.priorita?.[index];
-                const prioritaTesto = prioritaObj?.testo || ""; 
-                
-                return (
-                  <li key={`pri-row-${index}`} className="flex items-center gap-3">
-                    <span className="w-6 h-6 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xs font-bold shrink-0">{index + 1}</span>
-                    <input 
-                      key={`priorita-${index}-${prioritaObj?.id || 'empty'}-${targetDateStr}`} 
-                      type="text" 
-                      defaultValue={prioritaTesto} 
-                      onBlur={(e) => savePriorita({ id: prioritaObj?.id, text: e.target.value })} 
-                      placeholder={`Priorità ${index + 1}`} 
-                      className="w-full text-sm font-medium text-gray-700 border-none focus:ring-0 p-0 bg-transparent placeholder-gray-300" 
-                    />
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        </div>
+        <GoalsAndPrioritiesPanel
+          goalTitle="Obiettivo del Giorno"
+          prioritiesTitle="Top 3 Priorità"
+          dateKey={targetDateStr}
+          goalEntry={dayData?.obiettivi?.[0]}
+          prioritiesEntries={dayData?.priorita}
+          onSaveGoal={(nuovoTesto) => saveObiettivo({ id: dayData?.obiettivi?.[0]?.id, text: nuovoTesto })}
+          onSavePriority={(id, testo) => savePriorita({ id, text: testo })}
+        />
       </div>
 
       {/* SEZIONE CENTRALE */}
@@ -326,7 +252,7 @@ const DayPage: React.FC = () => {
 
         <div className="xl:col-span-4 flex flex-col gap-3 h-full min-h-0 w-full min-w-0">
           <TasksSection 
-              tasks={mappedTasks} 
+              tasks={taskTree} 
               targetDate={targetDate} 
               onToggleTask={handleToggleTask} 
             />

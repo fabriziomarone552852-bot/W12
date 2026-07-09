@@ -1,7 +1,6 @@
 // src/utils/eventUtils.ts
-import type { CalendarEvent } from '@/types';
 import { pad } from './dateUtils';
-import type { Event } from '@/types';
+import type { DbEvent, CalendarEvent } from '@/types';
 
 export interface DayEventItem {
   ev: CalendarEvent;
@@ -74,7 +73,7 @@ export const sortEvents = (events: CalendarEvent[]): CalendarEvent[] => {
   });
 };
 
-export const expandRecurringEvents = (eventiDalServer: Event[]): CalendarEvent[] => {
+export const expandRecurringEvents = (eventiDalServer: DbEvent[]): CalendarEvent[] => {
   if (!eventiDalServer || !Array.isArray(eventiDalServer)) return [];
 
   const expandedEvents: CalendarEvent[] = [];
@@ -86,7 +85,7 @@ export const expandRecurringEvents = (eventiDalServer: Event[]): CalendarEvent[]
     return new Date(d.getTime() - offset).toISOString().substring(0, 10);
   };
 
-  eventiDalServer.forEach((e: Event) => {
+  eventiDalServer.forEach((e: DbEvent) => {
     const dataInizio = e.data_inizio ? e.data_inizio.substring(0, 10) : '';
     let oraInizio = e.tutto_il_giorno || !e.data_inizio ? undefined : e.data_inizio.substring(11, 16);
     const dataFine = e.data_fine ? e.data_fine.substring(0, 10) : '';
@@ -220,4 +219,52 @@ export const calculateDailyEventLayout = (rawDayEvents: DayEventItem[], emptyHei
   });
 
   return { totalHeight: currentY, hourY, expandedHours, highlightedHours, overlayEvents };
+};
+
+export const mapDbEventsToCalendarEvents = (
+  events: DbEvent[] = [],
+  forceDateStr?: string
+): CalendarEvent[] => {
+  // Usiamo reduce o un map+filter per scartare gli eventi irrimediabilmente corrotti
+  return events.reduce<CalendarEvent[]>((acc, e) => {
+    // 🛡️ SICUREZZA: Se manca la data di inizio e non stiamo forzando la data, 
+    // scartiamo l'evento invece di far crashare l'app.
+    if (!e.data_inizio && !forceDateStr) {
+      console.warn(`Evento ignorato (ID: ${e.id}): data_inizio mancante.`);
+      return acc; 
+    }
+
+    // Estrazione sicura. Se data_inizio c'è, usiamo substring, altrimenti fallback
+    const safeDataInizio = e.data_inizio || '';
+    const baseDateStr = forceDateStr || safeDataInizio.substring(0, 10);
+    
+    const eventFormattato: CalendarEvent = {
+      id: `${e.id}-${baseDateStr}`,
+      originalId: e.id,
+      title: e.titolo || 'Senza Titolo', // Fallback se il titolo è vuoto
+      
+      // 🛡️ SICUREZZA: Controlliamo che le stringhe esistano prima di fare substring
+      time: e.tutto_il_giorno || !safeDataInizio 
+        ? undefined 
+        : safeDataInizio.substring(11, 16),
+        
+      endTime: e.tutto_il_giorno || !e.data_fine 
+        ? undefined 
+        : e.data_fine.substring(11, 16),
+        
+      dateStr: baseDateStr,
+      endDateStr: e.data_fine ? e.data_fine.substring(0, 10) : undefined,
+      
+      category: e.category?.name || e.category_name || 'Generico',
+      categoryColor: e.category?.colore || '#9ca3af',
+      
+      description: e.descrizione || undefined,
+      location: e.luogo || undefined,
+      tutto_il_giorno: e.tutto_il_giorno || false,
+      rrule: e.rrule || undefined
+    };
+
+    acc.push(eventFormattato);
+    return acc;
+  }, []);
 };

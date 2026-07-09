@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { getMonday, getSunday, getISOWeekNumber, formatDateString } from '@/utils/dateUtils';
+import { getMonday, getSunday, getISOWeekNumber, formatDateString, getLocalTodayStr } from '@/utils/dateUtils';
 import { useNavigate } from 'react-router-dom';
 
 // --- IMPORT COMPONENTI ---
-import { SmartObiettivoTextarea } from '@/components/day/utils/SmartObiettivoTextarea';
+import { GoalsAndPrioritiesPanel } from '@/components/shared/GoalsAndPrioritiesPanel';
 import CalendarColumn from '@/components/dashboard/CalendarColumn';
 import NotesSidebar from '@/components/day/NotesSidebar';
 import { SharedAgendaHeader } from '@/components/shared/SharedAgendaHeader';
@@ -12,17 +12,18 @@ import MoodEventsBoard from '@/components/weekmonth/MoodEventsBoard';
 // --- IMPORT MODALI ---
 import EventDetailModal from '@/components/shared/events/EventDetailModal';
 import EventNewModal from '@/components/shared/events/EventNewModal';
-import TaskDetailModal from '@/components/shared/tasks/TaskDetailModal';
-import TaskNewModal from '@/components/shared/tasks/TaskNewModal';
 
 // --- TIPI ---
-import type { Task, CalendarEvent, DailyEntry, TaskSummary, NoteItem, NoteVariant } from '@/types'; 
+import type { DbTask, CalendarEvent, TaskSummary, NoteItem, NoteVariant, LocalNoteEntry, DbEvent } from '@/types'; 
 import { isNoteVariant } from '@/types';
 import { useAgendaWeek } from '@/hooks/useAgendaWeek'; 
-import { useAgendaMutations } from '@/hooks/useAgendaMutations';
+import { useTaskModals } from '@/context/TaskModalContext';
+import { useEventMutations } from '@/hooks/mutations/useEventMutations';
 import { useMoodEvents } from '@/hooks/useMoodEvents';
 import { useDay } from '@/context/DayContext';
 import { useModal } from '@/hooks/useModals';
+import { mapDbEventsToCalendarEvents } from '@/utils/eventUtils';
+import { mapTasksToSummaries } from '@/utils/taskUtils';
 
 // 1. TIPIZZAZIONE RIGOROSA (Via le intersezioni inline)
 
@@ -47,13 +48,8 @@ const WeekPage: React.FC = () => {
   isLoading, 
   saveWeeklyEntry,
   toggleTask,
-  addNote,
-  autoSaveNote,
+  saveNote,
   deleteNote,
-  deleteEventFromCache,
-  deleteTaskFromCache,
-  addOrUpdateTaskInCache,
-  addOrUpdateEventInCache
 } = useAgendaWeek(mondayStr, sundayStr);
 
   // --- STATI UI E MODALI ---
@@ -64,11 +60,8 @@ const WeekPage: React.FC = () => {
   const eventDetailModal = useModal<CalendarEvent>();
   const eventFormModal = useModal<{ eventToEdit: CalendarEvent | null; initialDate: string | null }>();
 
-  // Modali Task
-  const taskDetailModal = useModal<TaskSummary>();
-  const taskFormModal = useModal<{ taskToEdit: TaskSummary | null }>();
-
-  const { deleteEvent } = useAgendaMutations();
+  const { deleteEvent } = useEventMutations<{ events: DbEvent[] }>(['weekSync', mondayStr]);
+  const { openTaskDetail } = useTaskModals(); 
 
   // --- HANDLERS DATA ---
   const handlePrevWeek = (): void => {
@@ -92,24 +85,33 @@ const WeekPage: React.FC = () => {
   };
 
   // Spuntare un Task dalla griglia
-  const handleToggleTaskFromGrid = async (task: Task, newStatus: boolean): Promise<void> => {
-    toggleTask(task.id, newStatus); // Fa tutto l'hook in RAM + background!
+  const handleToggleTaskFromGrid = async (task: DbTask, newStatus: boolean): Promise<void> => {
+    toggleTask({ id: task.id, isDone: newStatus });
   };
 
   // Aggiungere Nota
   const handleAddNote = (variant: NoteVariant): void => {
-    const tempId = addNote(variant);
+    const tempId = Date.now();
+
+    const TodayStr = getLocalTodayStr();
+    const isCurrentWeek = TodayStr >= mondayStr && TodayStr <= sundayStr;
+    const targetDate = isCurrentWeek ? TodayStr : mondayStr;
+
+    saveNote({ id: tempId, variant, dateStr: targetDate, text: "", isNew: true });
     setEditingNoteId(tempId);
   };
 
   // Autosave Nota
-  const handleAutoSaveNote = (id: number, text: string, variant: NoteVariant, isNew?: boolean): void => {
-    autoSaveNote(id, text, variant, isNew);
+  const handleAutoSaveNote = (id: number, text: string, variant: NoteVariant, isNew?: boolean) => {
+    const existingNote = weekData?.note?.find((n: LocalNoteEntry) => n.id === id);
+    const targetDate = existingNote?.data_riferimento || mondayStr;
+
+    saveNote({ id, text, dateStr: targetDate, variant, isNew });
   };
 
   // Elimina Nota
-  const handleDeleteNote = (id: number, isNew?: boolean): void => {
-    deleteNote(id, isNew);
+  const handleDeleteNote = (id: number, isNew?: boolean) => {
+    deleteNote(id); 
   };
 
   // const handleSelectTaskFromGrid = (task: Task): void => {
@@ -118,9 +120,9 @@ const WeekPage: React.FC = () => {
   // };
 
   // --- ADAPTERS DATI ---
-  const filteredTasks = useMemo((): Task[] => {
+  const filteredTasks = useMemo((): DbTask[] => {
     if (!weekData?.tasks) return [];
-    return weekData.tasks.filter((t: Task) => {
+    return weekData.tasks.filter((t: DbTask) => {
       if (!t.data_scadenza) return true;
       const taskDate = new Date(t.data_scadenza);
       return taskDate >= monday && taskDate <= sunday;
@@ -128,40 +130,11 @@ const WeekPage: React.FC = () => {
   }, [weekData?.tasks, monday, sunday]);
 
   const mappedTasks = useMemo((): TaskSummary[] => {
-    return filteredTasks.map((t) => ({
-      id: t.id,
-      title: t.titolo,
-      deadline: t.data_scadenza || "",
-      dateStr: t.data_start,
-      done: t.fatto,
-      priority: t.priorita,
-      category: t.category?.name || t.category_name || 'Generico',
-      categoryColor: t.category?.colore || '#9ca3af',
-      description: t.descrizione || "", 
-      location: t.luogo || "",
-      parent_id: t.parent_id,
-      data_fatto: t.data_fatto,
-      hasActiveSubtasks: !!t.subtasks && t.subtasks.some(st => !st.fatto)
-    }));
+    return mapTasksToSummaries(filteredTasks);
   }, [filteredTasks]);
 
-  const mappedEvents = useMemo((): CalendarEvent[] => {
-    if (!weekData?.events) return [];
-    return weekData.events.map((e) => ({
-      id: `${e.id}-${e.data_inizio.substring(0, 10)}`,
-      originalId: e.id,
-      title: e.titolo,
-      time: e.tutto_il_giorno ? undefined : e.data_inizio.substring(11, 16),
-      endTime: (e.tutto_il_giorno || !e.data_fine) ? undefined : e.data_fine.substring(11, 16),
-      dateStr: e.data_inizio.substring(0, 10),
-      endDateStr: e.data_fine ? e.data_fine.substring(0, 10) : undefined,
-      category: e.category?.name || e.category_name || 'Generico',
-      categoryColor: e.category?.colore || '#9ca3af',
-      description: e.descrizione || undefined,
-      location: e.luogo || undefined,
-      tutto_il_giorno: e.tutto_il_giorno,
-      rrule: e.rrule || undefined
-    }));
+  const mappedEvents: CalendarEvent[] = useMemo(() => {
+    return mapDbEventsToCalendarEvents(weekData?.events || []);
   }, [weekData?.events]);
 
   const mappedNotes = useMemo(() => {
@@ -169,12 +142,11 @@ const WeekPage: React.FC = () => {
     
     // 1. Diciamo che il risultato finale sarà un array di NoteItem (quello che vuole la Sidebar!)
     // 2. Diciamo che il parametro 'n' in entrata è un DailyEntry che può avere 'isNew'
-    return weekData.note.reduce<NoteItem[]>((acc, n: DailyEntry & { isNew?: boolean }) => {
+    return weekData.note.reduce<NoteItem[]>((acc, n: LocalNoteEntry) => {
       
       if (isNoteVariant(n.tipo)) {
         acc.push({ 
           id: n.id, 
-          // Mappiamo i campi del DB sui campi inglesi della Sidebar!
           text: n.testo,                
           variant: n.tipo,              
           dateStr: n.data_riferimento,  
@@ -219,42 +191,15 @@ const WeekPage: React.FC = () => {
           viewMode="week"
         />
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col flex-1 xl:flex-row gap-6 py-5 z-10">
-          <div className="flex-1 xl:border-r border-gray-200 xl:pr-8 flex flex-col justify-center relative h-full">
-            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-2 shrink-0">Obiettivo della Settimana</h3>
-            {(() => {
-              const obiettivoObj = weekData?.obiettivo_settimanale;
-              return (
-                <SmartObiettivoTextarea 
-                  key={`ob-week-${obiettivoObj?.id || 'empty'}-${mondayStr}`}
-                  initialText={obiettivoObj?.testo || ""}
-                  onSave={(testo) => saveWeeklyEntry({ id: obiettivoObj?.id, text: testo, tipo: 'OW', dateStr: mondayStr })}
-                />
-              );
-            })()}
-          </div>
-          <div className="flex-1 flex flex-col justify-center min-w-[280px]">
-            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">3 Priorità Settimanali</h3>
-            <ul className="space-y-2.5">
-              {[0, 1, 2].map(index => {
-                const prioritaObj = weekData?.priorita_settimanali?.[index];
-                return (
-                  <li key={`pri-w-row-${index}`} className="flex items-center gap-3">
-                    <span className="w-6 h-6 shrink-0 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xs font-bold">{index + 1}</span>
-                    <input 
-                      key={`pri-week-${index}-${prioritaObj?.id || 'empty'}-${mondayStr}`} 
-                      type="text" 
-                      defaultValue={prioritaObj?.testo || ""} 
-                      onBlur={(e) => saveWeeklyEntry({ id: prioritaObj?.id, text: e.target.value, tipo: 'PW', dateStr: mondayStr })} 
-                      placeholder={`Priorità ${index + 1}`} 
-                      className="w-full text-sm font-medium text-gray-700 border-none bg-transparent focus:ring-0 p-0 placeholder-gray-300" 
-                    />
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        </div>
+        <GoalsAndPrioritiesPanel
+            goalTitle="Obiettivo della Settimana"
+            prioritiesTitle="3 Priorità Settimanali"
+            dateKey={mondayStr}
+            goalEntry={weekData?.obiettivo_settimanale}
+            prioritiesEntries={weekData?.priorita_settimanali}
+            onSaveGoal={(testo) => saveWeeklyEntry({ id: weekData?.obiettivo_settimanale?.id, text: testo, tipo: 'OW', dateStr: mondayStr })}
+            onSavePriority={(id, testo) => saveWeeklyEntry({ id, text: testo, tipo: 'PW', dateStr: mondayStr })}
+          />
       </div>
 
       {/* 2. CALENDARIO */}
@@ -272,7 +217,7 @@ const WeekPage: React.FC = () => {
              onSelectEvent={(ev) => eventDetailModal.open(ev)}
              onSelectTask={(task) => {
                const summary = mappedTasks.find(t => t.id === task.id);
-               if (summary) taskDetailModal.open(summary);
+               if (summary) openTaskDetail(summary);
              }}
            />
         </div>
@@ -312,14 +257,9 @@ const WeekPage: React.FC = () => {
         }}
         onDeleteClick={async () => { 
           const idReale = eventDetailModal.data?.originalId;
-          if (idReale && deleteEvent) {
-            try {
-              await deleteEvent(idReale);
-              deleteEventFromCache(idReale); // 🚀 Aggiornamento RAM immediato!
-              eventDetailModal.close();
-            } catch (error) {
-              console.error(error);
-            }
+          if (idReale) {
+            deleteEvent(idReale); 
+            eventDetailModal.close();
           }
         }}
       />
@@ -330,53 +270,8 @@ const WeekPage: React.FC = () => {
         onClose={eventFormModal.close}
         initialDate={eventFormModal.data?.initialDate} 
         eventToEdit={eventFormModal.data?.eventToEdit}
-        onEventSaved={(savedEvent) => { 
-          if (savedEvent) {
-            addOrUpdateEventInCache(savedEvent); // 🚀 Aggiornamento RAM immediato!
-          }
-          eventFormModal.close();
-        }}
-      />
-
-
-      {/* ================= MODALI TASK ================= */}
-      
-      {/* Dettaglio Task */}
-      <TaskDetailModal
-        isOpen={taskDetailModal.isOpen}
-        onClose={taskDetailModal.close}
-        selectedTask={taskDetailModal.data} 
-        tasks={mappedTasks} 
-        onToggleTask={(id: number) => {
-          const taskOrigin = weekData?.tasks.find((t) => t.id === id);
-          if (taskOrigin) {
-            handleToggleTaskFromGrid(taskOrigin, !taskOrigin.fatto);
-          }
-        }}
-        onSelectTask={(summary) => taskDetailModal.open(summary)}
-        onEditClick={() => { 
-          taskFormModal.open({ taskToEdit: taskDetailModal.data! });
-          taskDetailModal.close();
-        }}
-        onAddSubtask={() => { console.log("Add subtask"); }}
-        onTaskDeleted={() => {
-          if (taskDetailModal.data) {
-             deleteTaskFromCache(taskDetailModal.data.id); // 🚀 Aggiornamento RAM immediato!
-          }
-          taskDetailModal.close();
-        }}
-      />
-
-      {/* Creazione/Modifica Task */}
-      <TaskNewModal
-        isOpen={taskFormModal.isOpen}
-        onClose={taskFormModal.close}
-        taskToEdit={taskFormModal.data?.taskToEdit}
-        onTaskSaved={(savedTask) => {
-          if (savedTask) {
-             addOrUpdateTaskInCache(savedTask); // 🚀 Aggiornamento RAM immediato!
-          }
-          taskFormModal.close();
+        onEventSaved={() => { 
+          eventFormModal.close(); 
         }}
       />
 
