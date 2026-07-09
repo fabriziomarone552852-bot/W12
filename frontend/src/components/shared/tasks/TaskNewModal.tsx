@@ -11,8 +11,8 @@ import { CloseIcon, CheckCircleIcon } from '@/components/shared/utils/Icons';
 import TaskTreeSelector from '@/components/shared/utils/TaskTreeSelector';
 import PrioritySelect from '@/components/shared/utils/PrioritySelect';
 import { useCategories } from '@/hooks/useCategories';
-import { useAgendaMutations } from '@/hooks/useAgendaMutations';
-import { useQuery } from '@tanstack/react-query';
+import { useTaskMutations } from '@/hooks/mutations/useTaskMutations';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '@/hooks/useApi';
 
 interface TaskNewModalProps {
@@ -26,11 +26,13 @@ interface TaskNewModalProps {
 // ✅ AGGIUNTO onTaskSaved ALLE PROPS DEL COMPONENTE
 const TaskNewModal: React.FC<TaskNewModalProps> = ({ isOpen, onClose, taskToEdit, initialParentId, onTaskSaved }) => {
   const {  user } = useAuth();
-  const { addTask, updateTask } = useAgendaMutations();
+  const { saveTask } = useTaskMutations<{ tasks: Task[] }>(['tasks']);  
   const [isSaving, setIsSaving] = useState(false);
   const { dbCategories } = useCategories();
 
   const api = useApi();
+  const queryClient = useQueryClient();
+
   const { data: tasks = [] } = useQuery({ 
     queryKey: ['tasks'], 
     queryFn: async () => {
@@ -60,15 +62,32 @@ const TaskNewModal: React.FC<TaskNewModalProps> = ({ isOpen, onClose, taskToEdit
   useEffect(() => {
     if (isOpen) {
       if (taskToEdit) {
+        // 🪄 MAGIA: Invece di fidarci della data formattata (es. "15 Ago"), 
+        // peschiamo il task grezzo originale dalla cache!
+        const cachedTasks = queryClient.getQueryData<{items?: Task[]} | Task[]>(['tasks']);
+        let rawTasks: Task[] = [];
+        if (Array.isArray(cachedTasks)) rawTasks = cachedTasks;
+        else if (cachedTasks?.items) rawTasks = cachedTasks.items;
+        
+        // Se non c'è in cache, usiamo la variabile locale
+        if (rawTasks.length === 0) rawTasks = tasks; 
+        
+        const rawTask = rawTasks.find((t: Task) => t.id === taskToEdit.id);
+        
+        // Helper per sicurezza: controlliamo che una stringa sia YYYY-MM-DD
+        const isIsoDate = (d?: string) => d && /^\d{4}-\d{2}-\d{2}/.test(d);
+
         setNewTaskForm({
           titolo: taskToEdit.title || '',
           descrizione: taskToEdit.description || '',
-          data_start: taskToEdit.dateStr || new Date().toISOString().slice(0, 10),
-          data_scadenza: taskToEdit.deadline && taskToEdit.deadline !== 'Nessuna' ? taskToEdit.deadline : '',
+          // 1. Usiamo la data grezza. Se manca, proviamo la stringa solo se è ISO, sennò oggi.
+          data_start: rawTask?.data_start || (isIsoDate(taskToEdit.dateStr) ? taskToEdit.dateStr : new Date().toISOString().slice(0, 10)),
+          // 2. Stessa cosa per la scadenza! Niente più "15 Ago" nel form.
+          data_scadenza: rawTask?.data_scadenza || (isIsoDate(taskToEdit.deadline) ? taskToEdit.deadline : ''),
           priorita: taskToEdit.priority || 'Bassa',
           category: taskToEdit.category || '',
           luogo: taskToEdit.location || '',
-          parent_id: taskToEdit.parent_id ? taskToEdit.parent_id.toString() : ''
+          parent_id: taskToEdit.parent_id ? String(taskToEdit.parent_id) : ''
         });
         setIsSubtaskPanelOpen(!!taskToEdit.parent_id);
       } else {
@@ -80,19 +99,37 @@ const TaskNewModal: React.FC<TaskNewModalProps> = ({ isOpen, onClose, taskToEdit
           priorita: 'Bassa', 
           category: '', 
           luogo: '', 
-          parent_id: initialParentId ? initialParentId.toString() : ''
+          parent_id: initialParentId ? String(initialParentId) : ''
         });
         setIsSubtaskPanelOpen(!!initialParentId);
       }
     } else {
       setIsDatePickerOpen(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, taskToEdit, initialParentId]);
 
 
   const handleSalvaNuovaTask = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true); // 🟢 Accendiamo il caricamento!
+
+    if (newTaskForm.data_scadenza && newTaskForm.data_start) {
+      const startDate = new Date(newTaskForm.data_start);
+      const endDate = new Date(newTaskForm.data_scadenza);
+      
+      if (endDate < startDate) {
+        setIsSaving(false); 
+        confirm({
+          title: "Data non valida",
+          message: "La data di scadenza non può essere precedente alla data di inizio del task.",
+          confirmText: "Ho capito",
+          isDestructive: false,
+          onConfirm: () => {}
+        });
+        return; 
+      }
+    }
 
     try {
       const categoriaScelta = dbCategories.find(c => c.name === newTaskForm.category);
@@ -112,9 +149,9 @@ const TaskNewModal: React.FC<TaskNewModalProps> = ({ isOpen, onClose, taskToEdit
       let savedTask: Task | undefined;
 
       if (taskToEdit) {
-        savedTask = await updateTask({ id: taskToEdit.id, data: pacchettoPerIlServer }); 
+        savedTask = await saveTask({ ...pacchettoPerIlServer, id: taskToEdit?.id }); 
       } else {
-        savedTask = await addTask(pacchettoPerIlServer);
+        savedTask = await saveTask(pacchettoPerIlServer);
       }
       
       if (onTaskSaved) {

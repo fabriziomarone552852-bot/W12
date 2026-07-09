@@ -1,10 +1,9 @@
 // src/components/dashboard/EventNewModal.tsx
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/context/AuthContext';
 import { type Category, CategoryGenre, type DbEvent } from '@/types';
 import type { CalendarEvent } from '@/types';
 import DatePicker from '@/components/shared/utils/DatePicker';
-import { getLocalDateString, smontaOrario, pad, formatTimeToServer } from '@/utils/dateUtils'; 
+import { getLocalDateString, smontaOrario, formatTimeToServer } from '@/utils/dateUtils'; 
 import CategorySelect from '@/components/shared/utils/CategorySelect';
 import BaseModal from '@/components/shared/dialog/BaseModal';
 import { useConfirm } from '@/context/ConfirmContext';
@@ -13,7 +12,7 @@ import { combineDateAndTime } from '@/utils/dateUtils';
 import { parseRRule, buildRRule } from '@/utils/rruleUtils';
 import { RecurrenceEditor } from '@/components/shared/utils/RecurrenceEditor';
 import { useCategories } from '@/hooks/useCategories';
-import { useAgendaMutations } from '@/hooks/useAgendaMutations';
+import { useEventMutations } from '@/hooks/mutations/useEventMutations';
 import TimeInput from '@/components/shared/utils/TimeInput'; 
 
 
@@ -25,16 +24,34 @@ interface NewEventModalProps {
   initialDate?: string | null;
 }
 
+interface EventFormState {
+  titolo: string;
+  descrizione: string;
+  data_inizio: string;
+  data_fine: string;
+  ora_inizio: string;
+  ora_fine: string;
+  category: string;
+  luogo: string;
+  tutto_il_giorno: boolean;
+}
+
 const NewEventModal: React.FC<NewEventModalProps> = ({ 
   isOpen, onClose, eventToEdit, initialDate, onEventSaved
 }) => {
-  const { token } = useAuth();
-  const { addEvent, updateEvent } = useAgendaMutations();
+  const { saveEvent } = useEventMutations<{ events: DbEvent[] }>(['events']);
   const { dbCategories } = useCategories();
 
-  const [newEventForm, setNewEventForm] = useState({
-    titolo: '', descrizione: '', data_inizio: getLocalDateString(), 
-    data_fine: '', ora_inizio: '', ora_fine: '', category: '', luogo: '', tutto_il_giorno: false
+  const [newEventForm, setNewEventForm] = useState<EventFormState>({
+    titolo: '', 
+    descrizione: '', 
+    data_inizio: getLocalDateString(), 
+    data_fine: '', 
+    ora_inizio: '', 
+    ora_fine: '', 
+    category: '', 
+    luogo: '', 
+    tutto_il_giorno: false
   });
 
   const {confirm} = useConfirm();
@@ -121,48 +138,37 @@ const NewEventModal: React.FC<NewEventModalProps> = ({
     rruleString = buildRRule(rruleFreq, rruleInterval, rruleUntil);
   }
 
+  const veroId = eventToEdit ? Number(String(eventToEdit.id).split('-')[0]) : undefined;
+
   const pacchettoPerIlServer = {
-    titolo: newEventForm.titolo,
-    descrizione: newEventForm.descrizione || null,
-    data_inizio: dataInizioStr,
-    data_fine: dataFineStr,
-    tutto_il_giorno: èTuttoIlGiorno, 
-    category_id: categoryId,
-    luogo: newEventForm.luogo || null,
-    rrule: rruleString 
-  };
+      id: veroId, 
+      titolo: newEventForm.titolo,
+      descrizione: newEventForm.descrizione || null,
+      data_inizio: dataInizioStr,
+      data_fine: dataFineStr,
+      tutto_il_giorno: èTuttoIlGiorno, 
+      category_id: categoryId,
+      luogo: newEventForm.luogo || null,
+      rrule: rruleString 
+    };
 
   try {
-    const veroId = eventToEdit ? String(eventToEdit.id).split('-')[0] : null;
-    let savedEvent: DbEvent | undefined; // Variabile per catturare la risposta
-
-    if (eventToEdit && veroId) {
-      savedEvent = await updateEvent({ id: veroId, data: pacchettoPerIlServer }); 
-    } else {
-      savedEvent = await addEvent(pacchettoPerIlServer);
-    }
-    
-    // Passiamo l'evento appena salvato alla pagina madre!
+    const savedEvent = await saveEvent(pacchettoPerIlServer) as DbEvent;
     if (onEventSaved) onEventSaved(savedEvent);
-    onClose();
-  } catch (errore) {
-    console.error("Errore nel salvataggio dell'evento", errore);
-    // OTTIMA UX: Feedback visivo all'utente se la rete cade
-    confirm({
-      title: "Attenzione",
-      message: "Si è verificato un errore durante il salvataggio.",
-      confirmText: "Ho capito",
-      isDestructive: false,
-      onConfirm: () => {}
-    });
-  } finally {
-    // 5. OTTIMA UX: Spegniamo il caricamento sempre e comunque
-    setIsSaving(false); 
-  }
-};
-
-  const orarioInizioScomposto = smontaOrario(newEventForm.ora_inizio);
-  const orarioFineScomposto = smontaOrario(newEventForm.ora_fine);
+      onClose();
+    } catch (errore: unknown) {
+      console.error("Errore nel salvataggio dell'evento", errore);
+      confirm({
+        title: "Attenzione",
+        message: "Si è verificato un errore durante il salvataggio.",
+        confirmText: "Ho capito",
+        isDestructive: false,
+        onConfirm: () => {}
+      });
+    } finally {
+      setIsSaving(false); 
+    }
+  };
 
   if (!isOpen) return null;
 

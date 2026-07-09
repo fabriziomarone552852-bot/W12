@@ -4,13 +4,13 @@ import type { Task, TaskSummary } from '@/types';
 import BaseModal from '@/components/shared/dialog/BaseModal'; 
 import { useConfirm } from '@/context/ConfirmContext';
 import { Badge } from '@/components/shared/utils/Badges';
-import { TrashIcon, EditIcon, LocationIcon, PlusIcon } from '@/components/shared/utils/Icons';
-import { formatToItalianShortDate } from '@/utils/dateUtils';
-import { useAgendaMutations } from '@/hooks/useAgendaMutations';
+import { TrashIcon, EditIcon, LocationIcon } from '@/components/shared/utils/Icons';
+import { useTaskMutations } from '@/hooks/mutations/useTaskMutations';
 import { useQuery } from '@tanstack/react-query';
 import { useApi } from '@/hooks/useApi';
 import { useAuth } from '@/context/AuthContext';
 import { TaskTreeNode } from '../utils/TaskTreeNode';
+import { buildTaskTree, type UITask } from '@/utils/taskUtils';
 
 interface TaskDetailModalProps {
   isOpen: boolean;
@@ -27,7 +27,7 @@ interface TaskDetailModalProps {
 const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ 
   isOpen, onClose, selectedTask, onToggleTask, onSelectTask, onEditClick, onAddSubtask, onTaskDeleted
 }) => {
-  const { updateTask, deleteTask } = useAgendaMutations();
+  const { toggleTask, deleteTask } = useTaskMutations<{ tasks: Task[] }>(['tasks']);
   const api = useApi();
   const { confirm } = useConfirm();
   const { user } = useAuth();
@@ -42,35 +42,30 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     }
   });
 
-  const { tasksByParent, tasksById } = useMemo(() => {
-    const parentMap = new Map<number | null, Task[]>();
-    const idMap = new Map<number, Task>();
-    
-    tasks.forEach((t: Task) => {
-      idMap.set(t.id, t);
-      const pId = t.parent_id ?? null;
-      if (!parentMap.has(pId)) parentMap.set(pId, []);
-      parentMap.get(pId)!.push(t);
-    });
-    return { tasksByParent: parentMap, tasksById: idMap };
+  // 🪄 1. Costruiamo l'albero in 0.1 millisecondi
+  const taskTree: UITask[] = useMemo(() => {
+    return buildTaskTree(tasks);
   }, [tasks]);
 
   if (!isOpen || !selectedTask) return null;
 
-  const liveTask = tasks.find((t: Task) => t.id === selectedTask.id);
-  const isTaskDone = liveTask ? liveTask.fatto : selectedTask.done;
-
-  const getRootTask = (taskId: number) => {
+  // 🪄 2. Troviamo il nodo "Radice" (Padre supremo) del task attualmente aperto
+  const getRootUITask = (taskId: number): UITask | undefined => {
     let current = tasks.find((t: Task) => t.id === taskId);
     while (current && current.parent_id != null) {
-      const parentId = current.parent_id; 
-      const parent = tasks.find((t: Task) => t.id === parentId);
+      const parent = tasks.find((t: Task) => t.id === current!.parent_id);
       if (parent) current = parent;
       else break;
     }
-    return current;
+    if (!current) return undefined;
+    
+    return taskTree.find(t => t.id === current!.id);
   };
-  const rootTask = getRootTask(selectedTask.id);
+
+  const rootUITask = getRootUITask(selectedTask.id);
+
+  const liveTask = tasks.find((t: Task) => t.id === selectedTask.id);
+  const isTaskDone = liveTask ? liveTask.fatto : selectedTask.done;
 
   const handleTaskToggle = async (taskId: number, isCurrentlyDone: boolean) => {
     // 1. Troviamo se ci sono sottotask dirette non completate
@@ -84,7 +79,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
         // 🪄 MAGIA: Rimosso onClose() qui! La finestra resterà aperta.
       } else {
         // Se stiamo spuntando un genitore o un figlio nell'albero laterale
-        await updateTask({ id: taskId, data: { fatto: !isCurrentlyDone } });
+        toggleTask({ id: taskId, isDone: !isCurrentlyDone });
       }
     };
 
@@ -112,7 +107,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
       confirmText: "Elimina",
       isDestructive: true,
       onConfirm: async () => {
-        await deleteTask(selectedTask.id);
+        deleteTask(selectedTask.id);
         if (onTaskDeleted) {
           onTaskDeleted();
         }
@@ -123,17 +118,15 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   };
 
   // 2. I COMPONENTI DA INIETTARE IN BASEMODAL
-  const SidePanel = rootTask ? (
+  const SidePanel = rootUITask ? (
     <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col h-full">
       <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center bg-gray-50 shrink-0">
         <h4 className="text-sm font-extrabold text-gray-800 uppercase tracking-wider">Albero Task</h4>
       </div>
       <div className="max-h-[60vh] overflow-y-auto overflow-x-hidden py-2 custom-scrollbar">
         <TaskTreeNode 
-          nodeId={rootTask.id}
+          task={rootUITask}
           depth={0}
-          tasksById={tasksById}
-          tasksByParent={tasksByParent}
           selectedTaskId={selectedTask.id}
           maxSubtaskDepth={maxSubtaskDepth}
           onToggleTask={handleTaskToggle}

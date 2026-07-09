@@ -1,6 +1,7 @@
 // src/components/day/NotesSection.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAgendaDay } from '@/hooks/useAgendaDay'; 
+import type { NoteVariant } from '@/types'; // Assicurati di importare i tipi corretti
 
 interface NotesSectionProps {
   targetDateStr: string;
@@ -8,17 +9,31 @@ interface NotesSectionProps {
 
 export const NotesSection: React.FC<NotesSectionProps> = ({ targetDateStr }) => {
   const { dayData, saveNote } = useAgendaDay(targetDateStr);
+  
+  // Prendiamo la nota di oggi (se esiste)
   const notaDiOggi = dayData?.note?.[0]; 
 
   const [draft, setDraft] = useState(notaDiOggi?.testo || '');
 
+  // 🪄 FIX 1: Sincronizziamo lo stato locale quando i dati arrivano dal server
+  // Senza questo, se la rete è lenta, la casella rimarrebbe vuota.
+  useEffect(() => {
+    setDraft(notaDiOggi?.testo || '');
+  }, [notaDiOggi?.testo, targetDateStr]);
+
   const handleSave = () => {
     const testoPrecedente = notaDiOggi?.testo || '';
-    if (draft !== testoPrecedente) {
+    
+    // Usiamo .trim() per evitare di salvare se l'utente ha solo aggiunto uno spazio
+    if (draft.trim() !== testoPrecedente.trim()) {
+      
+      // 🪄 FIX 2: Passiamo il payload esatto che si aspetta la nostra nuova mutazione
       saveNote({ 
-        id: notaDiOggi?.id, 
+        id: notaDiOggi?.id, // Se non c'è, verrà generato un tempId ottimistico
         dateStr: targetDateStr, 
-        text: draft 
+        text: draft,
+        variant: (notaDiOggi?.tipo as NoteVariant) || 'ND', // 'ND' (Note Day) o il valore di default del tuo DB
+        isNew: !notaDiOggi?.id // Se non ha ID, stiamo creando una nuova nota
       });
     }
   };

@@ -5,11 +5,11 @@ import CalendarHeader from '@/components/dashboard/calendar/CalendarHeader';
 import MonthGrid from '@/components/dashboard/calendar/MonthGrid';
 import WeekGrid from '@/components/dashboard/calendar/WeekGrid';
 import { PlusIcon } from '@/components/shared/utils/Icons';
-import { type Task, type CalendarEvent } from '@/types';
+import type { DbTask, CalendarEvent } from '@/types';
 
 interface CalendarColumnProps {
   events: CalendarEvent[];
-  tasks: Task[];
+  tasks: DbTask[];
   onSelectEvent: (event: CalendarEvent) => void;
   onAddEventClick?: (dateStr?: string) => void; 
   onDayClick?: (dateStr: string) => void;
@@ -18,8 +18,8 @@ interface CalendarColumnProps {
   forceView?: 'Mese' | 'Settimana';
   targetDate?: Date;
   variant?: 'classic' | 'detailed';
-  onSelectTask?: (task: Task) => void;
-  onToggleTask?: (task: Task, newStatus: boolean) => void;
+  onSelectTask?: (task: DbTask) => void;
+  onToggleTask?: (task: DbTask, newStatus: boolean) => void;
 }
 
 const CalendarColumn: React.FC<CalendarColumnProps> = ({ 

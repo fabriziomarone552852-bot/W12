@@ -5,13 +5,13 @@ import type { CalendarEvent } from '@/types';
 import { pad } from '@/utils/dateUtils';
 import { isEventInDay } from '@/utils/eventUtils';
 import { getHexColor } from '@/utils/uiUtils';
-import type { Task } from '@/types';
+import type { DbTask } from '@/types';
 import { TimeDisplay, DateRangeDisplay } from '@/components/shared/utils/DateTimeDisplays';
 
 interface MonthGridProps {
   state: CalendarState;
   events: CalendarEvent[];
-  tasks: Task[];
+  tasks: DbTask[];
   onDayClick?: (dateStr: string) => void;
   onAddEventClick?: (dateStr: string) => void;
 }
@@ -38,24 +38,44 @@ const MonthGrid: React.FC<MonthGridProps> = ({ state, events, tasks, onDayClick,
   };
 
   const getItemsForMonthDate = (dayNumber: number) => {
+    // 1. Costruisce la chiave della data (dal 2° snippet)
     const dateKey = `${monthYear}-${pad(monthIndex + 1)}-${pad(dayNumber)}`;
     
-    const dayTasks = (tasks || [])
-      .filter((t: Task) => t.data_scadenza && t.data_scadenza.substring(0, 10) === dateKey)
-      .map((t: Task) => ({
-        title: t.titolo, type: 'task' as const, category: t.category?.name || 'Generico',
-        time: undefined, endTime: undefined, isMultiDay: false, categoryColor: t.category?.colore || '#9CA3AF', done: t.fatto
+    // 🪄 2. LO SCUDO DI SICUREZZA (dal 1° snippet)
+    const safeTasks = Array.isArray(tasks) ? tasks : [];
+    const safeEvents = Array.isArray(events) ? events : [];
+    
+    // 3. Elaborazione Task
+    const dayTasks = safeTasks
+      .filter((t: DbTask) => t.data_scadenza && t.data_scadenza.substring(0, 10) === dateKey)
+      .map((t: DbTask) => ({
+        title: t.titolo, 
+        type: 'task' as const, 
+        category: t.category?.name || 'Generico',
+        time: undefined, 
+        endTime: undefined, 
+        isMultiDay: false, 
+        categoryColor: t.category?.colore || '#9CA3AF', 
+        done: t.fatto
       }));
     
-    const dayEvents = events
+    // 4. Elaborazione Eventi (usa la logica avanzata isEventInDay!)
+    const dayEvents = safeEvents
       .filter(e => isEventInDay(e, dateKey))
       .map(e => ({ 
-        title: e.title, type: 'event' as const, category: e.category, time: e.time, endTime: e.endTime,
-        dateStr: e.dateStr, endDateStr: e.endDateStr,
+        title: e.title, 
+        type: 'event' as const, 
+        category: e.category, 
+        time: e.time, 
+        endTime: e.endTime,
+        dateStr: e.dateStr, 
+        endDateStr: e.endDateStr,
         isMultiDay: e.tutto_il_giorno || (!!e.endDateStr && e.endDateStr !== e.dateStr),
-        categoryColor: e.categoryColor, done: false
+        categoryColor: e.categoryColor, 
+        done: false
       }));
       
+    // 5. Ritorna il pacchetto unificato per la UI
     return { items: [...dayTasks, ...dayEvents], dateKey };
   };
 

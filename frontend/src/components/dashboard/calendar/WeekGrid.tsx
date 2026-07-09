@@ -2,20 +2,21 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { CalendarState } from '@/hooks/useCalendarState';
-import type { CalendarEvent, Task } from '@/types';
+import type { CalendarEvent, DbTask } from '@/types';
 import WeeklyFocusPopup from '@/components/dashboard/WeeklyFocusPopup';
 import { pad } from '@/utils/dateUtils';
 import { getEventSegmentsForDay, type DayEventItem } from '@/utils/eventUtils';
 import { getHexColor, getDynamicStyles } from '@/utils/uiUtils';
+import { AllDayEventsGroup } from '@/components/shared/utils/AllDayEventsGroup';
 
 interface WeekGridProps {
   state: CalendarState;
   events: CalendarEvent[];
-  tasks?: Task[];
+  tasks?: DbTask[];
   onDayClick?: (dateStr: string) => void;
   onSelectEvent: (event: CalendarEvent) => void;
-  onSelectTask?: (task: Task) => void;
-  onToggleTask?: (task: Task, newStatus: boolean) => void;
+  onSelectTask?: (task: DbTask) => void;
+  onToggleTask?: (task: DbTask, newStatus: boolean) => void;
   variant?: 'classic' | 'detailed';
 }
 
@@ -35,7 +36,7 @@ const formatHoverTime = (start?: string, end?: string): string => {
 };
 
 // Helper Type-Safe per estrarre il colore senza usare "any"
-const getTaskColorHex = (task: Task): string => {
+const getTaskColorHex = (task: DbTask): string => {
   const t = task as unknown as Record<string, unknown>;
   const cat = t.category as Record<string, unknown> | undefined;
   
@@ -327,24 +328,12 @@ const WeekGrid: React.FC<WeekGridProps> = ({
                 <>
                   {/* ETICHETTE EVENTI TUTTO IL GIORNO (In cima alla colonna del giorno) */}
                   {multiDayEvents.length > 0 && (
-                    <div className="absolute top-0.5 left-0.5 right-0.5 flex flex-col gap-[2px] z-[20] pointer-events-auto">
-                      {multiDayEvents.map(({ ev }, idx) => {
-                        const hex = getHexColor(ev.categoryColor);
-                        return (
-                          <div 
-                            key={`allday-label-${ev.id}-${idx}`}
-                            onClick={(e: React.MouseEvent<HTMLDivElement>) => { e.stopPropagation(); onSelectEvent(ev); }}
-                            className="w-full rounded-[3px] px-1 py-[2px] text-[9px] sm:text-[10px] font-bold shadow-sm border-l-[3px] cursor-pointer truncate transition-transform hover:scale-[1.02] hover:z-50"
-                            style={{
-                              backgroundColor: getDynamicStyles(hex).bg,
-                              borderColor: hex,
-                              color: getDynamicStyles(hex).text || '#1f2937',
-                            }}
-                          >
-                            ★ {ev.title || 'Senza Titolo'}
-                          </div>
-                        );
-                      })}
+                    <div className="absolute top-0.5 left-0.5 right-0.5 z-[20] pointer-events-auto">
+                      <AllDayEventsGroup 
+                        events={multiDayEvents.map(m => m.ev)} 
+                        onSelectEvent={onSelectEvent} 
+                        limit={2} 
+                      />
                     </div>
                   )}
 

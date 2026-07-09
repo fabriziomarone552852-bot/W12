@@ -4,7 +4,7 @@ import { TruncatedTitle } from '@/components/shared/utils/TruncatedTitle';
 import { Pagination } from '@/components/shared/utils/Pagination';
 import { EmptyState } from '@/components/shared/utils/EmptyState';
 import { AddButton } from '@/components/shared/utils/AddButton';
-import { sortTasks } from '@/utils/taskUtils';
+import { filterAndSortTree, type UITask } from '@/utils/taskUtils';
 import { useConfirm } from '@/context/ConfirmContext';
 import { useAutoFitPagination } from '@/hooks/useAutoFitPagination';
 import { CalendarIcon, CalendarXIcon, SwitchIcon } from '@/components/shared/utils/Icons';
@@ -13,7 +13,7 @@ import { type TaskSummary } from '@/types';
 
 
 interface TaskColumnProps {
-  tasks: TaskSummary[];
+  tasks: UITask[];
   selectedDate?: Date; 
   onToggleTask: (id: number, e: React.MouseEvent) => void;
   onSelectTask: (task: TaskSummary) => void;
@@ -32,7 +32,7 @@ const TaskColumn: React.FC<TaskColumnProps> = ({ tasks, selectedDate, onToggleTa
 
   // Filtriamo solo per data/non data. Il sort vero e proprio lo fa taskUtils.ts!
   const filteredTasks = tasks.filter(task => showWithDeadline ? task.deadline !== 'Nessuna' : task.deadline === 'Nessuna');
-  const sortedTasks = sortTasks(filteredTasks, selectedDate ? 'priority' : sortMode);
+  const sortedTasks = filterAndSortTree(filteredTasks, false, selectedDate ? 'priority' : sortMode);
 
   const { 
     visibleItems: visibleTasks, 
@@ -45,6 +45,54 @@ const TaskColumn: React.FC<TaskColumnProps> = ({ tasks, selectedDate, onToggleTa
     setSortMode(prev => prev === 'chrono' ? 'priority' : 'chrono');
     setCurrentPage(1); 
   };
+
+  const renderTaskNode = (task: UITask, isSubtask: boolean = false) => (
+    <div key={task.id} className="flex flex-col gap-1 w-full">
+      <div 
+        onClick={() => onSelectTask(task)} 
+        className={`w-full flex items-center justify-between group cursor-pointer border h-16 px-3 rounded-xl shadow-sm hover:shadow-md transition-all gap-3 ${
+          isSubtask ? 'bg-gray-50/50 border-gray-100 ml-6 scale-[0.98]' : 'bg-gray-50 border-gray-200'
+        } hover:border-blue-300 hover:bg-white`}
+      >
+        <div className="flex items-center gap-3 flex-1 overflow-hidden min-w-0">
+          <input 
+            type="checkbox" checked={task.done} onChange={() => {}} 
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!task.done && task.hasActiveSubtasks) {
+                confirm({
+                  title: "Sottotask Incompiute",
+                  message: "Questa task principale presenta ancora delle sottotask non completate. Sei sicuro di volerla chiudere?",
+                  confirmText: "Conferma",
+                  isDestructive: false,
+                  onConfirm: () => onToggleTask(task.id, e) 
+                });
+              } else {
+                onToggleTask(task.id, e);
+              }
+            }}
+            className={`w-4 h-4 rounded border-gray-300 cursor-pointer flex-shrink-0 transition-colors ${task.done ? 'text-gray-500 accent-gray-500 focus:ring-gray-500' : 'text-blue-600 accent-blue-600 focus:ring-blue-500'}`}
+          />
+          <TruncatedTitle title={task.title} isDone={task.done} />
+        </div>
+
+        <Badge 
+            variant="priority" 
+            priorityLevel={task.done ? 'default' : task.priority}
+            className={`flex-shrink-0 ml-2 ${task.done ? 'opacity-50 grayscale' : ''}`}
+          >
+          {task.deadline}
+        </Badge>
+      </div>
+
+      {/* 🪄 Se ha dei sottotask, richiama se stessa rientrando verso destra! */}
+      {task.subtasks && task.subtasks.length > 0 && (
+        <div className="flex flex-col gap-1 mt-1 border-l-2 border-blue-100/50 ml-4 pl-2">
+          {task.subtasks.map(sub => renderTaskNode(sub, true))}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 h-[450px] xl:h-full w-full min-w-0 flex flex-col justify-between relative overflow-hidden">
@@ -78,7 +126,7 @@ const TaskColumn: React.FC<TaskColumnProps> = ({ tasks, selectedDate, onToggleTa
           </div>
         </div>
         
-        <div ref={listContainerRef} className="flex-1 min-h-0 overflow-hidden space-y-3 w-full min-w-0">
+        <div ref={listContainerRef} className="flex-1 min-h-0 overflow-y-auto space-y-3 w-full min-w-0">
           {visibleTasks.length === 0 ? (
             <EmptyState message={!selectedDate && !showWithDeadline ? "Nessuna idea o progetto in sospeso" : "Non ci sono task in programma"} />
           ) : (

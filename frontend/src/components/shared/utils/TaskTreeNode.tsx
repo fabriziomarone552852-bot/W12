@@ -1,38 +1,22 @@
-// src/components/dashboard/TaskTreeNode.tsx
-import React, { useMemo } from 'react';
-import type { Task, TaskSummary } from '@/types';
-import { formatToItalianShortDate } from '@/utils/dateUtils';
-import { getDeepEarliestDeadline } from '@/utils/taskUtils';
+// src/components/shared/utils/TaskTreeNode.tsx
+import React from 'react';
+import type { UITask } from '@/utils/taskUtils';
 
 interface TaskTreeNodeProps {
-  nodeId: number;
+  task: UITask; // 🪄 FIX 1: Riceve direttamente il nodo dell'albero! Niente più Map o ID.
   depth: number;
-  tasksById: Map<number, Task>;
-  tasksByParent: Map<number | null, Task[]>;
   selectedTaskId?: number;
   maxSubtaskDepth: number;
   onToggleTask: (taskId: number, isCurrentlyDone: boolean) => void;
-  onSelectTask: (task: TaskSummary) => void;
+  onSelectTask: (task: UITask) => void; 
   onAddSubtask?: (parentId: number) => void;
 }
 
 export const TaskTreeNode: React.FC<TaskTreeNodeProps> = ({
-  nodeId, depth, tasksById, tasksByParent, selectedTaskId, 
+  task, depth, selectedTaskId, 
   maxSubtaskDepth, onToggleTask, onSelectTask, onAddSubtask
 }) => {
-  const node = tasksById.get(nodeId);
-  if (!node) return null;
-
-  const sortedChildren = useMemo(() => {
-    const children = tasksByParent.get(nodeId) || [];
-    return [...children].sort((a, b) => {
-      const timeA = getDeepEarliestDeadline(a.id, tasksById, tasksByParent);
-      const timeB = getDeepEarliestDeadline(b.id, tasksById, tasksByParent);
-      return timeA - timeB;
-    });
-  }, [nodeId, tasksById, tasksByParent]);
-
-  const isSelected = selectedTaskId === nodeId;
+  const isSelected = selectedTaskId === task.id;
 
   return (
     <div className="w-full">
@@ -48,56 +32,39 @@ export const TaskTreeNode: React.FC<TaskTreeNodeProps> = ({
           
           <input 
             type="checkbox" 
-            checked={node.fatto}
-            onChange={() => onToggleTask(node.id, node.fatto)}
+            checked={task.done}
+            onChange={() => onToggleTask(task.id, task.done)}
             className="w-4 h-4 mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0 mr-2"
           />
 
           <div 
             className="flex-1 flex items-center justify-between gap-2 cursor-pointer" 
-            onClick={() => {
-              const formattedTask: TaskSummary = {
-                id: node.id,
-                title: node.titolo,
-                deadline: node.data_scadenza ? formatToItalianShortDate(node.data_scadenza) : 'Nessuna',
-                dateStr: node.data_scadenza || node.data_start || '',
-                done: node.fatto,
-                priority: node.priorita,
-                category: node.category?.name || node.category_name || 'Generico',
-                categoryColor: node.category?.colore || '#9CA3AF',
-                description: node.descrizione || '',
-                location: node.luogo || '',
-                parent_id: node.parent_id
-              };
-              onSelectTask(formattedTask);
-            }}
+            onClick={() => onSelectTask(task)} // 🪄 FIX 2: Passiamo direttamente il task! È già formattato in taskUtils.
           >
             <span className={`break-words flex-1 min-w-0 ${
-              node.fatto ? "line-through text-gray-400" : isSelected ? "font-extrabold text-gray-900" : "text-gray-700"
+              task.done ? "line-through text-gray-400" : isSelected ? "font-extrabold text-gray-900" : "text-gray-700"
             }`}>
-              {node.titolo}
+              {task.title}
             </span>
             
-            {node.data_scadenza && (
+            {task.deadline !== 'Nessuna' && (
               <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 whitespace-nowrap ${
-                node.fatto ? 'bg-gray-100 text-gray-400' : 'text-red-500'
+                task.done ? 'bg-gray-100 text-gray-400' : 'text-red-500'
               }`}>
-                {formatToItalianShortDate(node.data_scadenza)}
+                {task.deadline}
               </span>
             )}
           </div>
         </div>
 
         {/* PULSANTE "+" */}
-        {/* Modifica 1: depth < maxSubtaskDepth - 1 (Es. se max è 3, si ferma quando depth è 2) */}
         {depth < maxSubtaskDepth - 1 && (
           <div 
-            /* Modifica 2: Usato "hidden" di base, e "group-hover:flex" al passaggio del mouse */
             className="hidden group-hover:flex py-1 items-center gap-1.5 text-xs font-bold text-gray-400 hover:text-blue-600 cursor-pointer"
             style={{ paddingLeft: `${12 + ((depth + 1) * 16)}px` }}
             onClick={(e) => {
               e.stopPropagation(); 
-              if (onAddSubtask) onAddSubtask(node.id);
+              if (onAddSubtask) onAddSubtask(task.id);
             }}
           >
             <span className="text-lg leading-none mt-[-2px]">+</span> Aggiungi sottotask
@@ -105,14 +72,12 @@ export const TaskTreeNode: React.FC<TaskTreeNodeProps> = ({
         )}
       </div>
 
-      {/* RENDER RICORSIVO DEI FIGLI */}
-      {sortedChildren.map((child: Task) => (
+      {/* 🪄 FIX 3: RENDER RICORSIVO DEI FIGLI ESTREMAMENTE SEMPLIFICATO */}
+      {task.subtasks && task.subtasks.map((child: UITask) => (
         <TaskTreeNode 
           key={child.id}
-          nodeId={child.id}
+          task={child}             // Passiamo direttamente l'oggetto figlio
           depth={depth + 1}
-          tasksById={tasksById}
-          tasksByParent={tasksByParent}
           selectedTaskId={selectedTaskId}
           maxSubtaskDepth={maxSubtaskDepth}
           onToggleTask={onToggleTask}

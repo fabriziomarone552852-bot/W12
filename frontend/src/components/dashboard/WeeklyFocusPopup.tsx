@@ -68,7 +68,7 @@ const WeeklyFocusPopup: React.FC<WeeklyFocusPopupProps> = ({
         </p>
       </div>
       
-      <div className="flex-1 overflow-y-auto bg-gray-950 relative custom-scrollbar">
+      <div className="flex-1 z-[100] overflow-visible bg-gray-950 relative custom-scrollbar">
         <div className="relative w-full" style={{ height: totalHeight }}>
           {Array.from({ length: 24 }).map((_, h) => (
               <div key={h} className={`absolute w-full flex border-t border-gray-900/40 transition-colors ${highlightedHours.has(h) ? 'bg-blue-900/20' : ''}`} style={{ top: hourY[h], height: expandedHours.has(h) ? 96 : 24 }}>
