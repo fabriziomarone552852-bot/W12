@@ -101,5 +101,9 @@ export function useDailyEntryMutations<T extends CacheWithDailyEntries>(queryKey
     },
   });
 
-  return { saveDailyEntry: saveEntryMutation.mutate };
+  return { 
+    saveDailyEntry: saveEntryMutation.mutate, 
+    saveDailyEntryAsync: saveEntryMutation.mutateAsync 
+  };
+  
 }

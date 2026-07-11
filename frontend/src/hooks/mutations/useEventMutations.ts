@@ -119,7 +119,11 @@ export function useEventMutations<T extends CacheWithEvents>(queryKey: QueryKey)
       console.error("Errore eliminazione evento:", err);
       if (context?.previousData) queryClient.setQueryData(queryKey, context.previousData);
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ['events'] })
+    onSettled: () => {
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === 'daySync' });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === 'weekSync' });
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+    }
   });
 
   return {

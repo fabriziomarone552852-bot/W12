@@ -3,15 +3,21 @@ import AppRouter from '@/router/AppRouter';
 import { ConfirmProvider } from '@/context/ConfirmContext';
 import { DayProvider } from '@/context/DayContext';
 import { TaskModalProvider } from '@/context/TaskModalContext';
+import { EventModalProvider } from '@/context/EventModalContext';
 
 function App() {
   return (
     <AuthProvider>
       <ConfirmProvider>
         <DayProvider>
-          <TaskModalProvider>
-            <AppRouter />
-          </TaskModalProvider>
+          {/* 🪄 Inseriamo il nuovo provider qui */}
+          <EventModalProvider>
+            <TaskModalProvider>
+              
+              <AppRouter />
+              
+            </TaskModalProvider>
+          </EventModalProvider>
         </DayProvider>
       </ConfirmProvider>
     </AuthProvider>

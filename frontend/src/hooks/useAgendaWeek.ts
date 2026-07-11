@@ -26,9 +26,21 @@ export const useAgendaWeek = (mondayStr: string, sundayStr: string) => {
   // 1. FETCH DATI DELLA SETTIMANA
   const { data: weekData, isLoading, isError } = useQuery({
     queryKey,
-    queryFn: async () => {
+    queryFn: async (): Promise<SyncWeekResponse> => {
       const rawData = await api.get(`/sync/week?start_date=${mondayStr}&end_date=${sundayStr}`);
-      return rawData as SyncWeekResponse;
+      
+      // 🪄 FIX: Spargiamo prima i dati grezzi per ereditare start_date e end_date,
+      // poi mettiamo in sicurezza tutti gli array e gli oggetti possibili!
+      return {
+        ...rawData,
+        tasks: rawData?.tasks ?? [],
+        events: rawData?.events ?? [],
+        note: rawData?.note ?? [],
+        obiettivo_settimanale: rawData?.obiettivo_settimanale ?? null,
+        priorita_settimanali: rawData?.priorita_settimanali ?? [],
+        eventi_positivi: rawData?.eventi_positivi ?? [],
+        eventi_negativi: rawData?.eventi_negativi ?? []
+      };
     },
     staleTime: 5 * 60 * 1000,
   });

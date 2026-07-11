@@ -56,7 +56,6 @@ const DayPage: React.FC = () => {
     dayData, 
     isLoading, 
     toggleTask, 
-    deleteEvent, 
     saveNote, 
     deleteNote,
     updateHabitLog,
@@ -246,7 +245,6 @@ const DayPage: React.FC = () => {
               events={mappedEvents} 
               targetDate={targetDate} 
               targetDateStr={targetDateStr} 
-              deleteEvent={deleteEvent} 
             />
           </div>
 

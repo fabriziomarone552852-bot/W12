@@ -268,3 +268,10 @@ export const mapDbEventsToCalendarEvents = (
     return acc;
   }, []);
 };
+
+export const formatHoverTime = (start?: string, end?: string): string => {
+  if (start && end) return `${start} → ${end}`;
+  if (!start && end) return `→ ${end}`;
+  if (start && !end) return `${start}`;
+  return '';
+};

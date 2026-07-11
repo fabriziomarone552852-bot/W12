@@ -112,7 +112,7 @@ export const useMoodEvents = (mondayStr: string, sundayStr: string) => {
     negativeEvents: data?.negative ?? [],
     isLoadingMoods: isLoading,
     addMood: (type: MoodEventType, text: string) => 
-      addMoodMutation.mutate({ tipo: type, testo: text, data_riferimento: mondayStr }),
+      addMoodMutation.mutateAsync({ tipo: type, testo: text, data_riferimento: mondayStr }),
     updateMood: (id: number, title: string) => 
       updateMoodMutation.mutate({ id, title }),
     deleteMood: (id: number) => 

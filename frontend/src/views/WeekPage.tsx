@@ -9,15 +9,12 @@ import NotesSidebar from '@/components/day/NotesSidebar';
 import { SharedAgendaHeader } from '@/components/shared/SharedAgendaHeader';
 import MoodEventsBoard from '@/components/weekmonth/MoodEventsBoard';
 
-// --- IMPORT MODALI ---
-import EventDetailModal from '@/components/shared/events/EventDetailModal';
-import EventNewModal from '@/components/shared/events/EventNewModal';
-
 // --- TIPI ---
 import type { DbTask, CalendarEvent, TaskSummary, NoteItem, NoteVariant, LocalNoteEntry, DbEvent } from '@/types'; 
 import { isNoteVariant } from '@/types';
 import { useAgendaWeek } from '@/hooks/useAgendaWeek'; 
 import { useTaskModals } from '@/context/TaskModalContext';
+import { useEventModals } from '@/context/EventModalContext';
 import { useEventMutations } from '@/hooks/mutations/useEventMutations';
 import { useMoodEvents } from '@/hooks/useMoodEvents';
 import { useDay } from '@/context/DayContext';
@@ -32,6 +29,7 @@ const WeekPage: React.FC = () => {
 
   // --- STATO DELLA DATA ---
   const { dataRiferimento: targetDate, changeDate: setTargetDate } = useDay();
+  const today = useMemo(() => new Date(), []);
   
   const monday = getMonday(targetDate);
   const sunday = getSunday(targetDate);
@@ -57,12 +55,8 @@ const WeekPage: React.FC = () => {
   const [isNotesOpen, setIsNotesOpen] = useState<boolean>(false);
   const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
   
-  // Modali Eventi
-  const eventDetailModal = useModal<CalendarEvent>();
-  const eventFormModal = useModal<{ eventToEdit: CalendarEvent | null; initialDate: string | null }>();
-
-  const { deleteEvent } = useEventMutations<{ events: DbEvent[] }>(['weekSync', mondayStr]);
   const { openTaskDetail } = useTaskModals(); 
+  const { openEventDetail } = useEventModals();
 
   // --- HANDLERS DATA ---
   const handlePrevWeek = (): void => {
@@ -217,7 +211,7 @@ const WeekPage: React.FC = () => {
              variant="detailed"    
              onDayClick={handleGoToDay}
              onToggleTask={handleToggleTaskFromGrid}
-             onSelectEvent={(ev) => eventDetailModal.open(ev)}
+             onSelectEvent={(ev: CalendarEvent) => openEventDetail(ev)}
              onSelectTask={(task) => {
                const summary = mappedTasks.find(t => t.id === task.id);
                if (summary) openTaskDetail(summary);
@@ -245,37 +239,6 @@ const WeekPage: React.FC = () => {
         onAutoSaveNote={handleAutoSaveNote}
         onDeleteNote={handleDeleteNote}
         clearEditingNoteId={() => setEditingNoteId(null)}
-      />
-
-      {/* ================= MODALI EVENTO ================= */}
-      {/* MODALI EVENTO */}
-      <EventDetailModal
-        isOpen={eventDetailModal.isOpen}
-        onClose={eventDetailModal.close}
-        selectedEvent={eventDetailModal.data} 
-        onEditClick={() => {
-          // Apriamo il form passandogli i dati, e chiudiamo il dettaglio
-          eventFormModal.open({ eventToEdit: eventDetailModal.data!, initialDate: null });
-          eventDetailModal.close(); 
-        }}
-        onDeleteClick={async () => { 
-          const idReale = eventDetailModal.data?.originalId;
-          if (idReale) {
-            deleteEvent(idReale); 
-            eventDetailModal.close();
-          }
-        }}
-      />
-
-      {/* Creazione/Modifica Evento */}
-      <EventNewModal
-        isOpen={eventFormModal.isOpen}
-        onClose={eventFormModal.close}
-        initialDate={eventFormModal.data?.initialDate} 
-        eventToEdit={eventFormModal.data?.eventToEdit}
-        onEventSaved={() => { 
-          eventFormModal.close(); 
-        }}
       />
 
     </div>

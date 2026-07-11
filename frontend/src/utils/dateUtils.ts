@@ -157,3 +157,24 @@ export const getLocalTodayStr = () => {
     const day = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   };
+
+  export const generateWeeksGrid = (
+  firstDayIdx: number, 
+  daysInMo: number
+): (number | null)[][] => {
+  const cells: (number | null)[] = [
+    ...Array(firstDayIdx).fill(null),
+    ...Array.from({ length: daysInMo }, (_, i) => i + 1)
+  ];
+  
+  while (cells.length % 7 !== 0) {
+    cells.push(null);
+  }
+  
+  const weeks: (number | null)[][] = [];
+  for (let i = 0; i < cells.length; i += 7) {
+    weeks.push(cells.slice(i, i + 7));
+  }
+  
+  return weeks;
+};

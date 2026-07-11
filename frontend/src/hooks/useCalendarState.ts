@@ -1,5 +1,5 @@
 // src/hooks/useCalendarState.ts
-import { useState, type Dispatch, type SetStateAction } from 'react';
+import { useState } from 'react';
 import { pad, getDaysInMonth, getFirstDayIndex, getMondayOfCurrentWeek } from '@/utils/dateUtils';
 
 export function useCalendarState() {
@@ -14,8 +14,6 @@ export function useCalendarState() {
   const [currentWeekDate, setCurrentWeekDate] = useState<Date>(today);
 
   const [isSelectingDate, setIsSelectingDate] = useState(false);
-  
-  // RIMOSSI: pickerYear e pickerMonthDate (ora li gestisce DatePicker)
 
   const monthYear = currentMonthDate.getFullYear();
   const monthIndex = currentMonthDate.getMonth();
