@@ -1,7 +1,7 @@
 // src/components/day/CountdownNewModal.tsx
 import React, { useState, useEffect } from 'react';
 import type { CountdownItem } from '@/components/day/CountdownWidget';
-import DatePicker from '@/components/shared/utils/DatePicker';
+import DatePicker from '@/components/shared/utils/DatePicker/DatePicker';
 import TimeInput from '@/components/shared/utils/TimeInput'; 
 import { combineDateAndTime, pad } from '@/utils/dateUtils'; 
 import BaseModal from '@/components/shared/dialog/BaseModal';

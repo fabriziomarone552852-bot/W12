@@ -1,6 +1,6 @@
 // src/components/shared/utils/RecurrenceEditor.tsx
 import React, { useState } from 'react';
-import DatePicker from './DatePicker'; 
+import DatePicker from './DatePicker/DatePicker';
 import { CloseFillIcon } from './Icons';
 
 interface RecurrenceEditorProps {

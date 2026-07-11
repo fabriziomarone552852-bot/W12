@@ -1,7 +1,7 @@
 // src/components/day/RoutineNewModal.tsx
 import React, { useState, useEffect } from 'react';
 import type { RoutineItem } from '@/components/day/RoutineColumn';
-import DatePicker from '@/components/shared/utils/DatePicker'; 
+import DatePicker from '@/components/shared/utils/DatePicker/DatePicker'; 
 import { getLocalDateString } from '@/utils/dateUtils'; 
 import { parseRRule, buildRRule } from '@/utils/rruleUtils'; 
 import BaseModal from '@/components/shared/dialog/BaseModal';

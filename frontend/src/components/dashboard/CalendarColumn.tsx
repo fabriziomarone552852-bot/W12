@@ -3,9 +3,11 @@ import React, { useEffect } from 'react';
 import { useCalendarState } from '@/hooks/useCalendarState';
 import CalendarHeader from '@/components/dashboard/calendar/CalendarHeader';
 import MonthGrid from '@/components/dashboard/calendar/MonthGrid';
-import WeekGrid from '@/components/dashboard/calendar/WeekGrid';
 import { PlusIcon } from '@/components/shared/utils/Icons';
 import type { DbTask, CalendarEvent } from '@/types';
+
+import WeekGridClassic from '@/components/dashboard/calendar/WeekGridClassic';
+import WeekGridDetailed from '@/components/weekmonth/WeekGridDetailed';
 
 interface CalendarColumnProps {
   events: CalendarEvent[];
@@ -64,23 +66,32 @@ const CalendarColumn: React.FC<CalendarColumnProps> = ({
           onDayClick={onDayClick} 
           onAddEventClick={onAddEventClick} 
         />
-      ) : (
-        <WeekGrid 
+      ) : variant === 'detailed' ? (
+        <WeekGridDetailed 
           state={state} 
           events={events} 
           tasks={tasks}
           onDayClick={onDayClick} 
           onSelectEvent={onSelectEvent} 
-          variant={variant}
           onSelectTask={onSelectTask}
           onToggleTask={onToggleTask}
+        />
+      ) : (
+        <WeekGridClassic 
+          state={state} 
+          events={events} 
+          onDayClick={onDayClick} 
+          onSelectEvent={onSelectEvent} 
         />
       )}
 
       {state.view === 'Mese' && !hideHeader && (
-        <div className="absolute bottom-2.5 right-7 z-40 pointer-events-none">
+        <div className="absolute bottom-2.5 right-7 z-[100]">
           <button 
-            onClick={() => onAddEventClick && onAddEventClick()}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddEventClick && onAddEventClick()}
+            }
             className="px-5 py-1.5 bg-white border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 active:scale-95 transition-all flex justify-center items-center font-bold text-sm gap-2 pointer-events-auto"
           >
             <PlusIcon className="h-5 w-5" />

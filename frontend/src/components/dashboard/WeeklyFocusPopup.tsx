@@ -1,5 +1,5 @@
 // src/components/dashboard/WeeklyFocusPopup.tsx
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import type { CalendarEvent } from '@/types';
 import { getHexColor, getDynamicStyles } from '@/utils/uiUtils';
 import { pad } from '@/utils/dateUtils';
@@ -19,34 +19,33 @@ const WeeklyFocusPopup: React.FC<WeeklyFocusPopupProps> = ({
   dayNameShort, dayNum, monthNum, rawDayEvents, popupRect, onSelectEvent, closePopup 
 }) => {
   
-  // 1. Calcolo degli eventi (Intatto dal secondo codice)
   const { totalHeight, hourY, expandedHours, highlightedHours, overlayEvents } = useMemo(() => {
     return calculateDailyEventLayout(rawDayEvents);
   }, [rawDayEvents]);
 
-  // 2. NUOVO: Stato per memorizzare la coordinata X "sicura"
-  const [safeLeft, setSafeLeft] = useState<number>(0);
+  // 🪄 LA TUA INTUIZIONE: Posizionamento intelligente (Sincrono e a prova di bomba)
+  const positionStyles = useMemo(() => {
+    // clientWidth ignora la scrollbar
+    const screenWidth = typeof document !== 'undefined' ? document.documentElement.clientWidth : 1200;
+    
+    // Controlliamo se la colonna è nella metà destra dello schermo
+    const isRightHalf = popupRect.left > (screenWidth / 2);
 
-  // 3. INTEGRAZIONE: Calcoliamo lo spazio per non uscire dallo schermo
-  useEffect(() => {
-    // La larghezza del nostro popup è 26rem, che equivale a 416px. 
-    // La metà è 208px. Arrotondiamo a 216px per avere un piccolo margine di respiro (padding).
-    const POPUP_HALF_WIDTH = 216; 
-    const MARGIN = 16; // 16px di distanza minima dal bordo del browser
-
-    // Questo è il punto in cui il popup VORREBBE stare (al centro della colonna)
-    const idealCenter = popupRect.left + (popupRect.width / 2);
-
-    // Calcoliamo i confini massimi oltre i quali non può andare
-    // maxCenter = impedisce di uscire a destra (Domenica)
-    // minCenter = impedisce di uscire a sinistra (Lunedì)
-    const maxCenter = window.innerWidth - POPUP_HALF_WIDTH - MARGIN;
-    const minCenter = POPUP_HALF_WIDTH + MARGIN;
-
-    // MAGIA MATEMATICA: Math.min lo ferma prima del bordo destro, Math.max lo ferma prima del bordo sinistro.
-    const clampedCenter = Math.max(minCenter, Math.min(idealCenter, maxCenter));
-
-    setSafeLeft(clampedCenter);
+    if (isRightHalf) {
+      // Domenica, Sabato, ecc -> Lo ancoriamo a destra, si apre verso sinistra
+      return {
+        right: screenWidth - (popupRect.left + popupRect.width), // Allineato al bordo destro della colonna
+        left: 'auto',
+        transform: 'none'
+      };
+    } else {
+      // Lunedì, Martedì, ecc -> Lo ancoriamo a sinistra, si apre verso destra
+      return {
+        left: popupRect.left, // Allineato al bordo sinistro della colonna
+        right: 'auto',
+        transform: 'none'
+      };
+    }
   }, [popupRect]);
 
   return (
@@ -56,8 +55,7 @@ const WeeklyFocusPopup: React.FC<WeeklyFocusPopupProps> = ({
         top: '5vh', 
         height: '90vh', 
         width: '26rem', 
-        left: safeLeft || popupRect.left, // Usiamo la X sicura calcolata
-        transform: 'translateX(-50%)' 
+        ...positionStyles // 🪄 Applichiamo la nostra magia qui!
       }}
       onClick={(e) => e.stopPropagation()} 
     >

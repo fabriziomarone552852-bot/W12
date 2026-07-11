@@ -3,7 +3,7 @@ import React from 'react';
 import type { CalendarState } from '@/hooks/useCalendarState';
 import { nomiMesiLungo, pad } from '@/utils/dateUtils';
 import { BackIcon, ForwardIcon } from '@/components/shared/utils/Icons';
-import DatePicker from '@/components/shared/utils/DatePicker';
+import DatePicker from '@/components/shared/utils/DatePicker/DatePicker';
 
 interface CalendarHeaderProps {
   state: CalendarState;

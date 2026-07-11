@@ -1,8 +1,8 @@
 // src/components/dashboard/EventNewModal.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { type Category, CategoryGenre, type DbEvent } from '@/types';
 import type { CalendarEvent } from '@/types';
-import DatePicker from '@/components/shared/utils/DatePicker';
+import DatePicker from '@/components/shared/utils/DatePicker/DatePicker';
 import { getLocalDateString, smontaOrario, formatTimeToServer } from '@/utils/dateUtils'; 
 import CategorySelect from '@/components/shared/utils/CategorySelect';
 import BaseModal from '@/components/shared/dialog/BaseModal';
@@ -36,6 +36,20 @@ interface EventFormState {
   tutto_il_giorno: boolean;
 }
 
+interface EventPayload {
+  id?: number;
+  titolo: string;
+  descrizione: string | null;
+  data_inizio: string;
+  data_fine: string | null;
+  tutto_il_giorno: boolean;
+  category_id?: number;
+  luogo: string | null;
+  rrule: string | null;
+}
+
+const UNIQUE_FORM_ID = "unique-calendar-event-form";
+
 const NewEventModal: React.FC<NewEventModalProps> = ({ 
   isOpen, onClose, eventToEdit, initialDate, onEventSaved
 }) => {
@@ -55,6 +69,7 @@ const NewEventModal: React.FC<NewEventModalProps> = ({
   });
 
   const {confirm} = useConfirm();
+  const dynamicFormId = useMemo(() => `event-form-${Math.random().toString(36).substring(2, 9)}`, []);
 
   // Gestione calendari a comparsa (il nostro DatePicker)
   const [activeDatePicker, setActiveDatePicker] = useState<'start' | 'end' | 'until' | null>(null);
@@ -104,7 +119,7 @@ const NewEventModal: React.FC<NewEventModalProps> = ({
     }
   }, [isOpen, eventToEdit, initialDate]);
 
-  const handleSalvaNuovoEvento = async (e: React.FormEvent) => {
+  const handleSalvaNuovoEvento = async (e: React.FormEvent): Promise<void> => {
   e.preventDefault();
   
   // 1. OTTIMA UX: Accendiamo il caricamento
@@ -140,7 +155,7 @@ const NewEventModal: React.FC<NewEventModalProps> = ({
 
   const veroId = eventToEdit ? Number(String(eventToEdit.id).split('-')[0]) : undefined;
 
-  const pacchettoPerIlServer = {
+  const pacchettoPerIlServer: EventPayload = {
       id: veroId, 
       titolo: newEventForm.titolo,
       descrizione: newEventForm.descrizione || null,
@@ -179,13 +194,13 @@ const NewEventModal: React.FC<NewEventModalProps> = ({
         onClose={onClose}
         title={eventToEdit ? 'Modifica Evento' : 'Nuovo Evento'}
         maxWidthClass="max-w-xl" // Usiamo max-w-xl per far respirare i controlli orari/date
-        formId="event-form"
+        formId={dynamicFormId}
         confirmText={eventToEdit ? 'Aggiorna Evento' : 'Salva Evento'}
         isLoading={isSaving}
         isConfirmDisabled={!newEventForm.titolo.trim()}
         overflowVisible={true}
       >
-        <form id="event-form" onSubmit={handleSalvaNuovoEvento} className="space-y-4">
+        <form id={dynamicFormId} onSubmit={handleSalvaNuovoEvento} className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Titolo Evento</label>
               <input type="text" required placeholder="Es. Visita Medica, Riunione..." value={newEventForm.titolo} onChange={(e) => setNewEventForm({...newEventForm, titolo: e.target.value})} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500" />

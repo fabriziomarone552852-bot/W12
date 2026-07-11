@@ -1,9 +1,9 @@
 // src/components/shared/TaskNewModal.tsx
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { type Task, CategoryGenre } from '@/types';
-import { type TaskSummary } from '@/types';
-import DatePicker from '@/components/shared/utils/DatePicker'; 
+import { CategoryGenre } from '@/types';
+import type { TaskSummary, DbTask } from '@/types';
+import DatePicker from '@/components/shared/utils/DatePicker/DatePicker'; 
 import CategorySelect from '@/components/shared/utils/CategorySelect'; 
 import BaseModal from '@/components/shared/dialog/BaseModal';
 import { useConfirm } from '@/context/ConfirmContext';
@@ -20,13 +20,13 @@ interface TaskNewModalProps {
   onClose: () => void;
   taskToEdit?: TaskSummary | null;
   initialParentId?: number | null;
-  onTaskSaved?: (savedTask?: Task) => void;
+  onTaskSaved?: (savedTask?: DbTask) => void;
 }
 
 // ✅ AGGIUNTO onTaskSaved ALLE PROPS DEL COMPONENTE
 const TaskNewModal: React.FC<TaskNewModalProps> = ({ isOpen, onClose, taskToEdit, initialParentId, onTaskSaved }) => {
   const {  user } = useAuth();
-  const { saveTask } = useTaskMutations<{ tasks: Task[] }>(['tasks']);  
+  const { saveTask } = useTaskMutations<{ tasks: DbTask[] }>(['tasks']);
   const [isSaving, setIsSaving] = useState(false);
   const { dbCategories } = useCategories();
 
@@ -64,15 +64,15 @@ const TaskNewModal: React.FC<TaskNewModalProps> = ({ isOpen, onClose, taskToEdit
       if (taskToEdit) {
         // 🪄 MAGIA: Invece di fidarci della data formattata (es. "15 Ago"), 
         // peschiamo il task grezzo originale dalla cache!
-        const cachedTasks = queryClient.getQueryData<{items?: Task[]} | Task[]>(['tasks']);
-        let rawTasks: Task[] = [];
+        const cachedTasks = queryClient.getQueryData<{items?: DbTask[]} | DbTask[]>(['tasks']);
+        let rawTasks: DbTask[] = [];
         if (Array.isArray(cachedTasks)) rawTasks = cachedTasks;
         else if (cachedTasks?.items) rawTasks = cachedTasks.items;
         
         // Se non c'è in cache, usiamo la variabile locale
         if (rawTasks.length === 0) rawTasks = tasks; 
         
-        const rawTask = rawTasks.find((t: Task) => t.id === taskToEdit.id);
+        const rawTask = rawTasks.find((t: DbTask) => t.id === taskToEdit.id);
         
         // Helper per sicurezza: controlliamo che una stringa sia YYYY-MM-DD
         const isIsoDate = (d?: string) => d && /^\d{4}-\d{2}-\d{2}/.test(d);
@@ -135,7 +135,7 @@ const TaskNewModal: React.FC<TaskNewModalProps> = ({ isOpen, onClose, taskToEdit
       const categoriaScelta = dbCategories.find(c => c.name === newTaskForm.category);
       const categoryId = categoriaScelta ? Number(categoriaScelta.id) : undefined;
 
-      const pacchettoPerIlServer: Partial<Task> = {
+      const pacchettoPerIlServer: Partial<DbTask> = {
         titolo: newTaskForm.titolo,
         descrizione: newTaskForm.descrizione || null,
         data_start: newTaskForm.data_start,
@@ -146,7 +146,7 @@ const TaskNewModal: React.FC<TaskNewModalProps> = ({ isOpen, onClose, taskToEdit
         parent_id: newTaskForm.parent_id ? Number(newTaskForm.parent_id) : null
       };
 
-      let savedTask: Task | undefined;
+      let savedTask: DbTask | undefined;
 
       if (taskToEdit) {
         savedTask = await saveTask({ ...pacchettoPerIlServer, id: taskToEdit?.id }); 
@@ -223,7 +223,7 @@ const TaskNewModal: React.FC<TaskNewModalProps> = ({ isOpen, onClose, taskToEdit
           {isSubtaskPanelOpen && newTaskForm.parent_id && (
             <div className="mt-2 text-xs font-bold text-blue-600 flex items-start gap-1">
               <CheckCircleIcon className="h-4 w-4 shrink-0" />
-               <span className="break-words">Collegata a: {tasks.find((t: Task) => t.id.toString() === newTaskForm.parent_id)?.titolo}</span>
+               <span className="break-words">Collegata a: {tasks.find((t: DbTask) => t.id.toString() === newTaskForm.parent_id)?.titolo}</span>
             </div>
           )}
         </div>

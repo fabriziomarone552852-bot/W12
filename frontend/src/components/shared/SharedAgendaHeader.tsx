@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BackIcon, ForwardIcon, UndoIcon } from '@/components/shared/utils/Icons';
-import DatePicker from '@/components/shared/utils/DatePicker'; // <-- IL TUO COMPONENTE
+import DatePicker from '@/components/shared/utils/DatePicker/DatePicker';
 import { formatDateString } from '@/utils/dateUtils';
 
 interface SharedAgendaHeaderProps {
