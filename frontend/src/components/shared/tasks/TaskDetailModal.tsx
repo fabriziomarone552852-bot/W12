@@ -10,7 +10,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useApi } from '@/hooks/useApi';
 import { useAuth } from '@/context/AuthContext';
 import { TaskTreeNode } from '../utils/TaskTreeNode';
-import { buildTaskTree, type UITask } from '@/utils/taskUtils';
+import { buildTaskTree } from '@/utils/taskUtils';
+import type { UITask } from '@/types';
 import { formatToItalianShortDate } from '@/utils/dateUtils';
 
 interface TaskDetailModalProps {
@@ -28,7 +29,7 @@ interface TaskDetailModalProps {
 const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ 
   isOpen, onClose, selectedTask, onToggleTask, onSelectTask, onEditClick, onAddSubtask, onTaskDeleted
 }) => {
-  const { toggleTask, deleteTask } = useTaskMutations<{ tasks: DbTask[] }>(['tasks']);
+  const { toggleTask, deleteTask } = useTaskMutations(['tasks']);
   const api = useApi();
   const { confirm } = useConfirm();
   const { user } = useAuth();

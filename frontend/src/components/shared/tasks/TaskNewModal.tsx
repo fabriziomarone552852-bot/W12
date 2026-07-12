@@ -26,7 +26,7 @@ interface TaskNewModalProps {
 // ✅ AGGIUNTO onTaskSaved ALLE PROPS DEL COMPONENTE
 const TaskNewModal: React.FC<TaskNewModalProps> = ({ isOpen, onClose, taskToEdit, initialParentId, onTaskSaved }) => {
   const {  user } = useAuth();
-  const { saveTask } = useTaskMutations<{ tasks: DbTask[] }>(['tasks']);
+  const { saveTask } = useTaskMutations(['tasks']);
   const [isSaving, setIsSaving] = useState(false);
   const { dbCategories } = useCategories();
 

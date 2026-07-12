@@ -35,15 +35,15 @@ export const SharedAgendaHeader: React.FC<SharedAgendaHeaderProps> = ({
   };
 
   return (
-    <div className="xl:w-1/4 flex flex-col justify-center items-center relative py-2 z-30">
+    <div className="flex flex-col justify-center items-center relative py-2 z-30 shrink-0">
       <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-1">Agenda</h2>
       
-      <div className="flex items-center justify-center gap-3 w-full relative z-40">
+      <div className="flex items-center justify-between w-[340px] mx-auto relative z-40">
         <button onClick={onPrev} className="text-blue-600 hover:text-blue-800 transition-transform hover:-translate-x-1 focus:outline-none p-1 z-50 bg-transparent">
           <BackIcon className="w-8 h-8" />
         </button>
         
-        <div className="relative flex justify-center">
+        <div className="flex-1 flex justify-center min-w-0 px-2">
           {/* USIAMO IL TUO DATEPICKER! */}
           <DatePicker
             value={formatDateString(currentDate)} 
@@ -54,8 +54,8 @@ export const SharedAgendaHeader: React.FC<SharedAgendaHeaderProps> = ({
             align="center" 
             selectionMode={viewMode} // <-- "day" o "week" passato dalla pagina genitore
             customTrigger={
-              <div className="text-center flex items-center justify-center py-1 px-3">
-                <h1 className="text-3xl xl:text-4xl font-extrabold text-gray-900 uppercase cursor-pointer hover:text-blue-600 transition-colors select-none text-center whitespace-nowrap min-w-[120px]">
+              <div className="text-center flex items-center justify-center py-1 overflow-hidden w-full">
+                <h1 className="text-3xl xl:text-4xl font-extrabold text-gray-900 uppercase cursor-pointer hover:text-blue-600 transition-colors select-none text-center truncate">
                   {title}
                 </h1>
               </div>
@@ -63,7 +63,7 @@ export const SharedAgendaHeader: React.FC<SharedAgendaHeaderProps> = ({
           />
         </div>
         
-        <button onClick={onNext} className="text-blue-600 hover:text-blue-800 transition-transform hover:translate-x-1 focus:outline-none p-1 z-50 bg-transparent">
+        <button onClick={onNext} className="text-blue-600 hover:text-blue-800 transition-transform hover:translate-x-1 focus:outline-none p-1 z-50 bg-transparent shrink-0">
           <ForwardIcon className="w-8 h-8" />
         </button>
       </div>

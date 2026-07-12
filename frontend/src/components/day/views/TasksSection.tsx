@@ -1,7 +1,7 @@
 // src/components/day/views/TasksSection.tsx
 import React from 'react';
 import TaskColumn from '@/components/shared/tasks/TaskColumn';
-import type { UITask } from '@/utils/taskUtils';
+import type { UITask } from '@/types';
 import { useTaskModals } from '@/context/TaskModalContext';
 
 interface TasksSectionProps {

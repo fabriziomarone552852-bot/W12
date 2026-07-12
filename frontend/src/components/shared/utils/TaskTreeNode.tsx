@@ -1,6 +1,6 @@
 // src/components/shared/utils/TaskTreeNode.tsx
 import React from 'react';
-import type { UITask } from '@/utils/taskUtils';
+import type { UITask } from '@/types';
 import { formatToItalianShortDate } from '@/utils/dateUtils';
 
 interface TaskTreeNodeProps {

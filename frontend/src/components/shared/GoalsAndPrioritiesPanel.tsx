@@ -1,5 +1,5 @@
 // frontend/src/components/shared/GoalsAndPrioritiesPanel.tsx
-import React from 'react';
+import React, { memo } from 'react';
 import { SmartObiettivoTextarea } from '@/components/day/utils/SmartObiettivoTextarea';
 import type { DailyEntry } from '@/types';
 
@@ -7,7 +7,6 @@ interface GoalsAndPrioritiesPanelProps {
   goalTitle: string;
   prioritiesTitle: string;
   dateKey: string;
-  // Aggiungiamo | null qui e anche per le priorità
   goalEntry?: DailyEntry | null; 
   prioritiesEntries?: (DailyEntry | null)[] | null; 
   onSaveGoal: (text: string) => void;
@@ -69,4 +68,4 @@ export const GoalsAndPrioritiesPanel: React.FC<GoalsAndPrioritiesPanelProps> = (
   );
 };
 
-export default GoalsAndPrioritiesPanel;
+export default memo(GoalsAndPrioritiesPanel);
