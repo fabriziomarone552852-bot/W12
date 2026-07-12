@@ -18,7 +18,7 @@ export const useAgendaWeek = (mondayStr: string, sundayStr: string) => {
   const api = useApi();
   const queryKey = ['weekSync', mondayStr];
 
-  const taskMutations = useTaskMutations<SyncWeekResponse>(queryKey);
+  const taskMutations = useTaskMutations(['tasks']);
   const noteMutations = useNoteMutations<SyncWeekResponse>(queryKey);
   const entryMutations = useDailyEntryMutations<SyncWeekResponse>(queryKey);
   const eventMutations = useEventMutations<SyncWeekResponse>(queryKey);

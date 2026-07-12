@@ -1,8 +1,8 @@
 import React, { createContext, useContext, type ReactNode } from 'react';
 import { useModal } from '@/hooks/useModals';
 import TaskDetailModal from '@/components/shared/tasks/TaskDetailModal';
-import NewTaskModal from '@/components/shared/tasks/TaskNewModal';
-import type { Task, TaskSummary } from '@/types';
+import TaskNewModal from '@/components/shared/tasks/TaskNewModal';
+import type { DbTask, TaskSummary } from '@/types';
 import { useTaskMutations } from '@/hooks/mutations/useTaskMutations';
 
 interface TaskFormModalState {
@@ -23,7 +23,7 @@ export const TaskModalProvider: React.FC<{ children: ReactNode }> = ({ children 
   const detailModal = useModal<TaskSummary>();
   const formModal = useModal<TaskFormModalState>();
   
-  const { toggleTask } = useTaskMutations<{ tasks: Task[] }>(['tasks']);
+  const { toggleTask } = useTaskMutations(['tasks']);
 
   // 1. La nostra logica di transizione globale
   const handleAddSubtaskTransition = (parentId: number) => {
@@ -67,7 +67,7 @@ export const TaskModalProvider: React.FC<{ children: ReactNode }> = ({ children 
         onAddSubtask={handleAddSubtaskTransition}
       />
 
-      <NewTaskModal
+      <TaskNewModal
         isOpen={formModal.isOpen}
         onClose={formModal.close}
         taskToEdit={formModal.data?.taskToEdit}

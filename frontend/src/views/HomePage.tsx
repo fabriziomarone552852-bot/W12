@@ -14,18 +14,18 @@ import CalendarColumn from '@/components/dashboard/CalendarColumn';
 import TaskColumn from '@/components/shared/tasks/TaskColumn';
 import EventsColumn from '@/components/shared/events/EventsColumn';
 import NewEventModal from '@/components/shared/events/EventNewModal';
-import EventDetailModal from '@/components/shared/events/EventDetailModal';
+import EventDetailModal, { type EventDeletePayload } from '@/components/shared/events/EventDetailModal';
 import { YearProgressWidget } from '@/components/dashboard/YearProgressWidget';
 import { UpcomingTasksWidget } from '@/components/dashboard/UpcomingTasksWidget';
 import { LoadingIcon } from '@/components/shared/utils/Icons';
 
 // Regole e logiche
 import { calculateYearProgress } from '@/utils/dateUtils';
-import { buildTaskTree, filterAndSortTree, getUpcomingTasks, type UITask } from '@/utils/taskUtils';
+import { buildTaskTree, filterAndSortTree, getUpcomingTasks } from '@/utils/taskUtils';
 import { mapDbEventsToCalendarEvents } from '@/utils/eventUtils';
 
 // Le definizioni di come sono fatti i dati (Tipi)
-import type { CalendarEvent, DbTask, DbEvent, TaskSummary } from '@/types';
+import type { CalendarEvent, DbEvent, TaskSummary, UITask } from '@/types';
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -36,8 +36,8 @@ const HomePage: React.FC = () => {
 
   // Recuperiamo tutte le carte dal server
   const { events: eventiDalServer, tasks, isLoading, isFetching, isError } = useAgendaHome(currentMonth);
-  const { toggleTask } = useTaskMutations<{ tasks: DbTask[] }>(['tasks']);
-  const { deleteEvent } = useEventMutations<{ events: DbEvent[] }>(['events']);
+  const { toggleTask } = useTaskMutations(['tasks']);
+  const { deleteRecurringEvent } = useEventMutations(['events']);
 
   // Logica delle finestre a comparsa (Modali)
   const { openTaskDetail, openTaskForm } = useTaskModals();
@@ -85,9 +85,9 @@ const HomePage: React.FC = () => {
   };
 
   // Niente ambiguità: l'ID deve essere un numero
-  const handleDeleteEvent = (id: number | string): void => {
-    deleteEvent(id);
-    closeEventDetail(); // 🪄 Cambiato da eventDetailModal.close()
+  const handleDeleteEvent = (payload: EventDeletePayload): void => {
+    deleteRecurringEvent(payload);
+    closeEventDetail(); 
   };
 
   const handleEditEvent = (): void => {

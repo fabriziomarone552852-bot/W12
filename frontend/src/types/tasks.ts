@@ -38,7 +38,7 @@ export interface TaskSummary {
   data_fatto?: string | null;
 }
 
-export interface UITask extends DbTask {
+export interface UITask extends TaskSummary {
   subtasks: UITask[]; 
 }
 

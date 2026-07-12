@@ -20,7 +20,7 @@ export const useAgendaDay = (dateStr: string) => {
   const queryKey = ['daySync', dateStr];
 
   const noteMutations = useNoteMutations<SyncDayResponse>(queryKey);
-  const { toggleTask } = useTaskMutations<SyncDayResponse>(queryKey);
+  const { toggleTask } = useTaskMutations(['tasks']);
   const entryMutations = useDailyEntryMutations<SyncDayResponse>(queryKey);
   const eventMutations = useEventMutations<SyncDayResponse>(queryKey);
 

@@ -178,3 +178,16 @@ export const getLocalTodayStr = () => {
   
   return weeks;
 };
+
+
+//  Genera le etichette per l'header della pagina (es. "OGGI", "12 ottobre 2023")
+
+export const getAgendaDateLabels = (targetDate: Date) => {
+  const isToday = new Date().toDateString() === targetDate.toDateString();
+  const displayName = isToday 
+    ? "OGGI" 
+    : targetDate.toLocaleDateString('it-IT', { weekday: 'long' }).toUpperCase();
+  const formattedDate = targetDate.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  return { isToday, displayName, formattedDate };
+};

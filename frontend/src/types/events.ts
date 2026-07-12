@@ -13,6 +13,7 @@ export interface DbEvent {
   category?: Category | null;
   category_name?: string | null;
   rrule?: string | null;
+  esclusioni?: string | null;
 }
 
 export interface CalendarEvent {
@@ -29,4 +30,5 @@ export interface CalendarEvent {
   location?: string;
   tutto_il_giorno?: boolean;
   rrule?: string;
+  esclusioni?: string | null;
 }

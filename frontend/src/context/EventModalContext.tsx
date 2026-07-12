@@ -1,7 +1,7 @@
 // src/context/EventModalContext.tsx
 import React, { createContext, useContext, useState, type ReactNode } from 'react';
 import type { CalendarEvent } from '@/types';
-import EventDetailModal from '@/components/shared/events/EventDetailModal';
+import EventDetailModal, { type EventDeletePayload } from '@/components/shared/events/EventDetailModal';
 import NewEventModal from '@/components/shared/events/EventNewModal';
 import { useEventMutations } from '@/hooks/mutations/useEventMutations'; 
 
@@ -27,7 +27,7 @@ export const EventModalProvider: React.FC<{ children: ReactNode }> = ({ children
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
   const [eventToEdit, setEventToEdit] = useState<CalendarEvent | null>(null);
   const [initialDate, setInitialDate] = useState<string | null>(null);
-  const { deleteEvent } = useEventMutations<{ events: any[] }>(['events']);
+  const { deleteRecurringEvent } = useEventMutations(['events']);
 
   const openEventDetail = (event: CalendarEvent): void => {
     setSelectedEvent(event);
@@ -61,11 +61,9 @@ export const EventModalProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
 
-  const handleDeleteEvent = () => {
-    if (selectedEvent) {
-      deleteEvent(selectedEvent.id);
-      closeEventDetail();
-    }
+  const handleDeleteEvent = (payload: EventDeletePayload) => {
+    deleteRecurringEvent(payload);
+    closeEventDetail();
   };
 
   return (

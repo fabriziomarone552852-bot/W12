@@ -4,20 +4,22 @@ import { useApi } from './useApi';
 import type { DbEvent, DbTask } from '@/types';
 import { getLocalTodayStr } from '@/utils/dateUtils';
 
-export const useAgendaHome = (calendarViewDate: Date = new Date()) => {
+export const useAgendaHome = (currentMonth: Date) => {
   const api = useApi();
 
-  const year = calendarViewDate.getFullYear();
-  const month = calendarViewDate.getMonth();
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
 
+  // Prendiamo un range largo (dal mese scorso al prossimo)
   const startStr = new Date(year, month - 1, 1).toISOString().split('T')[0];
   const endStr = new Date(year, month + 2, 0).toISOString().split('T')[0];
 
+  // 1. QUERY DEGLI EVENTI DEL CALENDARIO (Ora il backend espanderà le ricorrenze per questo range!)
   const { 
     data: calendarEvents, 
     isLoading: eventsLoading, 
     isFetching: eventsFetching,
-    isError: eventsError // 🪄 Estraiamo l'errore per la prima query
+    isError: eventsError 
   } = useQuery<DbEvent[]>({
     queryKey: ['events', startStr, endStr],
     queryFn: async () => {
@@ -27,11 +29,12 @@ export const useAgendaHome = (calendarViewDate: Date = new Date()) => {
     placeholderData: keepPreviousData
   });
 
+  // 2. QUERY DEGLI EVENTI DI OGGI (Per avere sempre il giorno corrente ultra-aggiornato)
   const todayStr = getLocalTodayStr();
   const { 
     data: todayEvents, 
     isFetching: todayFetching,
-    isError: todayError // 🪄 Estraiamo l'errore per la seconda query
+    isError: todayError 
   } = useQuery<DbEvent[]>({
     queryKey: ['events', 'today', todayStr],
     queryFn: async () => {
@@ -40,14 +43,21 @@ export const useAgendaHome = (calendarViewDate: Date = new Date()) => {
     }
   });
 
+  // 3. FUSIONE SICURA DEI DATI
   const mergedEvents = [...(calendarEvents ?? []), ...(todayEvents ?? [])];
-  const uniqueEvents = Array.from(new Map(mergedEvents.map(e => [e.id, e])).values());
+  
+  // 🪄 FIX CRITICO: Deduplichiamo usando ID + Data Inizio! 
+  // Così le ricorrenze espese dal backend (stesso ID, ma date diverse) non si cancellano a vicenda!
+  const uniqueEvents = Array.from(new Map(
+    mergedEvents.map(e => [`${e.id}-${e.data_inizio}`, e])
+  ).values());
 
+  // 4. QUERY DELLE TASK
   const { 
     data: tasks, 
     isLoading: tasksLoading, 
     isFetching: tasksFetching,
-    isError: tasksError // 🪄 Estraiamo l'errore per la terza query
+    isError: tasksError 
   } = useQuery<DbTask[]>({
     queryKey: ['tasks'],
     queryFn: async () => {
@@ -61,7 +71,6 @@ export const useAgendaHome = (calendarViewDate: Date = new Date()) => {
     tasks: tasks ?? [],
     isLoading: eventsLoading || tasksLoading,
     isFetching: eventsFetching || todayFetching || tasksFetching,
-    // 🪄 Se ANCHE SOLO UNA delle chiamate va in errore, restituiamo true
     isError: eventsError || todayError || tasksError 
   };
 };
