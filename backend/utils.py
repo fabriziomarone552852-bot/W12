@@ -38,6 +38,7 @@ def expand_events_for_range(events_db: List[models.Event], start_date: date, end
 
         # CASO B: EVENTO RICORRENTE
         try:
+            date_escluse = set(ev.esclusioni.split(",")) if ev.esclusioni else set()
             rule = rrulestr(ev.rrule, dtstart=ev_start)
             occorrenze = rule.between(range_start, range_end, inc=True)
             
@@ -45,6 +46,9 @@ def expand_events_for_range(events_db: List[models.Event], start_date: date, end
             durata = ev_end - ev_start if ev.data_fine else timedelta(0)
             
             for occorrenza in occorrenze:
+                giorno_str = occorrenza.strftime("%Y-%m-%d")
+                if giorno_str in date_escluse:
+                    continue
                 updates = {"data_inizio": occorrenza}
                 if ev.data_fine:
                     updates["data_fine"] = occorrenza + durata
