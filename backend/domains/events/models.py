@@ -41,6 +41,7 @@ class Event(Base):
         index=True,
     )
     rrule: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    esclusioni: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     category: Mapped[Optional["Category"]] = relationship("Category", lazy="selectin")
     user: Mapped["User"] = relationship("User", back_populates="events")

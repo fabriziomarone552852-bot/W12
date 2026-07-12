@@ -51,6 +51,7 @@ class EventUpdate(StrictBaseModel):
     luogo: Optional[str] = Field(None, max_length=255)
     category_id: Optional[int] = None
     rrule: Optional[str] = Field(None, max_length=255)
+    esclusioni: Optional[str] = None
 
     @field_validator("titolo")
     @classmethod
@@ -84,3 +85,4 @@ class EventResponse(ORMBaseModel):
     category: Optional[CategoryResponse] = None
     category_name: Optional[str] = None
     rrule: Optional[str] = Field(None, max_length=255)
+    esclusioni: Optional[str] = None
