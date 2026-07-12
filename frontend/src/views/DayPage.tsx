@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router';
-// lascio un commento per il futuro
 
 // --- IMPORT COMPONENTI ---
 import NotesSidebar from '@/components/day/NotesSidebar';
